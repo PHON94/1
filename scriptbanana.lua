@@ -1,5 +1,5 @@
 --=============================================================================
---         BANANA HUB PREMIUM V13 - TỐI ƯU PHẠM VI TRIAL & FAST ATTACK AN TOÀN
+--         BANANA HUB PREMIUM V16 - PHÂN CHIA MELEE THUẦN & ĐAN XEN VŨ KHÍ
 --=============================================================================
 
 local Players = game:GetService("Players")
@@ -14,10 +14,18 @@ local LocalPlayer = Players.LocalPlayer
 _G.AutoChest = false
 _G.AutoHop = false
 _G.AutoKillPlayers = false
+_G.WeaveFastAttack = false 
 
 local islandList = {}
 local currentIslandIdx = 1
 local collectedChests = setmetatable({}, {__mode = "k"})
+
+-- Danh sách các võ học (Melee) thông dụng
+local MELEE_LIST = {
+    "Combat", "Dark Step", "Electro", "Water Kung Fu", "Dragon Breath", 
+    "Superhuman", "Death Step", "Sharkman Karate", "Electric Claw", 
+    "Dragon Talon", "Godhuman", "Sanguine Art"
+}
 
 --// DỌN DẸP UI CŨ
 if game:GetService("CoreGui"):FindFirstChild("BananaHubPremium") then
@@ -185,7 +193,8 @@ end
 local function AddToggle(page, text, callback)
     local Frame = Instance.new("Frame", page)
     Frame.Size = UDim2.new(1, -10, 0, 45)
-    Frame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+    Frame.BackgroundColor3 = Color3.fromRGB(255, 25, 25)
+    Frame.BackgroundTransparency = 0.95
     Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 8)
     Instance.new("UIStroke", Frame).Color = Color3.fromRGB(40,40,40)
 
@@ -230,7 +239,8 @@ AddToggle(MainTab, "Càn Quét Rương Tốc Độ (V10)", function(v) _G.AutoCh
 AddToggle(MainTab, "Tự Động Đổi Server Thông Minh", function(v) _G.AutoHop = v end)
 
 local V4Tab = CreateTab("Tộc V4", false)
-AddToggle(V4Tab, "Tự Động Đồ Sát Trial (Phạm Vi Hẹp)", function(v) _G.AutoKillPlayers = v end)
+AddToggle(V4Tab, "Tự Động Đồ Sát Trial", function(v) _G.AutoKillPlayers = v end)
+AddToggle(V4Tab, "Đan Xen Fruit & Melee (M1)", function(v) _G.WeaveFastAttack = v end)
 
 --=============================================================================
 --                         LOGIC HỆ THỐNG PHỤ TRỢ
@@ -310,12 +320,10 @@ local function TweenTo(targetCFrame)
     return true
 end
 
---// CẢI TIẾN V13: THU HẸP PHẠM VI QUÉT CHỈ TRONG PHÒNG TRIAL (MAX 250 STUDS)
 local function GetClosestPlayerInTrial()
     local closestPlayer = nil
-    local shortestDistance = 250 -- Chỉ tìm đối thủ đứng siêu gần (trong khu vực Trial)
+    local shortestDistance = 250
     local myRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-    
     if not myRoot then return nil end
     
     for _, p in pairs(Players:GetPlayers()) do
@@ -331,6 +339,30 @@ local function GetClosestPlayerInTrial()
         end
     end
     return closestPlayer
+end
+
+local function GetMeleeTool()
+    for _, tool in pairs(LocalPlayer.Backpack:GetChildren()) do
+        if tool:IsA("Tool") and table.find(MELEE_LIST, tool.Name) then return tool end
+    end
+    for _, tool in pairs(LocalPlayer.Character:GetChildren()) do
+        if tool:IsA("Tool") and table.find(MELEE_LIST, tool.Name) then return tool end
+    end
+    return nil
+end
+
+local function GetFruitTool()
+    for _, tool in pairs(LocalPlayer.Backpack:GetChildren()) do
+        if tool:IsA("Tool") and (tool.Name:find("Fruit") or tool.Name:find("-") or tool.Name:find("Trái")) and not table.find(MELEE_LIST, tool.Name) then 
+            return tool 
+        end
+    end
+    for _, tool in pairs(LocalPlayer.Character:GetChildren()) do
+        if tool:IsA("Tool") and (tool.Name:find("Fruit") or tool.Name:find("-") or tool.Name:find("Trái")) and not table.find(MELEE_LIST, tool.Name) then 
+            return tool 
+        end
+    end
+    return nil
 end
 
 local function GetIslands()
@@ -365,98 +397,22 @@ local function GetChest()
 end
 
 --=============================================================================
---         CẢI TIẾN V13: LUỒNG ĐÁNH SIÊU TỐC ĐỘ (FAST ATTACK) AN TOÀN TUYỆT ĐỐI
+--           XỬ LÝ CHẾ ĐỘ ĐÁNH THEO ĐÚNG YÊU CẦU PHÂN CHIA NÚT BẤT
 --=============================================================================
 task.spawn(function()
     while true do
-        RunService.Heartbeat:Wait() -- Chạy đồng bộ theo khung hình vật lý của game để đạt tốc độ tối đa
+        RunService.Heartbeat:Wait()
         if _G.AutoKillPlayers then
             local targetPlayer = GetClosestPlayerInTrial()
             local char = LocalPlayer.Character
-            
-            -- Chỉ vung vũ khí ra chiêu khi mục tiêu thực sự ở gần trong Trial
-            if targetPlayer and char then
-                local tool = char:FindFirstChildOfClass("Tool")
-                if tool then
-                    tool:Activate()
-                    -- Cơ chế gỡ bỏ độ trễ ảo của Roblox để dồn sát thương cực hạn nhưng an toàn cho tài khoản
-                    task.wait(0.01) 
-                end
-            end
-        end
-    end
-end)
-
---// VÒNG LẶP CHÍNH ĐIỀU HƯỚNG NHÂN VẬT
-task.spawn(function()
-    while true do
-        task.wait()
-        
-        -- LOGIC TRIAL (TAB V4)
-        if _G.AutoKillPlayers then
-            local targetPlayer = GetClosestPlayerInTrial()
-            local char = LocalPlayer.Character
-            local root = char and char:FindFirstChild("HumanoidRootPart")
-            
-            if root and targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                MaintainHover()
-                local enemyRoot = targetPlayer.Character.HumanoidRootPart
-                
-                -- Khóa góc đứng lơ lửng ngay phía sau lưng đối thủ (Né skill và đấm thẳng mặt)
-                root.CFrame = enemyRoot.CFrame * CFrame.new(0, 2.5, 1.5)
-            else
-                -- Nếu không tìm thấy ai trong phòng Trial, tắt cơ chế lơ lửng để đứng im an toàn
-                if not _G.AutoChest then RemoveHover() end
-            end
-            
-        -- LOGIC NHẶT RƯƠNG (TRANG CHỦ)
-        elseif _G.AutoChest then
-            local char = LocalPlayer.Character
-            local root = char and char:FindFirstChild("HumanoidRootPart")
             local hum = char and char:FindFirstChildWhichIsA("Humanoid")
             
-            if not root or not hum then RemoveHover() continue end
-            MaintainHover()
-            
-            local chestPart, chestModel = GetChest()
-            if chestPart and chestModel then
-                TweenTo(chestPart.CFrame)
-                task.wait(0.05)
-                if firetouchinterest and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
-                    firetouchinterest(LocalPlayer.Character.HumanoidRootPart, chestPart, 0)
-                    task.wait()
-                    firetouchinterest(LocalPlayer.Character.HumanoidRootPart, chestPart, 1)
-                end
-                collectedChests[chestModel] = true
-            else
-                if #islandList == 0 then islandList = GetIslands() end
-                if #islandList > 0 then
-                    if currentIslandIdx > #islandList then
-                        currentIslandIdx = 1
-                        if _G.AutoHop then HopServer() task.wait(5) end
-                    end
-                    local targetIsland = islandList[currentIslandIdx]
-                    if targetIsland then
-                        local safetyCFrame = targetIsland + Vector3.new(0, 30, 0)
-                        TweenTo(safetyCFrame)
-                        task.wait(0.2)
-                    end
-                    currentIslandIdx = currentIslandIdx + 1
-                else
-                    if _G.AutoHop then HopServer() task.wait(5) end
-                end
-            end
-        else
-            if not _G.AutoKillPlayers then RemoveHover() end
-        end
-    end
-end)
-
--- Hệ thống noclip xuyên vật thể toàn diện
-RunService.Stepped:Connect(function()
-    if (_G.AutoChest or _G.AutoKillPlayers) and LocalPlayer.Character then
-        for _, v in pairs(LocalPlayer.Character:GetDescendants()) do
-            if v:IsA("BasePart") then v.CanCollide = false end
-        end
-    end
-end)
+            if targetPlayer and char and hum then
+                local meleeTool = GetMeleeTool()
+                
+                -- CHẾ ĐỘ NÚT BÊN DƯỚI BẬT: Kết hợp đan xen (2 Fruit M1 -> 2 Melee M1)
+                if _G.WeaveFastAttack then
+                    local fruitTool = GetFruitTool()
+                    if fruitTool and meleeTool then
+                        hum:EquipTool(fruitTool)
+                        fruitTool:Activate()
