@@ -13,15 +13,15 @@ local LocalPlayer = Players.LocalPlayer
 _G.AutoChest = false         
 local Ban_Kinh_Gom_Ruong = 1000 
 
---// 2. MENU UI SYSTEM (Khởi tạo Giao diện Fluent UI với cột danh mục bên trái)
-local Fluent = loadstring(game:HttpGet("https://github.com"))()
+--// 2. MENU UI SYSTEM (Cập nhật Link chính thức và ép hiển thị ngay lập tức)
+local Fluent = loadstring(game:HttpGet("https://githubusercontent.com"))()
 
 local Window = Fluent:CreateWindow({
     Title = "Banana Hub | Auto Chest",
     SubTitle = "by AI Assistant",
     TabWidth = 160,                     -- Độ rộng của cột danh mục bên trái
     Size = UDim2.fromOffset(580, 460),
-    Acrylic = true, 
+    Acrylic = false,                    -- Tắt hiệu ứng nhòe để tránh lỗi hiển thị trên máy yếu
     Theme = "Dark",
     MinimizeKey = Enum.KeyCode.LeftControl -- Nhấn nút Ctrl Trái để Ẩn/Hiện Menu
 })
@@ -41,6 +41,9 @@ local ToggleChest = Tabs.Main:AddToggle("ToggleChest", {Title = "Tự Động Nh
 ToggleChest:OnChanged(function(Value)
     _G.AutoChest = Value
 end)
+
+-- ÉP MENU TỰ ĐỘNG BẬT LÊN MÀN HÌNH NGAY KHI CHẠY SCRIPT
+Window:SelectTab(1)
 
 --// 3. TWEEN SYSTEM (Hệ thống dịch chuyển mượt mà)
 local function TweenTo(targetCFrame)
@@ -136,6 +139,6 @@ end)
 -- Thông báo Giao diện đã sẵn sàng
 Fluent:Notify({
     Title = "Banana Hub",
-    Content = "Menu đã tải xong! Nhấn nút Ctrl Trái để tắt/mở giao diện.",
+    Content = "Menu đã được kích hoạt thành công trên màn hình!",
     Duration = 5
 })
