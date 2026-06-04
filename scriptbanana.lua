@@ -1,5 +1,5 @@
 --=============================================================================
---         BANANA HUB PREMIUM V7 - BAY THẤP SIÊU MƯỢT & CHỐNG GIẬT CAMERA
+--         BANANA HUB PREMIUM V8 - FIX LỖI KHÔNG NHẬN TIỀN & CHỐNG RUNG GIẬT
 --=============================================================================
 
 local Players = game:GetService("Players")
@@ -24,7 +24,7 @@ end
 
 --// KHỞI TẠO SCREEN GUI
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "PhongdzHubPremium"
+ScreenGui.Name = "BananaHubPremium"
 ScreenGui.Parent = game:GetService("CoreGui")
 ScreenGui.ResetOnSpawn = false
 
@@ -222,7 +222,7 @@ end
 --// TẠO NỘI DUNG TAB
 local MainTab = CreateTab("Trang Chủ", true)
 
-AddToggle(MainTab, "Càn Quét Rương Siêu Mượt (V7)", function(v)
+AddToggle(MainTab, "Càn Quét Rương Kiếm Tiền (V8)", function(v)
     _G.AutoChest = v
 end)
 
@@ -270,24 +270,25 @@ local function HopServer()
     if not success then TeleportService:Teleport(game.PlaceId, LocalPlayer) end
 end
 
---// HÀM TWEEN SIÊU MƯỢT (CHỐNG RUNG GIẬT PHÝSICS)
+--// HÀM TWEEN PHÁT TRIỂN V8 - CHỐNG RUNG BẰNG PLATFORMSTAND (KHÔNG KHÓA ANCHOR)
 local function TweenTo(targetCFrame)
     local char = LocalPlayer.Character
     local root = char and char:FindFirstChild("HumanoidRootPart")
-    if not root then return end
+    local hum = char and char:FindFirstChildWhichIsA("Humanoid")
+    if not root or not hum then return end
     
-    -- KHÓA CỨNG VẬT LÝ NHÂN VẬT: Loại bỏ hoàn toàn hiện tượng rung lắc camera
-    root.Anchored = true
+    -- MẸO V8: Bật PlatformStand để triệt tiêu lực đứng thẳng của chân (hết giật lag camera hoàn toàn)
+    hum.PlatformStand = true
+    root.Anchored = false -- Đảm bảo tuyệt đối KHÔNG khóa vật lý để tránh mất tiền
     
     local dist = (root.Position - targetCFrame.Position).Magnitude
     local info = TweenInfo.new(dist/280, Enum.EasingStyle.Linear)
     local tw = TweenService:Create(root, info, {CFrame = targetCFrame})
     tw:Play()
     
-    -- Khi bay tới đích, mở khóa vật lý ngay lập tức để nhặt rương
     local connection
     connection = tw.Completed:Connect(function()
-        root.Anchored = false
+        hum.PlatformStand = false -- Trả lại trạng thái bình thường sau khi bay xong
         root.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
         root.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
         connection:Disconnect()
@@ -329,7 +330,7 @@ local function GetChest()
     end
 end
 
---// VÒNG LẶP CHÍNH V7
+--// VÒNG LẶP CHÍNH V8
 task.spawn(function()
     while true do
         task.wait()
@@ -341,7 +342,10 @@ task.spawn(function()
                 local tw = TweenTo(chestPart.CFrame)
                 if tw then tw.Completed:Wait() end
                 
-                if firetouchinterest then
+                -- Khựng cực ngắn 0.05 giây để đồng bộ hóa tọa độ vật lý lên hệ thống Server
+                task.wait(0.05)
+                
+                if firetouchinterest and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
                     firetouchinterest(LocalPlayer.Character.HumanoidRootPart, chestPart, 0)
                     task.wait()
                     firetouchinterest(LocalPlayer.Character.HumanoidRootPart, chestPart, 1)
@@ -364,7 +368,7 @@ task.spawn(function()
                     
                     local targetIsland = islandList[currentIslandIdx]
                     if targetIsland then
-                        -- ĐÃ HẠ THẤP ĐỘ CAO: Thay vì +120 studs, giờ chỉ cộng +30 studs để bay là là sát mặt đảo
+                        -- Bay sát mặt đất (+30 studs) mượt mà
                         local safetyCFrame = targetIsland + Vector3.new(0, 30, 0)
                         local tw = TweenTo(safetyCFrame)
                         if tw then tw.Completed:Wait() end
@@ -380,7 +384,7 @@ task.spawn(function()
     end
 end)
 
--- Hệ thống xuyên tường toàn diện
+-- Hệ thống noclip xuyên vật thể toàn diện
 RunService.Stepped:Connect(function()
     if _G.AutoChest and LocalPlayer.Character then
         for _, v in pairs(LocalPlayer.Character:GetDescendants()) do
