@@ -1,5 +1,5 @@
 --=============================================================================
---         PHONGDZ HUB PREMIUM V8 - FIX LỖI KHÔNG NHẬN TIỀN & CHỐNG RUNG GIẬT
+--         BANANA HUB PREMIUM V10 - LOẠI BỎ LỆNH ĐỢI HỒI SINH (MAX SPEED)
 --=============================================================================
 
 local Players = game:GetService("Players")
@@ -24,7 +24,7 @@ end
 
 --// KHỞI TẠO SCREEN GUI
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "PhongdzHubPremium"
+ScreenGui.Name = "BananaHubPremium"
 ScreenGui.Parent = game:GetService("CoreGui")
 ScreenGui.ResetOnSpawn = false
 
@@ -222,7 +222,7 @@ end
 --// TẠO NỘI DUNG TAB
 local MainTab = CreateTab("Trang Chủ", true)
 
-AddToggle(MainTab, "Càn Quét Rương Kiếm Tiền (V8)", function(v)
+AddToggle(MainTab, "Càn Quét Rương Tốc Độ (V10)", function(v)
     _G.AutoChest = v
 end)
 
@@ -230,7 +230,7 @@ AddToggle(MainTab, "Tự Động Đổi Server Thông Minh", function(v)
     _G.AutoHop = v
 end)
 
---// HỆ THỐNG HOP SERVER CHỐNG LẶP DỮ LIỆU
+--// HỆ THỐNG HOP SERVER CHỐNG LẶP
 local function HopServer()
     local fileName = "banana_hop_history.json"
     local history = {}
@@ -270,31 +270,63 @@ local function HopServer()
     if not success then TeleportService:Teleport(game.PlaceId, LocalPlayer) end
 end
 
---// HÀM TWEEN PHÁT TRIỂN V8 - CHỐNG RUNG BẰNG PLATFORMSTAND (KHÔNG KHÓA ANCHOR)
+--// GIỮ LƠ LỬNG CHỐNG RƠI BIỂN
+local function MaintainHover()
+    local char = LocalPlayer.Character
+    local root = char and char:FindFirstChild("HumanoidRootPart")
+    if not root then return end
+    
+    local bv = root:FindFirstChild("BananaHoverForce")
+    if not bv then
+        bv = Instance.new("BodyVelocity")
+        bv.Name = "BananaHoverForce"
+        bv.Velocity = Vector3.new(0, 0, 0)
+        bv.MaxForce = Vector3.new(9e9, 9e9, 9e9)
+        bv.Parent = root
+    end
+end
+
+local function RemoveHover()
+    local char = LocalPlayer.Character
+    local root = char and char:FindFirstChild("HumanoidRootPart")
+    local bv = root and root:FindFirstChild("BananaHoverForce")
+    if bv then bv:Destroy() end
+end
+
+--// HÀM TWEEN V10 - ĐÃ BỎ HOÀN TOÀN CÁC LỆNH KIỂM TRA CHẾT/HỒI SINH
 local function TweenTo(targetCFrame)
     local char = LocalPlayer.Character
     local root = char and char:FindFirstChild("HumanoidRootPart")
     local hum = char and char:FindFirstChildWhichIsA("Humanoid")
-    if not root or not hum then return end
+    if not root or not hum then return false end
     
-    -- MẸO V8: Bật PlatformStand để triệt tiêu lực đứng thẳng của chân (hết giật lag camera hoàn toàn)
     hum.PlatformStand = true
-    root.Anchored = false -- Đảm bảo tuyệt đối KHÔNG khóa vật lý để tránh mất tiền
+    root.Anchored = false 
     
     local dist = (root.Position - targetCFrame.Position).Magnitude
     local info = TweenInfo.new(dist/280, Enum.EasingStyle.Linear)
     local tw = TweenService:Create(root, info, {CFrame = targetCFrame})
-    tw:Play()
     
+    local isPlaying = true
     local connection
+    
     connection = tw.Completed:Connect(function()
-        hum.PlatformStand = false -- Trả lại trạng thái bình thường sau khi bay xong
-        root.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-        root.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+        isPlaying = false
+        if hum and hum.Parent then hum.PlatformStand = false end
+        if root and root.Parent then
+            root.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+        end
         connection:Disconnect()
     end)
     
-    return tw
+    tw:Play()
+    
+    -- Chỉ chờ cho đến khi di chuyển xong hoặc vật thể gốc bị hủy (khi nhân vật biến mất)
+    while isPlaying and root.Parent do
+        task.wait()
+    end
+    
+    return true
 end
 
 local function GetIslands()
@@ -330,19 +362,28 @@ local function GetChest()
     end
 end
 
---// VÒNG LẶP CHÍNH V8
+--// VÒNG LẶP CHÍNH V10
 task.spawn(function()
     while true do
         task.wait()
         
         if _G.AutoChest then
+            local char = LocalPlayer.Character
+            local root = char and char:FindFirstChild("HumanoidRootPart")
+            local hum = char and char:FindFirstChildWhichIsA("Humanoid")
+            
+            -- Chỉ bỏ qua nếu không tìm thấy Nhân vật (Tránh lỗi script), KHÔNG bắt chờ hồi sinh nữa
+            if not root or not hum then
+                RemoveHover()
+                continue
+            end
+            
+            MaintainHover()
+            
             local chestPart, chestModel = GetChest()
             
             if chestPart and chestModel then
-                local tw = TweenTo(chestPart.CFrame)
-                if tw then tw.Completed:Wait() end
-                
-                -- Khựng cực ngắn 0.05 giây để đồng bộ hóa tọa độ vật lý lên hệ thống Server
+                TweenTo(chestPart.CFrame)
                 task.wait(0.05)
                 
                 if firetouchinterest and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
@@ -368,11 +409,8 @@ task.spawn(function()
                     
                     local targetIsland = islandList[currentIslandIdx]
                     if targetIsland then
-                        -- Bay sát mặt đất (+30 studs) mượt mà
                         local safetyCFrame = targetIsland + Vector3.new(0, 30, 0)
-                        local tw = TweenTo(safetyCFrame)
-                        if tw then tw.Completed:Wait() end
-                        
+                        TweenTo(safetyCFrame)
                         task.wait(0.2)
                     end
                     currentIslandIdx = currentIslandIdx + 1
@@ -380,6 +418,8 @@ task.spawn(function()
                     if _G.AutoHop then HopServer() task.wait(5) end
                 end
             end
+        else
+            RemoveHover()
         end
     end
 end)
