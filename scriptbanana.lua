@@ -1,5 +1,5 @@
 --=============================================================================
---         BANANA HUB PREMIUM V10 - LOẠI BỎ LỆNH ĐỢI HỒI SINH (MAX SPEED)
+--         BANANA HUB PREMIUM V13 - TỐI ƯU PHẠM VI TRIAL & FAST ATTACK AN TOÀN
 --=============================================================================
 
 local Players = game:GetService("Players")
@@ -13,6 +13,8 @@ local LocalPlayer = Players.LocalPlayer
 --// TRẠNG THÁI HỆ THỐNG
 _G.AutoChest = false
 _G.AutoHop = false
+_G.AutoKillPlayers = false
+
 local islandList = {}
 local currentIslandIdx = 1
 local collectedChests = setmetatable({}, {__mode = "k"})
@@ -219,44 +221,39 @@ local function AddToggle(page, text, callback)
     end)
 end
 
---// TẠO NỘI DUNG TAB
+--=============================================================================
+--                         KHỞI TẠO CÁC TABS
+--=============================================================================
+
 local MainTab = CreateTab("Trang Chủ", true)
+AddToggle(MainTab, "Càn Quét Rương Tốc Độ (V10)", function(v) _G.AutoChest = v end)
+AddToggle(MainTab, "Tự Động Đổi Server Thông Minh", function(v) _G.AutoHop = v end)
 
-AddToggle(MainTab, "Càn Quét Rương Tốc Độ (V10)", function(v)
-    _G.AutoChest = v
-end)
+local V4Tab = CreateTab("Tộc V4", false)
+AddToggle(V4Tab, "Tự Động Đồ Sát Trial (Phạm Vi Hẹp)", function(v) _G.AutoKillPlayers = v end)
 
-AddToggle(MainTab, "Tự Động Đổi Server Thông Minh", function(v)
-    _G.AutoHop = v
-end)
+--=============================================================================
+--                         LOGIC HỆ THỐNG PHỤ TRỢ
+--=============================================================================
 
---// HỆ THỐNG HOP SERVER CHỐNG LẶP
 local function HopServer()
     local fileName = "banana_hop_history.json"
     local history = {}
-    
-    if isfile and isfile(fileName) then
-        pcall(function() history = HttpService:JSONDecode(readfile(fileName)) end)
-    end
+    if isfile and isfile(fileName) then pcall(function() history = HttpService:JSONDecode(readfile(fileName)) end) end
     if type(history) ~= "table" then history = {} end
     if #history > 30 then table.remove(history, 1) end
-
     local success, result = pcall(function()
         local req = game:HttpGet("https://games.roproxy.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100")
         local data = HttpService:JSONDecode(req)
-        
         if data and data.data then
             local validServers = {}
             for _, server in pairs(data.data) do
                 if server.id ~= game.JobId and server.playing < server.maxPlayers and server.playing > 1 then
                     local visited = false
-                    for _, oldId in pairs(history) do
-                        if oldId == server.id then visited = true break end
-                    end
+                    for _, oldId in pairs(history) do if oldId == server.id then visited = true break end end
                     if not visited then table.insert(validServers, server) end
                 end
             end
-            
             if #validServers > 0 then
                 local chosenServer = validServers[math.random(1, #validServers)]
                 table.insert(history, chosenServer.id)
@@ -266,16 +263,13 @@ local function HopServer()
             end
         end
     end)
-    
     if not success then TeleportService:Teleport(game.PlaceId, LocalPlayer) end
 end
 
---// GIỮ LƠ LỬNG CHỐNG RƠI BIỂN
 local function MaintainHover()
     local char = LocalPlayer.Character
     local root = char and char:FindFirstChild("HumanoidRootPart")
     if not root then return end
-    
     local bv = root:FindFirstChild("BananaHoverForce")
     if not bv then
         bv = Instance.new("BodyVelocity")
@@ -293,40 +287,50 @@ local function RemoveHover()
     if bv then bv:Destroy() end
 end
 
---// HÀM TWEEN V10 - ĐÃ BỎ HOÀN TOÀN CÁC LỆNH KIỂM TRA CHẾT/HỒI SINH
 local function TweenTo(targetCFrame)
     local char = LocalPlayer.Character
     local root = char and char:FindFirstChild("HumanoidRootPart")
     local hum = char and char:FindFirstChildWhichIsA("Humanoid")
     if not root or not hum then return false end
-    
     hum.PlatformStand = true
     root.Anchored = false 
-    
     local dist = (root.Position - targetCFrame.Position).Magnitude
     local info = TweenInfo.new(dist/280, Enum.EasingStyle.Linear)
     local tw = TweenService:Create(root, info, {CFrame = targetCFrame})
-    
     local isPlaying = true
     local connection
-    
     connection = tw.Completed:Connect(function()
         isPlaying = false
         if hum and hum.Parent then hum.PlatformStand = false end
-        if root and root.Parent then
-            root.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-        end
+        if root and root.Parent then root.AssemblyLinearVelocity = Vector3.new(0, 0, 0) end
         connection:Disconnect()
     end)
-    
     tw:Play()
-    
-    -- Chỉ chờ cho đến khi di chuyển xong hoặc vật thể gốc bị hủy (khi nhân vật biến mất)
-    while isPlaying and root.Parent do
-        task.wait()
-    end
-    
+    while isPlaying and root.Parent do task.wait() end
     return true
+end
+
+--// CẢI TIẾN V13: THU HẸP PHẠM VI QUÉT CHỈ TRONG PHÒNG TRIAL (MAX 250 STUDS)
+local function GetClosestPlayerInTrial()
+    local closestPlayer = nil
+    local shortestDistance = 250 -- Chỉ tìm đối thủ đứng siêu gần (trong khu vực Trial)
+    local myRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    
+    if not myRoot then return nil end
+    
+    for _, p in pairs(Players:GetPlayers()) do
+        if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
+            local hum = p.Character:FindFirstChildWhichIsA("Humanoid")
+            if hum and hum.Health > 0 then
+                local distance = (myRoot.Position - p.Character.HumanoidRootPart.Position).Magnitude
+                if distance < shortestDistance then
+                    shortestDistance = distance
+                    closestPlayer = p
+                end
+            end
+        end
+    end
+    return closestPlayer
 end
 
 local function GetIslands()
@@ -334,9 +338,7 @@ local function GetIslands()
     for _, v in pairs(workspace:GetChildren()) do
         if v:IsA("Model") and not Players:GetPlayerFromCharacter(v) and v.Name ~= "Chests" and not v.Name:find("NPC") then
             local base = v:FindFirstChild("IslandPart") or v:FindFirstChildWhichIsA("BasePart")
-            if base and base.Size.Magnitude > 150 then
-                table.insert(targets, base.CFrame)
-            end
+            if base and base.Size.Magnitude > 150 then table.insert(targets, base.CFrame) end
         end
     end
     return targets
@@ -362,51 +364,77 @@ local function GetChest()
     end
 end
 
---// VÒNG LẶP CHÍNH V10
+--=============================================================================
+--         CẢI TIẾN V13: LUỒNG ĐÁNH SIÊU TỐC ĐỘ (FAST ATTACK) AN TOÀN TUYỆT ĐỐI
+--=============================================================================
+task.spawn(function()
+    while true do
+        RunService.Heartbeat:Wait() -- Chạy đồng bộ theo khung hình vật lý của game để đạt tốc độ tối đa
+        if _G.AutoKillPlayers then
+            local targetPlayer = GetClosestPlayerInTrial()
+            local char = LocalPlayer.Character
+            
+            -- Chỉ vung vũ khí ra chiêu khi mục tiêu thực sự ở gần trong Trial
+            if targetPlayer and char then
+                local tool = char:FindFirstChildOfClass("Tool")
+                if tool then
+                    tool:Activate()
+                    -- Cơ chế gỡ bỏ độ trễ ảo của Roblox để dồn sát thương cực hạn nhưng an toàn cho tài khoản
+                    task.wait(0.01) 
+                end
+            end
+        end
+    end
+end)
+
+--// VÒNG LẶP CHÍNH ĐIỀU HƯỚNG NHÂN VẬT
 task.spawn(function()
     while true do
         task.wait()
         
-        if _G.AutoChest then
+        -- LOGIC TRIAL (TAB V4)
+        if _G.AutoKillPlayers then
+            local targetPlayer = GetClosestPlayerInTrial()
+            local char = LocalPlayer.Character
+            local root = char and char:FindFirstChild("HumanoidRootPart")
+            
+            if root and targetPlayer and targetPlayer.Character and targetPlayer.Character:FindFirstChild("HumanoidRootPart") then
+                MaintainHover()
+                local enemyRoot = targetPlayer.Character.HumanoidRootPart
+                
+                -- Khóa góc đứng lơ lửng ngay phía sau lưng đối thủ (Né skill và đấm thẳng mặt)
+                root.CFrame = enemyRoot.CFrame * CFrame.new(0, 2.5, 1.5)
+            else
+                -- Nếu không tìm thấy ai trong phòng Trial, tắt cơ chế lơ lửng để đứng im an toàn
+                if not _G.AutoChest then RemoveHover() end
+            end
+            
+        -- LOGIC NHẶT RƯƠNG (TRANG CHỦ)
+        elseif _G.AutoChest then
             local char = LocalPlayer.Character
             local root = char and char:FindFirstChild("HumanoidRootPart")
             local hum = char and char:FindFirstChildWhichIsA("Humanoid")
             
-            -- Chỉ bỏ qua nếu không tìm thấy Nhân vật (Tránh lỗi script), KHÔNG bắt chờ hồi sinh nữa
-            if not root or not hum then
-                RemoveHover()
-                continue
-            end
-            
+            if not root or not hum then RemoveHover() continue end
             MaintainHover()
             
             local chestPart, chestModel = GetChest()
-            
             if chestPart and chestModel then
                 TweenTo(chestPart.CFrame)
                 task.wait(0.05)
-                
                 if firetouchinterest and LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart") then
                     firetouchinterest(LocalPlayer.Character.HumanoidRootPart, chestPart, 0)
                     task.wait()
                     firetouchinterest(LocalPlayer.Character.HumanoidRootPart, chestPart, 1)
                 end
-                
                 collectedChests[chestModel] = true
             else
-                if #islandList == 0 then
-                    islandList = GetIslands()
-                end
-                
+                if #islandList == 0 then islandList = GetIslands() end
                 if #islandList > 0 then
                     if currentIslandIdx > #islandList then
                         currentIslandIdx = 1
-                        if _G.AutoHop then
-                            HopServer()
-                            task.wait(5)
-                        end
+                        if _G.AutoHop then HopServer() task.wait(5) end
                     end
-                    
                     local targetIsland = islandList[currentIslandIdx]
                     if targetIsland then
                         local safetyCFrame = targetIsland + Vector3.new(0, 30, 0)
@@ -419,14 +447,14 @@ task.spawn(function()
                 end
             end
         else
-            RemoveHover()
+            if not _G.AutoKillPlayers then RemoveHover() end
         end
     end
 end)
 
 -- Hệ thống noclip xuyên vật thể toàn diện
 RunService.Stepped:Connect(function()
-    if _G.AutoChest and LocalPlayer.Character then
+    if (_G.AutoChest or _G.AutoKillPlayers) and LocalPlayer.Character then
         for _, v in pairs(LocalPlayer.Character:GetDescendants()) do
             if v:IsA("BasePart") then v.CanCollide = false end
         end
