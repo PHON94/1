@@ -1,300 +1,354 @@
 --=============================================================================
---         SCRIPT TỰ ĐỘNG NHẶT RƯƠNG TRÊN NỀN GIAO DIỆN TỰ CODE TAY (NO LINK)
+--         BANANA HUB PREMIUM V3 - CÀN QUÉT TẤT CẢ CÁC ĐẢO (BLOX FRUITS)
 --=============================================================================
 
---// 1. SERVICES
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local HttpService = game:GetService("HttpService")
+local TeleportService = game:GetService("TeleportService")
 local LocalPlayer = Players.LocalPlayer
 
--- Khởi tạo biến trạng thái toàn cục
-_G.AutoChest = false         
-local Ban_Kinh_Gom_Ruong = 1000 
+--// TRẠNG THÁI HỆ THỐNG
+_G.AutoChest = false
+_G.AutoHop = false
+local islandList = {}
+local currentIslandIdx = 1
 
--- Xóa Menu cũ nếu lỡ chạy lại script nhằm tránh trùng lặp
-if game:GetService("CoreGui"):FindFirstChild("BananaHubCustom") then
-    game:GetService("CoreGui").BananaHubCustom:Destroy()
+--// DỌN DẸP UI CŨ
+if game:GetService("CoreGui"):FindFirstChild("BananaHubPremium") then
+    game:GetService("CoreGui").BananaHubPremium:Destroy()
 end
 
---// 2. CUSTOM MENU UI (Tự tạo giao diện bằng Code thuần không qua link ngoài)
+--// KHỞI TẠO SCREEN GUI
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "BananaHubCustom"
+ScreenGui.Name = "BananaHubPremium"
 ScreenGui.Parent = game:GetService("CoreGui")
 ScreenGui.ResetOnSpawn = false
 
--- Khung chính của Menu
+local function ApplyTween(obj, info, goal)
+    return TweenService:Create(obj, TweenInfo.new(info, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), goal):Play()
+end
+
+--// 1. KHUNG CHÍNH (MAIN FRAME)
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 520, 0, 360)
-MainFrame.Position = UDim2.new(0.5, -260, 0.5, -180)
-MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+MainFrame.Size = UDim2.new(0, 550, 0, 350)
+MainFrame.Position = UDim2.new(0.5, -275, 0.5, -175)
+MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
 MainFrame.BorderSizePixel = 0
-MainFrame.Active = true
-MainFrame.Draggable = true -- Cho phép giữ chuột để kéo Menu di chuyển trên màn hình
+MainFrame.ClipsDescendants = true
 MainFrame.Parent = ScreenGui
 
--- Bo góc khung chính
-local MainCorner = Instance.new("UICorner")
-MainCorner.CornerRadius = UDim.new(0, 8)
-MainCorner.Parent = MainFrame
+local MainCorner = Instance.new("UICorner", MainFrame)
+MainCorner.CornerRadius = UDim.new(0, 12)
 
--- Thanh Menu bên trái (Sidebar)
-local Sidebar = Instance.new("Frame")
-Sidebar.Name = "Sidebar"
-Sidebar.Size = UDim2.new(0, 140, 1, 0)
-Sidebar.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
+local MainStroke = Instance.new("UIStroke", MainFrame)
+MainStroke.Thickness = 1.5
+MainStroke.Color = Color3.fromRGB(45, 45, 45)
+
+-- Kéo thả Menu
+local dragging, dragInput, dragStart, startPos
+MainFrame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        dragStart = input.Position
+        startPos = MainFrame.Position
+    end
+end)
+UserInputService.InputChanged:Connect(function(input)
+    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+        local delta = input.Position - dragStart
+        MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
+end)
+
+--// 2. THANH BÊN (SIDEBAR)
+local Sidebar = Instance.new("Frame", MainFrame)
+Sidebar.Size = UDim2.new(0, 160, 1, 0)
+Sidebar.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 Sidebar.BorderSizePixel = 0
-Sidebar.Parent = MainFrame
 
-local SidebarCorner = Instance.new("UICorner")
-SidebarCorner.CornerRadius = UDim.new(0, 8)
-SidebarCorner.Parent = Sidebar
+local SidebarLine = Instance.new("Frame", Sidebar)
+SidebarLine.Size = UDim2.new(0, 1, 1, 0)
+SidebarLine.Position = UDim2.new(1, 0, 0, 0)
+SidebarLine.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
 
--- Tiêu đề Menu
-local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1, 0, 0, 40)
-Title.Text = " BANANA HUB"
-Title.TextColor3 = Color3.fromRGB(255, 215, 0)
-Title.TextSize = 16
-Title.Font = Enum.Font.SourceSansBold
-Title.TextXAlignment = Enum.TextXAlignment.Left
-Title.BackgroundTransparency = 1
-Title.Parent = Sidebar
+local Logo = Instance.new("TextLabel", Sidebar)
+Logo.Size = UDim2.new(1, 0, 0, 60)
+Logo.Text = "BANANA HUB"
+Logo.TextColor3 = Color3.fromRGB(255, 215, 0)
+Logo.TextSize = 20
+Logo.Font = Enum.Font.GothamBold
+Logo.BackgroundTransparency = 1
 
--- Khu vực chứa các nút Tab bên trái
-local TabContainer = Instance.new("Frame")
-TabContainer.Position = UDim2.new(0, 0, 0, 50)
-TabContainer.Size = UDim2.new(1, 0, 1, -50)
+local TabContainer = Instance.new("Frame", Sidebar)
+TabContainer.Position = UDim2.new(0, 10, 0, 70)
+TabContainer.Size = UDim2.new(1, -20, 1, -80)
 TabContainer.BackgroundTransparency = 1
-TabContainer.Parent = Sidebar
+Instance.new("UIListLayout", TabContainer).Padding = UDim.new(0, 8)
 
-local TabListLayout = Instance.new("UIListLayout")
-TabListLayout.Padding = UDim.new(0, 5)
-TabListLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-TabListLayout.Parent = TabContainer
+--// 3. KHU VỰC NỘI DUNG
+local ContentArea = Instance.new("Frame", MainFrame)
+ContentArea.Position = UDim2.new(0, 170, 0, 50)
+ContentArea.Size = UDim2.new(1, -180, 1, -60)
+ContentArea.BackgroundTransparency = 1
 
--- Khung nội dung bên phải hiển thị tính năng
-local ContentFrame = Instance.new("Frame")
-ContentFrame.Position = UDim2.new(0, 150, 0, 10)
-ContentFrame.Size = UDim2.new(1, -160, 1, -20)
-ContentFrame.BackgroundTransparency = 1
-ContentFrame.Parent = MainFrame
+--// 4. NÚT THU GỌN & ĐÓNG
+local TopButtons = Instance.new("Frame", MainFrame)
+TopButtons.Size = UDim2.new(1, -170, 0, 40)
+TopButtons.Position = UDim2.new(0, 170, 0, 0)
+TopButtons.BackgroundTransparency = 1
 
--- HÀM TẠO TAB BÊN TRÁI
+local MinimizeBtn = Instance.new("TextButton", TopButtons)
+MinimizeBtn.Size = UDim2.new(0, 30, 0, 30)
+MinimizeBtn.Position = UDim2.new(1, -70, 0.5, -15)
+MinimizeBtn.Text = "-"
+MinimizeBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
+MinimizeBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+MinimizeBtn.Font = Enum.Font.GothamBold
+MinimizeBtn.TextSize = 18
+Instance.new("UICorner", MinimizeBtn).CornerRadius = UDim.new(0, 6)
+
+local CloseBtn = MinimizeBtn:Clone()
+CloseBtn.Text = "×"
+CloseBtn.Position = UDim2.new(1, -35, 0.5, -15)
+CloseBtn.BackgroundColor3 = Color3.fromRGB(150, 50, 50)
+CloseBtn.Parent = TopButtons
+
+local RestoreBtn = Instance.new("TextButton", ScreenGui)
+RestoreBtn.Size = UDim2.new(0, 50, 0, 50)
+RestoreBtn.Position = UDim2.new(0, 20, 0, 20)
+RestoreBtn.BackgroundColor3 = Color3.fromRGB(255, 215, 0)
+RestoreBtn.Text = "B"
+RestoreBtn.Font = Enum.Font.GothamBold
+RestoreBtn.TextSize = 25
+RestoreBtn.TextColor3 = Color3.fromRGB(0,0,0)
+RestoreBtn.Visible = false
+Instance.new("UICorner", RestoreBtn).CornerRadius = UDim.new(1, 0)
+
+MinimizeBtn.MouseButton1Click:Connect(function()
+    MainFrame:TweenSize(UDim2.new(0,0,0,0), "Out", "Quart", 0.3, true)
+    task.wait(0.3)
+    MainFrame.Visible = false
+    RestoreBtn.Visible = true
+end)
+
+RestoreBtn.MouseButton1Click:Connect(function()
+    RestoreBtn.Visible = false
+    MainFrame.Visible = true
+    MainFrame:TweenSize(UDim2.new(0, 550, 0, 350), "Out", "Quart", 0.3, true)
+end)
+
+CloseBtn.MouseButton1Click:Connect(function() ScreenGui:Destroy() end)
+
+--// 5. HÀM TẠO TAB & TOGGLE
 local function CreateTab(name, isDefault)
-    local TabButton = Instance.new("TextButton")
-    TabButton.Size = UDim2.new(0, 120, 0, 32)
-    TabButton.BackgroundColor3 = isDefault and Color3.fromRGB(35, 35, 35) or Color3.fromRGB(22, 22, 22)
-    TabButton.Text = name
-    TabButton.TextColor3 = isDefault and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(150, 150, 150)
-    TabButton.TextSize = 14
-    TabButton.Font = Enum.Font.SourceSansSemibold
-    TabButton.BorderSizePixel = 0
-    TabButton.Parent = TabContainer
-    
-    local ButtonCorner = Instance.new("UICorner")
-    ButtonCorner.CornerRadius = UDim.new(0, 6)
-    ButtonCorner.Parent = TabButton
-    
-    -- Khung nội dung riêng cho từng Tab
-    local TabPage = Instance.new("Frame")
-    TabPage.Size = UDim2.new(1, 0, 1, 0)
-    TabPage.BackgroundTransparency = 1
-    TabPage.Visible = isDefault
-    TabPage.Parent = ContentFrame
-    
-    local PageLayout = Instance.new("UIListLayout")
-    PageLayout.Padding = UDim.new(0, 8)
-    PageLayout.Parent = TabPage
+    local TabBtn = Instance.new("TextButton", TabContainer)
+    TabBtn.Size = UDim2.new(1, 0, 0, 35)
+    TabBtn.BackgroundColor3 = isDefault and Color3.fromRGB(255, 215, 0) or Color3.fromRGB(30, 30, 30)
+    TabBtn.Text = name
+    TabBtn.TextColor3 = isDefault and Color3.fromRGB(0, 0, 0) or Color3.fromRGB(200, 200, 200)
+    TabBtn.Font = Enum.Font.GothamSemibold
+    TabBtn.TextSize = 14
+    Instance.new("UICorner", TabBtn).CornerRadius = UDim.new(0, 6)
 
-    TabButton.MouseButton1Click:Connect(function()
-        for _, child in pairs(ContentFrame:GetChildren()) do
-            if child:IsA("Frame") then child.Visible = false end
-        end
-        for _, btn in pairs(TabContainer:GetChildren()) do
-            if btn:IsA("TextButton") then 
-                btn.BackgroundColor3 = Color3.fromRGB(22, 22, 22)
-                btn.TextColor3 = Color3.fromRGB(150, 150, 150)
+    local Page = Instance.new("ScrollingFrame", ContentArea)
+    Page.Size = UDim2.new(1, 0, 1, 0)
+    Page.BackgroundTransparency = 1
+    Page.Visible = isDefault
+    Page.ScrollBarThickness = 2
+    Instance.new("UIListLayout", Page).Padding = UDim.new(0, 10)
+
+    TabBtn.MouseButton1Click:Connect(function()
+        for _, p in pairs(ContentArea:GetChildren()) do p.Visible = false end
+        for _, b in pairs(TabContainer:GetChildren()) do
+            if b:IsA("TextButton") then
+                b.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+                b.TextColor3 = Color3.fromRGB(200, 200, 200)
             end
         end
-        TabPage.Visible = true
-        TabButton.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
-        TabButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+        Page.Visible = true
+        TabBtn.BackgroundColor3 = Color3.fromRGB(255, 215, 0)
+        TabBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
     end)
-    
-    return TabPage
+    return Page
 end
 
--- TẠO CÁC DANH MỤC CỘT BÊN TRÁI
-local MainTab = CreateTab("Main", true)
-local CombatTab = CreateTab("Combat (Sắp có)", false)
-local TeleportTab = CreateTab("Teleport (Sắp có)", false)
-local SettingsTab = CreateTab("Cấu Hình", false)
+local function AddToggle(page, text, callback)
+    local Frame = Instance.new("Frame", page)
+    Frame.Size = UDim2.new(1, -10, 0, 45)
+    Frame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
+    Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 8)
+    Instance.new("UIStroke", Frame).Color = Color3.fromRGB(40,40,40)
 
--- HÀM TẠO NÚT BẬT / TẮT (TOGGLE) TRONG TAB MAIN
-local function AddToggle(parentPage, text, callback)
-    local ToggleBg = Instance.new("Frame")
-    ToggleBg.Size = UDim2.new(1, 0, 0, 40)
-    ToggleBg.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-    ToggleBg.BorderSizePixel = 0
-    ToggleBg.Parent = parentPage
-    
-    local ToggleCorner = Instance.new("UICorner")
-    ToggleCorner.CornerRadius = UDim.new(0, 6)
-    ToggleCorner.Parent = ToggleBg
-    
-    local Label = Instance.new("TextLabel")
+    local Label = Instance.new("TextLabel", Frame)
     Label.Size = UDim2.new(1, -60, 1, 0)
-    Label.Position = UDim2.new(0, 10, 0, 0)
+    Label.Position = UDim2.new(0, 15, 0, 0)
     Label.Text = text
-    Label.TextColor3 = Color3.fromRGB(230, 230, 230)
+    Label.TextColor3 = Color3.fromRGB(220, 220, 220)
     Label.TextSize = 14
-    Label.Font = Enum.Font.SourceSans
+    Label.Font = Enum.Font.Gotham
     Label.TextXAlignment = Enum.TextXAlignment.Left
     Label.BackgroundTransparency = 1
-    Label.Parent = ToggleBg
+
+    local Tog = Instance.new("TextButton", Frame)
+    Tog.Size = UDim2.new(0, 40, 0, 20)
+    Tog.Position = UDim2.new(1, -50, 0.5, -10)
+    Tog.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    Tog.Text = ""
+    Instance.new("UICorner", Tog).CornerRadius = UDim.new(1, 0)
     
-    local Button = Instance.new("TextButton")
-    Button.Size = UDim2.new(0, 45, 0, 22)
-    Button.Position = UDim2.new(1, -55, 0.5, -11)
-    Button.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-    Button.Text = "TẮT"
-    Button.TextColor3 = Color3.fromRGB(200, 200, 200)
-    Button.Font = Enum.Font.SourceSansBold
-    Button.TextSize = 12
-    Button.BorderSizePixel = 0
-    Button.Parent = ToggleBg
-    
-    local BtnCorner = Instance.new("UICorner")
-    BtnCorner.CornerRadius = UDim.new(0, 4)
-    BtnCorner.Parent = Button
-    
-    local enabled = false
-    Button.MouseButton1Click:Connect(function()
-        enabled = not enabled
-        if enabled then
-            Button.BackgroundColor3 = Color3.fromRGB(46, 204, 113) -- Đổi sang xanh khi bật
-            Button.Text = "BẬT"
-            Button.TextColor3 = Color3.fromRGB(255, 255, 255)
-        else
-            Button.BackgroundColor3 = Color3.fromRGB(60, 60, 60)   -- Đổi sang xám khi tắt
-            Button.Text = "TẮT"
-            Button.TextColor3 = Color3.fromRGB(200, 200, 200)
-        end
-        callback(enabled)
+    local TogCircle = Instance.new("Frame", Tog)
+    TogCircle.Size = UDim2.new(0, 16, 0, 16)
+    TogCircle.Position = UDim2.new(0, 2, 0.5, -8)
+    TogCircle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    Instance.new("UICorner", TogCircle).CornerRadius = UDim.new(1, 0)
+
+    local state = false
+    Tog.MouseButton1Click:Connect(function()
+        state = not state
+        ApplyTween(Tog, 0.2, {BackgroundColor3 = state and Color3.fromRGB(255, 215, 0) or Color3.fromRGB(50, 50, 50)})
+        ApplyTween(TogCircle, 0.2, {Position = state and UDim2.new(0, 22, 0.5, -8) or UDim2.new(0, 2, 0.5, -8)})
+        callback(state)
     end)
 end
 
--- THÊM TÍNH NĂNG AUTO CHEST VÀO TRONG TAB MAIN
-AddToggle(MainTab, "Tự Động Nhặt Rương (Silver/Gold)", function(Value)
-    _G.AutoChest = Value
+--// TẠO NỘI DUNG TAB
+local MainTab = CreateTab("Trang Chủ", true)
+
+AddToggle(MainTab, "Tự Động Nhặt Rương (Mọi Đảo)", function(v)
+    _G.AutoChest = v
 end)
 
--- Nút đóng / ẩn nhanh Menu (Nút đỏ góc trên bên phải)
-local CloseBtn = Instance.new("TextButton")
-CloseBtn.Size = UDim2.new(0, 30, 0, 30)
-CloseBtn.Position = UDim2.new(1, -35, 0, 5)
-CloseBtn.BackgroundColor3 = Color3.fromRGB(192, 57, 43)
-CloseBtn.Text = "X"
-CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-CloseBtn.Font = Enum.Font.SourceSansBold
-CloseBtn.TextSize = 14
-CloseBtn.Parent = MainFrame
-
-local CloseCorner = Instance.new("UICorner")
-CloseCorner.CornerRadius = UDim.new(0, 6)
-CloseCorner.Parent = CloseBtn
-
-CloseBtn.MouseButton1Click:Connect(function()
-    MainFrame.Visible = not MainFrame.Visible
+AddToggle(MainTab, "Tự Động Đổi Server khi hết rương", function(v)
+    _G.AutoHop = v
 end)
 
---// 3. TWEEN SYSTEM (Hệ thống dịch chuyển mượt mà xuyên địa hình)
-local function TweenTo(targetCFrame)
-    local character = LocalPlayer.Character
-    if not character or not character:FindFirstChild("HumanoidRootPart") then return nil end
-    
-    local distance = (character.HumanoidRootPart.Position - targetCFrame.Position).Magnitude
-    local speed = 300 
-    local duration = distance / speed
-    
-    local tweenInfo = TweenInfo.new(duration, Enum.EasingStyle.Linear)
-    local tween = TweenService:Create(character.HumanoidRootPart, tweenInfo, {CFrame = targetCFrame})
-    tween:Play()
-    return tween
-end
-
---// 4. AUTO CHEST SYSTEM (Hệ thống quét rương SilverChest và GoldChest)
-local function LayRuongGanNhat()
-    local WorkspaceRuong = workspace:FindFirstChild("Chests") or workspace:FindFirstChild("ChestModels") or workspace
-    local ruongGanNhat = nil
-    local khoangCachNhoNhat = math.huge
-    
-    local character = LocalPlayer.Character
-    if not character or not character:FindFirstChild("HumanoidRootPart") then return nil end
-    local viTriCuaToi = character.HumanoidRootPart.Position
-
-    for _, v in pairs(WorkspaceRuong:GetChildren()) do
-        if (v.Name == "SilverChest" or v.Name == "GoldChest") and not v:GetAttribute("Collected") then
-            local phanThuong = v:FindFirstChild("HumanoidRootPart") or v:FindFirstChild("RootPart") or (v:IsA("BasePart") and v)
-            if phanThuong then
-                local khoangCach = (phanThuong.Position - viTriCuaToi).Magnitude
-                if khoangCach < khoangCachNhoNhat and khoangCach <= Ban_Kinh_Gom_Ruong then
-                    khoangCachNhoNhat = khoangCach
-                    ruongGanNhat = phanThuong
+--// HỆ THỐNG PHÂN TÍCH & LOGIC GAME
+local function HopServer()
+    local x, y = pcall(function()
+        local req = game:HttpGet("https://games.roproxy.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100")
+        local data = HttpService:JSONDecode(req)
+        if data and data.data then
+            for _, server in pairs(data.data) do
+                if server.id ~= game.JobId and server.playing < server.maxPlayers then
+                    TeleportService:TeleportToPlaceInstance(game.PlaceId, server.id, LocalPlayer)
+                    return
                 end
             end
         end
-    end
-    return ruongGanNhat
+    end)
 end
 
-local function XuLyNhatRuong()
-    local ruongMucTieu = LayRuongGanNhat()
-    if ruongMucTieu then
-        local tween = TweenTo(ruongMucTieu.CFrame)
-        if tween then
-            tween.Completed:Wait()
-        end
-        
-        if firetouchinterest then
-            firetouchinterest(LocalPlayer.Character.HumanoidRootPart, ruongMucTieu, 0)
-            task.wait(0.05)
-            firetouchinterest(LocalPlayer.Character.HumanoidRootPart, ruongMucTieu, 1)
-        else
-            task.wait(0.2) 
-        end
-        
-        if ruongMucTieu.Parent then
-            ruongMucTieu.Parent:SetAttribute("Collected", true)
-        else
-            ruongMucTieu:SetAttribute("Collected", true)
-        end
-        
-        task.wait(0.2)
-        return true
-    end
-    return false
+local function TweenTo(targetCFrame)
+    local char = LocalPlayer.Character
+    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
+    local dist = (char.HumanoidRootPart.Position - targetCFrame.Position).Magnitude
+    local info = TweenInfo.new(dist/260, Enum.EasingStyle.Linear) -- Tốc độ 260 chống kick an toàn
+    local tw = TweenService:Create(char.HumanoidRootPart, info, {CFrame = targetCFrame})
+    tw:Play()
+    return tw
 end
 
---// 5. MAIN LOOP (Vòng lặp thực thi chạy ngầm tính năng)
+-- Bộ quét định vị đảo lớn (Bỏ qua nhà cửa/NPC)
+local function GetIslands()
+    local targets = {}
+    for _, v in pairs(workspace:GetChildren()) do
+        if v:IsA("Model") and not Players:GetPlayerFromCharacter(v) and v.Name ~= "Chests" and not v.Name:find("NPC") then
+            local base = v:FindFirstChild("IslandPart") or v:FindFirstChildWhichIsA("BasePart")
+            -- Chỉ chọn vật thể có kích thước lớn (độ dài vector > 150 studs) để xác định là Đảo
+            if base and base.Size.Magnitude > 150 then
+                table.insert(targets, base.CFrame)
+            end
+        end
+    end
+    return targets
+end
+
+local function GetChest()
+    for _, v in pairs(workspace:GetChildren()) do
+        if v.Name:find("Chest") and not v:GetAttribute("Collected") then
+            local part = v:FindFirstChild("HumanoidRootPart") or v:FindFirstChild("RootPart") or (v:IsA("BasePart") and v)
+            if part then return part end
+        end
+    end
+    -- Quét thêm trong thư mục chứa rương phụ nếu có
+    local folder = workspace:FindFirstChild("Chests") or workspace:FindFirstChild("ChestModels")
+    if folder then
+        for _, v in pairs(folder:GetChildren()) do
+            if v.Name:find("Chest") and not v:GetAttribute("Collected") then
+                local part = v:FindFirstChild("HumanoidRootPart") or v:FindFirstChild("RootPart") or (v:IsA("BasePart") and v)
+                if part then return part end
+            end
+        end
+    end
+end
+
+--// VÒNG LẶP CHÍNH CÀN QUÉT TOÀN BẢN ĐỒ
 task.spawn(function()
     while true do
         task.wait(0.1)
         if _G.AutoChest then
-            XuLyNhatRuong()
+            local chest = GetChest()
+            
+            if chest then
+                -- 1. Nếu có rương xuất hiện gần đó, lập tức bay tới nhặt
+                local tw = TweenTo(chest.CFrame)
+                if tw then tw.Completed:Wait() end
+                
+                if firetouchinterest then
+                    firetouchinterest(LocalPlayer.Character.HumanoidRootPart, chest, 0)
+                    task.wait()
+                    firetouchinterest(LocalPlayer.Character.HumanoidRootPart, chest, 1)
+                end
+                chest:SetAttribute("Collected", true)
+                task.wait(0.05)
+            else
+                -- 2. Nếu đảo hiện tại hết sạch rương, chuẩn bị chuyển đảo tuần tra
+                if #islandList == 0 then
+                    islandList = GetIslands()
+                end
+                
+                if #islandList > 0 then
+                    -- Nếu đã đi tuần tra hết tất cả các đảo trên bản đồ hiện tại
+                    if currentIslandIdx > #islandList then
+                        currentIslandIdx = 1
+                        -- Nếu bật chế độ Hop Server thì sẽ đổi server luôn cho tối ưu tiền
+                        if _G.AutoHop then
+                            HopServer()
+                            task.wait(5)
+                        end
+                    end
+                    
+                    local targetIsland = islandList[currentIslandIdx]
+                    if targetIsland then
+                        -- Bay lên cao 120 studs phía trên đảo mục tiêu để tránh kẹt đất ban đầu
+                        local safetyCFrame = targetIsland + Vector3.new(0, 120, 0)
+                        local tw = TweenTo(safetyCFrame)
+                        if tw then tw.Completed:Wait() end
+                        
+                        task.wait(1.2) -- Khóa đuôi 1.2 giây chờ tính năng StreamingEnabled của game đồng bộ hóa rương
+                    end
+                    currentIslandIdx = currentIslandIdx + 1
+                else
+                    -- Trường hợp khẩn cấp nếu không quét được đảo, tự động đổi server nếu bật Hop
+                    if _G.AutoHop then HopServer() task.wait(5) end
+                end
+            end
         end
     end
 end)
 
---// 6. NOCLIP SYSTEM (Bật liên tục khi AutoChest chạy để chống kẹt tường)
+-- Hệ thống chống va chạm khi bay (Noclip)
 RunService.Stepped:Connect(function()
     if _G.AutoChest and LocalPlayer.Character then
-        for _, part in pairs(LocalPlayer.Character:GetChildren()) do
-            if part:IsA("BasePart") then
-                part.CanCollide = false
-            end
+        for _, v in pairs(LocalPlayer.Character:GetDescendants()) do
+            if v:IsA("BasePart") then v.CanCollide = false end
         end
     end
 end)
