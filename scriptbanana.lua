@@ -1,5 +1,5 @@
 --=============================================================================
---              SCRIPT TỰ ĐỘNG NHẶT RƯƠNG (SILVER & GOLD CHEST) + MENU UI
+--         SCRIPT TỰ ĐỘNG NHẶT RƯƠNG VỚI PHIÊN BẢN RAYFIELD UI MỚI
 --=============================================================================
 
 --// 1. SERVICES
@@ -13,37 +13,34 @@ local LocalPlayer = Players.LocalPlayer
 _G.AutoChest = false         
 local Ban_Kinh_Gom_Ruong = 1000 
 
---// 2. MENU UI SYSTEM (Cập nhật Link chính thức và ép hiển thị ngay lập tức)
-local Fluent = loadstring(game:HttpGet("https://githubusercontent.com"))()
+--// 2. RAYFIELD MENU UI SYSTEM (Đổi sang thư viện Rayfield siêu ổn định)
+local Rayfield = loadstring(game:HttpGet('https://sirius.menu'))()
 
-local Window = Fluent:CreateWindow({
-    Title = "Banana Hub | Auto Chest",
-    SubTitle = "by AI Assistant",
-    TabWidth = 160,                     -- Độ rộng của cột danh mục bên trái
-    Size = UDim2.fromOffset(580, 460),
-    Acrylic = false,                    -- Tắt hiệu ứng nhòe để tránh lỗi hiển thị trên máy yếu
-    Theme = "Dark",
-    MinimizeKey = Enum.KeyCode.LeftControl -- Nhấn nút Ctrl Trái để Ẩn/Hiện Menu
+local Window = Rayfield:CreateWindow({
+   Name = "Banana Hub | Auto Chest",
+   LoadingTitle = "Đang Tải Giao Diện...",
+   LoadingSubtitle = "by AI Assistant",
+   ConfigurationSaving = {
+      Enabled = false -- Tắt lưu file cấu hình để tránh lỗi bộ nhớ executor
+   },
+   KeySystem = false -- Tắt hệ thống nhập key để vào thẳng menu nhanh chóng
 })
 
--- KHỞI TẠO CÁC MỤC Ở CỘT BÊN TRÁI
-local Tabs = {
-    Main = Window:AddTab({ Title = "Main", Icon = "home" }),
-    Combat = Window:AddTab({ Title = "Combat (Sắp có)", Icon = "swords" }),
-    Teleport = Window:AddTab({ Title = "Teleport (Sắp có)", Icon = "map-pin" }),
-    Settings = Window:AddTab({ Title = "Cấu Hình", Icon = "settings" })
-}
+-- KHỞI TẠO CÁC MỤC Ở THANH DANH MỤC BÊN TRÁI (Tabs)
+local MainTab = Window:CreateTab("Main", 4483362458)       -- Icon Home
+local CombatTab = Window:CreateTab("Combat", 4483362458)   -- Mục bổ sung sau
+local TeleportTab = Window:CreateTab("Teleport", 4483362458) -- Mục bổ sung sau
+local SettingsTab = Window:CreateTab("Cấu Hình", 4483362458) -- Mục bổ sung sau
 
--- THÊM TÍNH NĂNG VÀO TRONG TAB "MAIN"
-local ToggleChest = Tabs.Main:AddToggle("ToggleChest", {Title = "Tự Động Nhặt Rương (Silver/Gold)", Default = false})
-
--- Đồng bộ trạng thái từ Menu UI vào Logic Code
-ToggleChest:OnChanged(function(Value)
-    _G.AutoChest = Value
-end)
-
--- ÉP MENU TỰ ĐỘNG BẬT LÊN MÀN HÌNH NGAY KHI CHẠY SCRIPT
-Window:SelectTab(1)
+-- THÊM TÍNH NĂNG BẬT/TẮT VÀO TRONG TAB "MAIN"
+local ToggleChest = MainTab:CreateToggle({
+   Name = "Tự Động Nhặt Rương (Silver/Gold)",
+   CurrentValue = false,
+   Flag = "ToggleAutoChest", 
+   Callback = function(Value)
+      _G.AutoChest = Value
+   end,
+})
 
 --// 3. TWEEN SYSTEM (Hệ thống dịch chuyển mượt mà)
 local function TweenTo(targetCFrame)
@@ -88,13 +85,11 @@ end
 local function XuLyNhatRuong()
     local ruongMucTieu = LayRuongGanNhat()
     if ruongMucTieu then
-        -- Di chuyển xuyên thẳng vào tâm rương
         local tween = TweenTo(ruongMucTieu.CFrame)
         if tween then
             tween.Completed:Wait()
         end
         
-        -- Kích hoạt TouchInterest để nhận quà từ rương
         if firetouchinterest then
             firetouchinterest(LocalPlayer.Character.HumanoidRootPart, ruongMucTieu, 0)
             task.wait(0.05)
@@ -135,10 +130,3 @@ RunService.Stepped:Connect(function()
         end
     end
 end)
-
--- Thông báo Giao diện đã sẵn sàng
-Fluent:Notify({
-    Title = "Banana Hub",
-    Content = "Menu đã được kích hoạt thành công trên màn hình!",
-    Duration = 5
-})
