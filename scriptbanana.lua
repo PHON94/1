@@ -1,5 +1,5 @@
 --=============================================================================
---         BANANA HUB PREMIUM V8 - FIX LỖI KHÔNG NHẬN TIỀN & CHỐNG RUNG GIẬT
+--         PHONGDZ HUB PREMIUM V8 - FIX LỖI KHÔNG NHẬN TIỀN & CHỐNG RUNG GIẬT
 --=============================================================================
 
 local Players = game:GetService("Players")
@@ -24,7 +24,7 @@ end
 
 --// KHỞI TẠO SCREEN GUI
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "BananaHubPremium"
+ScreenGui.Name = "PhongdzHubPremium"
 ScreenGui.Parent = game:GetService("CoreGui")
 ScreenGui.ResetOnSpawn = false
 
