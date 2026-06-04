@@ -1,5 +1,5 @@
 --=============================================================================
---         BANANA HUB PREMIUM V3 - CÀN QUÉT TẤT CẢ CÁC ĐẢO (BLOX FRUITS)
+--         BANANA HUB PREMIUM V4 - CÀN QUÉT SIÊU TỐC KHÔNG NGỪNG NGHỈ
 --=============================================================================
 
 local Players = game:GetService("Players")
@@ -221,15 +221,15 @@ end
 --// TẠO NỘI DUNG TAB
 local MainTab = CreateTab("Trang Chủ", true)
 
-AddToggle(MainTab, "Tự Động Nhặt Rương (Mọi Đảo)", function(v)
+AddToggle(MainTab, "Càn Quét Rương Liên Tục (Mọi Đảo)", function(v)
     _G.AutoChest = v
 end)
 
-AddToggle(MainTab, "Tự Động Đổi Server khi hết rương", function(v)
+AddToggle(MainTab, "Tự Động Đổi Server Khi Hết Sạch", function(v)
     _G.AutoHop = v
 end)
 
---// HỆ THỐNG PHÂN TÍCH & LOGIC GAME
+--// HỆ THỐNG LOGIC GAME
 local function HopServer()
     local x, y = pcall(function()
         local req = game:HttpGet("https://games.roproxy.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100")
@@ -249,19 +249,18 @@ local function TweenTo(targetCFrame)
     local char = LocalPlayer.Character
     if not char or not char:FindFirstChild("HumanoidRootPart") then return end
     local dist = (char.HumanoidRootPart.Position - targetCFrame.Position).Magnitude
-    local info = TweenInfo.new(dist/260, Enum.EasingStyle.Linear) -- Tốc độ 260 chống kick an toàn
+    local info = TweenInfo.new(dist/280, Enum.EasingStyle.Linear) -- Tốc độ 280 (Gom cực nhanh, chống kick)
     local tw = TweenService:Create(char.HumanoidRootPart, info, {CFrame = targetCFrame})
     tw:Play()
     return tw
 end
 
--- Bộ quét định vị đảo lớn (Bỏ qua nhà cửa/NPC)
+-- Quét tìm tọa độ toàn bộ đảo lớn
 local function GetIslands()
     local targets = {}
     for _, v in pairs(workspace:GetChildren()) do
         if v:IsA("Model") and not Players:GetPlayerFromCharacter(v) and v.Name ~= "Chests" and not v.Name:find("NPC") then
             local base = v:FindFirstChild("IslandPart") or v:FindFirstChildWhichIsA("BasePart")
-            -- Chỉ chọn vật thể có kích thước lớn (độ dài vector > 150 studs) để xác định là Đảo
             if base and base.Size.Magnitude > 150 then
                 table.insert(targets, base.CFrame)
             end
@@ -270,34 +269,39 @@ local function GetIslands()
     return targets
 end
 
+-- HÀM CẬP NHẬT DỮ LIỆU RƯƠNG LIÊN TỤC (TỐI ƯU KHÔNG SÓT)
 local function GetChest()
+    -- Quét trực tiếp ngoài Workspace trước
     for _, v in pairs(workspace:GetChildren()) do
         if v.Name:find("Chest") and not v:GetAttribute("Collected") then
             local part = v:FindFirstChild("HumanoidRootPart") or v:FindFirstChild("RootPart") or (v:IsA("BasePart") and v)
             if part then return part end
         end
     end
-    -- Quét thêm trong thư mục chứa rương phụ nếu có
-    local folder = workspace:FindFirstChild("Chests") or workspace:FindFirstChild("ChestModels")
-    if folder then
-        for _, v in pairs(folder:GetChildren()) do
-            if v.Name:find("Chest") and not v:GetAttribute("Collected") then
-                local part = v:FindFirstChild("HumanoidRootPart") or v:FindFirstChild("RootPart") or (v:IsA("BasePart") and v)
-                if part then return part end
+    -- Quét sâu vào các folder chứa rương phụ của Blox Fruits
+    for _, folderName in pairs({"Chests", "ChestModels", "ChestSpawns"}) do
+        local folder = workspace:FindFirstChild(folderName)
+        if folder then
+            for _, v in pairs(folder:GetChildren()) do
+                if v.Name:find("Chest") and not v:GetAttribute("Collected") then
+                    local part = v:FindFirstChild("HumanoidRootPart") or v:FindFirstChild("RootPart") or (v:IsA("BasePart") and v)
+                    if part then return part end
+                end
             end
         end
     end
 end
 
---// VÒNG LẶP CHÍNH CÀN QUÉT TOÀN BẢN ĐỒ
+--// VÒNG LẶP CHÍNH: CẬP NHẬT LIÊN TỤC & NHẶT KHÔNG NGỪNG NGHỈ
 task.spawn(function()
     while true do
-        task.wait(0.1)
+        task.wait() -- Vòng lặp siêu tốc (Chạy ở tốc độ khung hình tối đa)
+        
         if _G.AutoChest then
             local chest = GetChest()
             
             if chest then
-                -- 1. Nếu có rương xuất hiện gần đó, lập tức bay tới nhặt
+                -- PHÁT HIỆN RƯƠNG: Lao đến đớp ngay lập tức
                 local tw = TweenTo(chest.CFrame)
                 if tw then tw.Completed:Wait() end
                 
@@ -307,37 +311,34 @@ task.spawn(function()
                     firetouchinterest(LocalPlayer.Character.HumanoidRootPart, chest, 1)
                 end
                 chest:SetAttribute("Collected", true)
-                task.wait(0.05)
             else
-                -- 2. Nếu đảo hiện tại hết sạch rương, chuẩn bị chuyển đảo tuần tra
+                -- KHÔNG THẤY RƯƠNG: Lập tức chuyển đảo ngay để bắt game load rương mới
                 if #islandList == 0 then
                     islandList = GetIslands()
                 end
                 
                 if #islandList > 0 then
-                    -- Nếu đã đi tuần tra hết tất cả các đảo trên bản đồ hiện tại
+                    -- Nếu đã đi tuần tra hết tất cả các đảo trong server này
                     if currentIslandIdx > #islandList then
                         currentIslandIdx = 1
-                        -- Nếu bật chế độ Hop Server thì sẽ đổi server luôn cho tối ưu tiền
                         if _G.AutoHop then
                             HopServer()
-                            task.wait(5)
+                            task.wait(3)
                         end
                     end
                     
                     local targetIsland = islandList[currentIslandIdx]
                     if targetIsland then
-                        -- Bay lên cao 120 studs phía trên đảo mục tiêu để tránh kẹt đất ban đầu
+                        -- Bay lên cao 120 studs tránh kẹt địa hình khi di chuyển siêu tốc
                         local safetyCFrame = targetIsland + Vector3.new(0, 120, 0)
                         local tw = TweenTo(safetyCFrame)
                         if tw then tw.Completed:Wait() end
                         
-                        task.wait(1.2) -- Khóa đuôi 1.2 giây chờ tính năng StreamingEnabled của game đồng bộ hóa rương
+                        task.wait(0.25) -- Chỉ khựng lại 0.25 giây cực ngắn để game stream rương ra, rồi lập tức vòng lặp quét tiếp luôn!
                     end
                     currentIslandIdx = currentIslandIdx + 1
                 else
-                    -- Trường hợp khẩn cấp nếu không quét được đảo, tự động đổi server nếu bật Hop
-                    if _G.AutoHop then HopServer() task.wait(5) end
+                    if _G.AutoHop then HopServer() task.wait(3) end
                 end
             end
         end
