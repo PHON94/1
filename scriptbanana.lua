@@ -24,7 +24,7 @@ end
 
 --// KHỞI TẠO SCREEN GUI
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "BananaHubPremium"
+ScreenGui.Name = "PhongdzHubPremium"
 ScreenGui.Parent = game:GetService("CoreGui")
 ScreenGui.ResetOnSpawn = false
 
