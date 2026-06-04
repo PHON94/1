@@ -269,6 +269,32 @@ local function XuLyNhatRuong()
         if ruongMucTieu.Parent then
             ruongMucTieu.Parent:SetAttribute("Collected", true)
         else
-ruongMucTieu:SetAttribute("Collected", true)endtask.wait(0.2)
-         task.wait(0.2)return trueendreturn falseend
-         --// 5. MAIN LOOP (Vòng lặp thực thi chạy ngầm tính năng)task.spawn(function()while true dotask.wait(0.1)if _G.AutoChest thenXuLyNhatRuong()endendend)--// 6. NOCLIP SYSTEM (Bật liên tục khi AutoChest chạy để chống kẹt tường)RunService.Stepped:Connect(function()if _G.AutoChest and LocalPlayer.Character thenfor _, part in pairs(LocalPlayer.Character:GetChildren()) doif part:IsA("BasePart") thenpart.CanCollide = falseendendendend)
+            ruongMucTieu:SetAttribute("Collected", true)
+        end
+        
+        task.wait(0.2)
+        return true
+    end
+    return false
+end
+
+--// 5. MAIN LOOP (Vòng lặp thực thi chạy ngầm tính năng)
+task.spawn(function()
+    while true do
+        task.wait(0.1)
+        if _G.AutoChest then
+            XuLyNhatRuong()
+        end
+    end
+end)
+
+--// 6. NOCLIP SYSTEM (Bật liên tục khi AutoChest chạy để chống kẹt tường)
+RunService.Stepped:Connect(function()
+    if _G.AutoChest and LocalPlayer.Character then
+        for _, part in pairs(LocalPlayer.Character:GetChildren()) do
+            if part:IsA("BasePart") then
+                part.CanCollide = false
+            end
+        end
+    end
+end)
