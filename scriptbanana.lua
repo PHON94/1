@@ -1,5 +1,5 @@
 --=============================================================================
---         BANANA HUB PREMIUM V4 - CÀN QUÉT SIÊU TỐC KHÔNG NGỪNG NGHỈ
+--         BANANA HUB PREMIUM V7 - BAY THẤP SIÊU MƯỢT & CHỐNG GIẬT CAMERA
 --=============================================================================
 
 local Players = game:GetService("Players")
@@ -15,6 +15,7 @@ _G.AutoChest = false
 _G.AutoHop = false
 local islandList = {}
 local currentIslandIdx = 1
+local collectedChests = setmetatable({}, {__mode = "k"})
 
 --// DỌN DẸP UI CŨ
 if game:GetService("CoreGui"):FindFirstChild("BananaHubPremium") then
@@ -23,7 +24,7 @@ end
 
 --// KHỞI TẠO SCREEN GUI
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "PhongdzHubPremium"
+ScreenGui.Name = "BananaHubPremium"
 ScreenGui.Parent = game:GetService("CoreGui")
 ScreenGui.ResetOnSpawn = false
 
@@ -221,41 +222,80 @@ end
 --// TẠO NỘI DUNG TAB
 local MainTab = CreateTab("Trang Chủ", true)
 
-AddToggle(MainTab, "Càn Quét Rương Liên Tục (Mọi Đảo)", function(v)
+AddToggle(MainTab, "Càn Quét Rương Siêu Mượt (V7)", function(v)
     _G.AutoChest = v
 end)
 
-AddToggle(MainTab, "Tự Động Đổi Server Khi Hết Sạch", function(v)
+AddToggle(MainTab, "Tự Động Đổi Server Thông Minh", function(v)
     _G.AutoHop = v
 end)
 
---// HỆ THỐNG LOGIC GAME
+--// HỆ THỐNG HOP SERVER CHỐNG LẶP DỮ LIỆU
 local function HopServer()
-    local x, y = pcall(function()
+    local fileName = "banana_hop_history.json"
+    local history = {}
+    
+    if isfile and isfile(fileName) then
+        pcall(function() history = HttpService:JSONDecode(readfile(fileName)) end)
+    end
+    if type(history) ~= "table" then history = {} end
+    if #history > 30 then table.remove(history, 1) end
+
+    local success, result = pcall(function()
         local req = game:HttpGet("https://games.roproxy.com/v1/games/" .. game.PlaceId .. "/servers/Public?sortOrder=Asc&limit=100")
         local data = HttpService:JSONDecode(req)
+        
         if data and data.data then
+            local validServers = {}
             for _, server in pairs(data.data) do
-                if server.id ~= game.JobId and server.playing < server.maxPlayers then
-                    TeleportService:TeleportToPlaceInstance(game.PlaceId, server.id, LocalPlayer)
-                    return
+                if server.id ~= game.JobId and server.playing < server.maxPlayers and server.playing > 1 then
+                    local visited = false
+                    for _, oldId in pairs(history) do
+                        if oldId == server.id then visited = true break end
+                    end
+                    if not visited then table.insert(validServers, server) end
                 end
+            end
+            
+            if #validServers > 0 then
+                local chosenServer = validServers[math.random(1, #validServers)]
+                table.insert(history, chosenServer.id)
+                if writefile then writefile(fileName, HttpService:JSONEncode(history)) end
+                TeleportService:TeleportToPlaceInstance(game.PlaceId, chosenServer.id, LocalPlayer)
+                return true
             end
         end
     end)
+    
+    if not success then TeleportService:Teleport(game.PlaceId, LocalPlayer) end
 end
 
+--// HÀM TWEEN SIÊU MƯỢT (CHỐNG RUNG GIẬT PHÝSICS)
 local function TweenTo(targetCFrame)
     local char = LocalPlayer.Character
-    if not char or not char:FindFirstChild("HumanoidRootPart") then return end
-    local dist = (char.HumanoidRootPart.Position - targetCFrame.Position).Magnitude
-    local info = TweenInfo.new(dist/280, Enum.EasingStyle.Linear) -- Tốc độ 280 (Gom cực nhanh, chống kick)
-    local tw = TweenService:Create(char.HumanoidRootPart, info, {CFrame = targetCFrame})
+    local root = char and char:FindFirstChild("HumanoidRootPart")
+    if not root then return end
+    
+    -- KHÓA CỨNG VẬT LÝ NHÂN VẬT: Loại bỏ hoàn toàn hiện tượng rung lắc camera
+    root.Anchored = true
+    
+    local dist = (root.Position - targetCFrame.Position).Magnitude
+    local info = TweenInfo.new(dist/280, Enum.EasingStyle.Linear)
+    local tw = TweenService:Create(root, info, {CFrame = targetCFrame})
     tw:Play()
+    
+    -- Khi bay tới đích, mở khóa vật lý ngay lập tức để nhặt rương
+    local connection
+    connection = tw.Completed:Connect(function()
+        root.Anchored = false
+        root.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+        root.AssemblyAngularVelocity = Vector3.new(0, 0, 0)
+        connection:Disconnect()
+    end)
+    
     return tw
 end
 
--- Quét tìm tọa độ toàn bộ đảo lớn
 local function GetIslands()
     local targets = {}
     for _, v in pairs(workspace:GetChildren()) do
@@ -269,83 +309,78 @@ local function GetIslands()
     return targets
 end
 
--- HÀM CẬP NHẬT DỮ LIỆU RƯƠNG LIÊN TỤC (TỐI ƯU KHÔNG SÓT)
 local function GetChest()
-    -- Quét trực tiếp ngoài Workspace trước
     for _, v in pairs(workspace:GetChildren()) do
-        if v.Name:find("Chest") and not v:GetAttribute("Collected") then
+        if v.Name:find("Chest") and not collectedChests[v] then
             local part = v:FindFirstChild("HumanoidRootPart") or v:FindFirstChild("RootPart") or (v:IsA("BasePart") and v)
-            if part then return part end
+            if part then return part, v end
         end
     end
-    -- Quét sâu vào các folder chứa rương phụ của Blox Fruits
     for _, folderName in pairs({"Chests", "ChestModels", "ChestSpawns"}) do
         local folder = workspace:FindFirstChild(folderName)
         if folder then
             for _, v in pairs(folder:GetChildren()) do
-                if v.Name:find("Chest") and not v:GetAttribute("Collected") then
+                if v.Name:find("Chest") and not collectedChests[v] then
                     local part = v:FindFirstChild("HumanoidRootPart") or v:FindFirstChild("RootPart") or (v:IsA("BasePart") and v)
-                    if part then return part end
+                    if part then return part, v end
                 end
             end
         end
     end
 end
 
---// VÒNG LẶP CHÍNH: CẬP NHẬT LIÊN TỤC & NHẶT KHÔNG NGỪNG NGHỈ
+--// VÒNG LẶP CHÍNH V7
 task.spawn(function()
     while true do
-        task.wait() -- Vòng lặp siêu tốc (Chạy ở tốc độ khung hình tối đa)
+        task.wait()
         
         if _G.AutoChest then
-            local chest = GetChest()
+            local chestPart, chestModel = GetChest()
             
-            if chest then
-                -- PHÁT HIỆN RƯƠNG: Lao đến đớp ngay lập tức
-                local tw = TweenTo(chest.CFrame)
+            if chestPart and chestModel then
+                local tw = TweenTo(chestPart.CFrame)
                 if tw then tw.Completed:Wait() end
                 
                 if firetouchinterest then
-                    firetouchinterest(LocalPlayer.Character.HumanoidRootPart, chest, 0)
+                    firetouchinterest(LocalPlayer.Character.HumanoidRootPart, chestPart, 0)
                     task.wait()
-                    firetouchinterest(LocalPlayer.Character.HumanoidRootPart, chest, 1)
+                    firetouchinterest(LocalPlayer.Character.HumanoidRootPart, chestPart, 1)
                 end
-                chest:SetAttribute("Collected", true)
+                
+                collectedChests[chestModel] = true
             else
-                -- KHÔNG THẤY RƯƠNG: Lập tức chuyển đảo ngay để bắt game load rương mới
                 if #islandList == 0 then
                     islandList = GetIslands()
                 end
                 
                 if #islandList > 0 then
-                    -- Nếu đã đi tuần tra hết tất cả các đảo trong server này
                     if currentIslandIdx > #islandList then
                         currentIslandIdx = 1
                         if _G.AutoHop then
                             HopServer()
-                            task.wait(3)
+                            task.wait(5)
                         end
                     end
                     
                     local targetIsland = islandList[currentIslandIdx]
                     if targetIsland then
-                        -- Bay lên cao 120 studs tránh kẹt địa hình khi di chuyển siêu tốc
-                        local safetyCFrame = targetIsland + Vector3.new(0, 120, 0)
+                        -- ĐÃ HẠ THẤP ĐỘ CAO: Thay vì +120 studs, giờ chỉ cộng +30 studs để bay là là sát mặt đảo
+                        local safetyCFrame = targetIsland + Vector3.new(0, 30, 0)
                         local tw = TweenTo(safetyCFrame)
                         if tw then tw.Completed:Wait() end
                         
-                        task.wait(0.25) -- Chỉ khựng lại 0.25 giây cực ngắn để game stream rương ra, rồi lập tức vòng lặp quét tiếp luôn!
+                        task.wait(0.2)
                     end
                     currentIslandIdx = currentIslandIdx + 1
                 else
-                    if _G.AutoHop then HopServer() task.wait(3) end
+                    if _G.AutoHop then HopServer() task.wait(5) end
                 end
             end
         end
     end
 end)
 
--- Hệ thống chống va chạm khi bay (Noclip)
+-- Hệ thống xuyên tường toàn diện
 RunService.Stepped:Connect(function()
     if _G.AutoChest and LocalPlayer.Character then
         for _, v in pairs(LocalPlayer.Character:GetDescendants()) do
