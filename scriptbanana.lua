@@ -1,5 +1,5 @@
 --=============================================================================
---    BANANA HUB PREMIUM V16 - STYLE FRONT MENU V10 (OPTIMIZED FOR DELTA)
+--    BANANA HUB PREMIUM V16 - STYLE V10 KHỬ LỖI MẤT NÚT TRÊN DELTA MOBILE
 --=============================================================================
 
 local Players = game:GetService("Players")
@@ -32,17 +32,17 @@ local ScreenGui = Instance.new("ScreenGui", game:GetService("CoreGui"))
 ScreenGui.Name = "BananaHubPremium"
 ScreenGui.ResetOnSpawn = false
 
---// 1. KHUNG CHÍNH (PHONG CÁCH V10 CHUẨN)
+--// 1. KHUNG CHÍNH (STYLE V10)
 local MainFrame = Instance.new("Frame", ScreenGui)
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 420, 0, 260)
-MainFrame.Position = UDim2.new(0.5, -210, 0.5, -130)
-MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25) -- Màu nền tối V10
+MainFrame.Size = UDim2.new(0, 420, 0, 250)
+MainFrame.Position = UDim2.new(0.5, -210, 0.5, -125)
+MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25) -- Màu đen mờ V10
 MainFrame.BorderSizePixel = 0
 
 Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 5)
 
--- Hệ thống kéo thả bằng Touch cho Mobile
+-- Hệ thống kéo thả Menu bằng cảm ứng Mobile
 local dragging, dragStart, startPos
 MainFrame.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -59,7 +59,7 @@ UserInputService.InputEnded:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then dragging = false end
 end)
 
---// 2. THANH TIÊU ĐỀ BÊN TRÊN (TOP BAR BANANA V10)
+--// 2. THANH TIÊU ĐỀ BANANA V10
 local TopBar = Instance.new("Frame", MainFrame)
 TopBar.Size = UDim2.new(1, 0, 0, 35)
 TopBar.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
@@ -70,13 +70,13 @@ local Title = Instance.new("TextLabel", TopBar)
 Title.Size = UDim2.new(0, 150, 1, 0)
 Title.Position = UDim2.new(0, 12, 0, 0)
 Title.Text = "Banana Hub V10"
-Title.TextColor3 = Color3.fromRGB(255, 255, 0) -- Màu vàng chuối đặc trưng
+Title.TextColor3 = Color3.fromRGB(255, 255, 0) -- Màu vàng chuối huyền thoại
 Title.TextSize = 15
 Title.Font = Enum.Font.SourceSansBold
 Title.TextXAlignment = Enum.TextXAlignment.Left
 Title.BackgroundTransparency = 1
 
--- Nút đóng / thu gọn
+-- Nút ẩn / hiện và đóng menu
 local CloseBtn = Instance.new("TextButton", TopBar)
 CloseBtn.Size = UDim2.new(0, 22, 0, 22)
 CloseBtn.Position = UDim2.new(1, -28, 0.5, -11)
@@ -99,7 +99,7 @@ RestoreBtn.Position = UDim2.new(0, 15, 0, 15)
 RestoreBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 0)
 RestoreBtn.Text = "Chuối"
 RestoreBtn.Font = Enum.Font.SourceSansBold
-RestoreBtn.TextSize = 14
+RestoreBtn.TextSize = 13
 RestoreBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
 RestoreBtn.Visible = false
 Instance.new("UICorner", RestoreBtn).CornerRadius = UDim.new(1, 0)
@@ -108,7 +108,7 @@ MinimizeBtn.MouseButton1Click:Connect(function() MainFrame.Visible = false Resto
 RestoreBtn.MouseButton1Click:Connect(function() RestoreBtn.Visible = false MainFrame.Visible = true end)
 CloseBtn.MouseButton1Click:Connect(function() ScreenGui:Destroy() end)
 
---// 3. THANH DIỀU HƯỚNG TAB BÊN TRÊN CHUẨN V10 (TOP TABS FRAME)
+--// 3. THANH DANH MỤC TABS NẰM NGANG CHUẨN V10
 local TabBar = Instance.new("Frame", MainFrame)
 TabBar.Size = UDim2.new(1, -16, 0, 30)
 TabBar.Position = UDim2.new(0, 8, 0, 40)
@@ -117,17 +117,17 @@ local TabListLayout = Instance.new("UIListLayout", TabBar)
 TabListLayout.FillDirection = Enum.FillDirection.Horizontal
 TabListLayout.Padding = UDim.new(0, 6)
 
--- Vùng hiển thị nội dung phía dưới thanh Tab
+-- Vùng chứa nội dung (Dùng Frame thường, TUYỆT ĐỐI BỎ SCROLLINGFRAME GÂY MẤT NÚT)
 local ContentArea = Instance.new("Frame", MainFrame)
-ContentArea.Position = UDim2.new(0, 8, 0, 75)
-ContentArea.Size = UDim2.new(1, -16, 1, -83)
+ContentArea.Position = UDim2.new(0, 8, 0, 78)
+ContentArea.Size = UDim2.new(1, -16, 1, -86)
 ContentArea.BackgroundTransparency = 1
 
---// 4. HÀM TẠO TAB & TOGGLE NẰM NGANG V10
+--// 4. HÀM TẠO TAB VÀ TOGGLE GIAO DIỆN V10 ĐÃ FIX LỖI DELTA
 local firstTab = true
 local function CreateTab(name)
     local TabBtn = Instance.new("TextButton", TabBar)
-    TabBtn.Size = UDim2.new(0, 90, 1, 0) -- Kích thước dàn ngang
+    TabBtn.Size = UDim2.new(0, 95, 1, 0)
     TabBtn.BackgroundColor3 = firstTab and Color3.fromRGB(255, 255, 0) or Color3.fromRGB(35, 35, 35)
     TabBtn.Text = name
     TabBtn.TextColor3 = firstTab and Color3.fromRGB(0, 0, 0) or Color3.fromRGB(230, 230, 230)
@@ -135,14 +135,11 @@ local function CreateTab(name)
     TabBtn.TextSize = 13
     Instance.new("UICorner", TabBtn).CornerRadius = UDim.new(0, 4)
 
-    local Page = Instance.new("ScrollingFrame", ContentArea)
+    -- Sử dụng Frame thường để ép Delta bắt buộc phải hiển thị nút ra màn hình
+    local Page = Instance.new("Frame", ContentArea)
     Page.Size = UDim2.new(1, 0, 1, 0)
     Page.BackgroundTransparency = 1
     Page.Visible = firstTab
-    Page.ScrollBarThickness = 3
-    Page.ScrollBarImageColor3 = Color3.fromRGB(255, 255, 0)
-    Page.AutomaticCanvasSize = Enum.AutomaticCanvasSize.Y
-    Page.CanvasSize = UDim2.new(0, 0, 0, 0)
 
     local ListLayout = Instance.new("UIListLayout", Page)
     ListLayout.Padding = UDim.new(0, 6)
@@ -166,13 +163,13 @@ end
 
 local function AddToggle(page, text, callback)
     local Frame = Instance.new("Frame", page)
-    Frame.Size = UDim2.new(1, -6, 0, 36)
+    Frame.Size = UDim2.new(1, 0, 0, 36) -- Đặt kích thước chính xác tuyệt đối
     Frame.BackgroundColor3 = Color3.fromRGB(32, 32, 32)
     Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 4)
 
     local Label = Instance.new("TextLabel", Frame)
     Label.Size = UDim2.new(1, -50, 1, 0)
-    Label.Position = UDim2.new(0, 10, 0, 0)
+    Label.Position = UDim2.new(0, 12, 0, 0)
     Label.Text = text
     Label.TextColor3 = Color3.fromRGB(240, 240, 240)
     Label.TextSize = 13
@@ -181,9 +178,9 @@ local function AddToggle(page, text, callback)
     Label.BackgroundTransparency = 1
 
     local Tog = Instance.new("TextButton", Frame)
-    Tog.Size = UDim2.new(0, 30, 0, 16)
-    Tog.Position = UDim2.new(1, -40, 0.5, -8)
-    Tog.BackgroundColor3 = Color3.fromRGB(55, 55, 55)
+    Tog.Size = UDim2.new(0, 32, 0, 16)
+    Tog.Position = UDim2.new(1, -42, 0.5, -8)
+    Tog.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
     Tog.Text = ""
     Instance.new("UICorner", Tog).CornerRadius = UDim.new(1, 0)
     
@@ -196,15 +193,15 @@ local function AddToggle(page, text, callback)
     local state = false
     Tog.MouseButton1Click:Connect(function()
         state = not state
-        Tog.BackgroundColor3 = state and Color3.fromRGB(255, 255, 0) or Color3.fromRGB(55, 55, 55)
-        TogCircle.Position = state and UDim2.new(0, 16, 0.5, -6) or UDim2.new(0, 2, 0.5, -6)
+        Tog.BackgroundColor3 = state and Color3.fromRGB(255, 255, 0) or Color3.fromRGB(60, 60, 60)
+        TogCircle.Position = state and UDim2.new(0, 18, 0.5, -6) or UDim2.new(0, 2, 0.5, -6)
         TogCircle.BackgroundColor3 = state and Color3.fromRGB(0, 0, 0) or Color3.fromRGB(255, 255, 255)
         callback(state)
     end)
 end
 
 --=============================================================================
---         TÍCH HỢP TOÀN BỘ DANH MỤC NÚT BẤM (GIAO DIỆN V10)
+--         TÍCH HỢP NÚT CHỨC NĂNG (GIAO DIỆN KHÔNG SCROLL - HIỆN 100%)
 --=============================================================================
 local MainTab = CreateTab("Trang Chủ")
 AddToggle(MainTab, "Càn Quét Rương Tốc Độ (V10)", function(v) _G.AutoChest = v end)
@@ -215,7 +212,7 @@ AddToggle(V4Tab, "OVERCLOCK: Đồ Sát Trial", function(v) _G.AutoKillPlayers =
 AddToggle(V4Tab, "Đan Xen Trái Ác Quỷ & Melee", function(v) _G.WeaveFastAttack = v end)
 
 --=============================================================================
---                         HỆ THỐNG LOGIC PHỤ TRỢ BÊN TRONG
+--                         HỆ THỐNG LOGIC VẬN HÀNH BÊN TRONG
 --=============================================================================
 local function HopServer()
     local fileName = "banana_hop_history.json"
@@ -312,7 +309,7 @@ local function GetChest()
 end
 
 --=============================================================================
---    VÒNG LẶP CHẠY FAST ATTACK OVERCLOCK SÁT THƯƠNG KHỦNG QUA REMOTE
+--    VÒNG LẶP FAST ATTACK OVERCLOCK SIÊU SÁT THƯƠNG QUA REMOTE
 --=============================================================================
 task.spawn(function()
     local attackCounter = 0
