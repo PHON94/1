@@ -366,11 +366,34 @@ local function GetFruitTool()
     return nil
 end
 
+local function GetChest()
+    for _, v in pairs(workspace:GetChildren()) do
+        if v.Name:find("Chest") and not collectedChests[v] then
+            local part = v:FindFirstChild("HumanoidRootPart") or v:FindFirstChild("RootPart") or (v:IsA("BasePart") and v)
+            if part then return part, v end
+        end
+    end
+    for _, folderName in pairs({"Chests", "ChestModels", "ChestSpawns"}) do
+        local folder = workspace:FindFirstChild(folderName)
+        if folder then
+            for _, v in pairs(folder:GetChildren()) do
+                if v.Name:find("Chest") and not collectedChests[v] then
+                    local part = v:FindFirstChild("HumanoidRootPart") or v:FindFirstChild("RootPart") or (v:IsA("BasePart") and v)
+                    if part then return part, v end
+                end
+            end
+        end
+    end
+end
+
 --=============================================================================
---           XỬ LÝ CHẾ ĐỘ ĐÁNH THEO ĐÚNG YÊU CẦU PHÂN CHIA NÚT BẤM
+--         XỬ LÝ CHẾ ĐỘ ĐÁNH FAST ATTACK TỐI ƯU QUA REMOTE REGISTERATTACK
 --=============================================================================
 task.spawn(function()
     local attackCounter = 0
+    local lastAttackTime = 0
+    local attackCooldown = 0.05 -- Ngưỡng an toàn chống kích hoạt Anti-Cheat hệ thống công bằng
+
     while true do
         RunService.Heartbeat:Wait()
         
@@ -383,50 +406,61 @@ task.spawn(function()
             if targetPlayer and char and hum and root then
                 local targetRoot = targetPlayer.Character:FindFirstChild("HumanoidRootPart")
                 if targetRoot then
-                    -- Giữ lơ lửng bám sát mục tiêu
+                    -- Duy trì khoảng cách lơ lửng áp sát mục tiêu
                     MaintainHover()
-                    root.CFrame = targetRoot.CFrame * CFrame.new(0, 0, 3) -- Đứng trước mặt mục tiêu 3 studs
+                    root.CFrame = targetRoot.CFrame * CFrame.new(0, 0, 2.5) -- Áp sát 2.5 Studs để Remote nhận diện Hitbox
                     
+                    local currentDist = (root.Position - targetRoot.Position).Magnitude
                     local meleeTool = GetMeleeTool()
                     
-                    -- CHẾ ĐỘ 1: Đan xen vũ khí (Fruit & Melee) được bật
-                    if _G.WeaveFastAttack then
-                        local fruitTool = GetFruitTool()
-                        if fruitTool and meleeTool then
-                            attackCounter = attackCounter + 1
-                            
-                            if attackCounter <= 2 then
-                                -- Thực hiện 2 phát đánh bằng Trái ác quỷ
-                                if hum.Parent and fruitTool.Parent ~= char then
-                                    hum:EquipTool(fruitTool)
+                    -- Chỉ gửi gói tin tấn công khi khoảng cách hợp lệ (Bảo mật tối đa, tránh ban)
+                    if currentDist <= 15 and (tick() - lastAttackTime) >= attackCooldown then
+                        local remote = game:GetService("ReplicatedStorage"):WaitForChild("Modules"):WaitForChild("Net"):FindFirstChild("RE/RegisterAttack")
+                        
+                        if remote then
+                            -- CHẾ ĐỘ 1: Đan xen vũ khí (Fruit & Melee) được bật
+                            if _G.WeaveFastAttack then
+                                local fruitTool = GetFruitTool()
+                                if fruitTool and meleeTool then
+                                    attackCounter = attackCounter + 1
+                                    
+                                    if attackCounter <= 2 then
+                                        -- Nhịp 1-2: Đánh bằng Fruit
+                                        if hum.Parent and fruitTool.Parent ~= char then
+                                            hum:EquipTool(fruitTool)
+                                        end
+                                    else
+                                        -- Nhịp 3-4: Đánh bằng Melee
+                                        if hum.Parent and meleeTool.Parent ~= char then
+                                            hum:EquipTool(meleeTool)
+                                        end
+                                    end
+                                    
+                                    -- Bypass Animation: Gọi trực tiếp Remote kích hoạt sát thương tức thì
+                                    remote:FireServer(0.4000000059604645)
+                                    lastAttackTime = tick()
+                                    
+                                    if attackCounter >= 4 then
+                                        attackCounter = 0
+                                    end
+                                elseif meleeTool then
+                                    -- Backup phòng khi không có Fruit, tự động dùng Melee thuần
+                                    if hum.Parent and meleeTool.Parent ~= char then
+                                        hum:EquipTool(meleeTool)
+                                    end
+                                    remote:FireServer(0.4000000059604645)
+                                    lastAttackTime = tick()
                                 end
-                                fruitTool:Activate()
                             else
-                                -- Thực hiện 2 phát đánh bằng Melee
-                                if hum.Parent and meleeTool.Parent ~= char then
-                                    hum:EquipTool(meleeTool)
+                                -- CHẾ ĐỘ 2: Đánh Melee thuần túy (Khi tắt Đan xen)
+                                if meleeTool then
+                                    if hum.Parent and meleeTool.Parent ~= char then
+                                        hum:EquipTool(meleeTool)
+                                    end
+                                    remote:FireServer(0.4000000059604645)
+                                    lastAttackTime = tick()
                                 end
-                                meleeTool:Activate()
                             end
-                            
-                            -- Reset bộ đếm chu kỳ sau khi đủ 4 lần nhấn (2 Fruit + 2 Melee)
-                            if attackCounter >= 4 then
-                                attackCounter = 0
-                            end
-                        elseif meleeTool then
-                            -- Nếu bật đan xen nhưng không tìm thấy Trái, tự động dùng Melee thuần
-                            if hum.Parent and meleeTool.Parent ~= char then
-                                hum:EquipTool(meleeTool)
-                            end
-                            meleeTool:Activate()
-                        end
-                    else
-                        -- CHẾ ĐỘ 2: Melee thuần túy (Khi tắt Đan xen vũ khí)
-                        if meleeTool then
-                            if hum.Parent and meleeTool.Parent ~= char then
-                                hum:EquipTool(meleeTool)
-                            end
-                            meleeTool:Activate()
                         end
                     end
                 end
@@ -455,7 +489,6 @@ task.spawn(function()
                     task.wait(0.2)
                 end
             else
-                -- Khi hết rương trong server thì tự động nhảy sang server khác nếu AutoHop bật
                 if _G.AutoHop then
                     HopServer()
                 end
