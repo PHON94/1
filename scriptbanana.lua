@@ -1,5 +1,5 @@
 --=============================================================================
---    BANANA HUB V16 - PHIÊN BẢN ĐỒ SÁT TRIAL SIÊU TỐC & EXPAND HITBOX
+--    PHONGDZ HUB V16 - PHIÊN BẢN ĐỒ SÁT TRIAL SIÊU TỐC & EXPAND HITBOX (FIXED)
 --=============================================================================
 
 local Players = game:GetService("Players")
@@ -24,13 +24,13 @@ local MELEE_LIST = {
 }
 
 --// XÓA GIAO DIỆN CŨ
-if game:GetService("CoreGui"):FindFirstChild("BananaHubPremium") then
-    game:GetService("CoreGui").BananaHubPremium:Destroy()
+if game:GetService("CoreGui"):FindFirstChild("PhongdzHub") then
+    game:GetService("CoreGui").PhongdzHub:Destroy()
 end
 
 --// SCREEN GUI
 local ScreenGui = Instance.new("ScreenGui", game:GetService("CoreGui"))
-ScreenGui.Name = "BananaHubPremium"
+ScreenGui.Name = "PhongdzHub"
 ScreenGui.ResetOnSpawn = false
 
 --// 1. KHUNG CHÍNH (MAIN)
@@ -46,7 +46,7 @@ Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 6)
 local dragging, dragStart, startPos
 MainFrame.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        dragging = true dragStart = input.Position startPos = MainFrame.Position
+        dragging = true; dragStart = input.Position; startPos = MainFrame.Position
     end
 end)
 UserInputService.InputChanged:Connect(function(input)
@@ -69,7 +69,7 @@ Instance.new("UICorner", Sidebar).CornerRadius = UDim.new(0, 6)
 
 local Logo = Instance.new("TextLabel", Sidebar)
 Logo.Size = UDim2.new(1, 0, 0, 40)
-Logo.Text = "BANANA HUB"
+Logo.Text = "PHONGDZ HUB"
 Logo.TextColor3 = Color3.fromRGB(255, 255, 0)
 Logo.TextSize = 16
 Logo.Font = Enum.Font.SourceSansBold
@@ -244,8 +244,8 @@ local function MaintainHover()
     local root = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
     if not root then return end
     local bv = root:FindFirstChild("BananaHoverForce") or Instance.new("BodyVelocity")
-    bv.Name = "BananaHoverForce" bv.Velocity = Vector3.new(0, 0, 0)
-    bv.MaxForce = Vector3.new(9e9, 9e9, 9e9) bv.Parent = root
+    bv.Name = "BananaHoverForce"; bv.Velocity = Vector3.new(0, 0, 0)
+    bv.MaxForce = Vector3.new(9e9, 9e9, 9e9); bv.Parent = root
 end
 
 local function RemoveHover()
@@ -374,14 +374,16 @@ task.spawn(function()
                 local root = p.Character:FindFirstChild("HumanoidRootPart")
                 if root then
                     if _G.AutoKillPlayers then
-                        -- Phóng to hitbox lên kích thước 15x15x15 và tắt va chạm để đánh chuẩn hơn
-                        root.Size = Vector3.new(15, 15, 15)
+                        -- Phóng to hitbox lên kích thước 25x25x25 (lớn hơn trước) và tắt va chạm để đánh chuẩn hơn
+                        root.Size = Vector3.new(25, 25, 25)
                         root.CanCollide = false
+                        root.Transparency = 0.5 -- Cho dễ nhìn
                     else
                         -- Khôi phục kích thước gốc khi tắt chức năng
                         if root.Size ~= Vector3.new(2, 2, 1) then
                             root.Size = Vector3.new(2, 2, 1)
                             root.CanCollide = true
+                            root.Transparency = 0
                         end
                     end
                 end
@@ -391,7 +393,7 @@ task.spawn(function()
 end)
 
 --=============================================================================
---    VÒNG LẶP SÁT THƯƠNG (NÂNG CẤP ĐỒ SÁT SPEED CAO)
+--    VÒNG LẶP SÁT THƯƠNG (NÂNG CẤP ĐỒ SÁT SPEED CAO - FIX AUTO KILL)
 --=============================================================================
 task.spawn(function()
     local attackCounter = 0
@@ -415,8 +417,13 @@ task.spawn(function()
                     root.CFrame = tRoot.CFrame * CFrame.new(0, 0, 2.2)
                     root.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
                     
-                    local remote = game:GetService("ReplicatedStorage"):WaitForChild("Modules"):WaitForChild("Net"):FindFirstChild("RE/RegisterAttack")
-                    if remote then
+                    -- FIX: Dùng RE/RegisterHit thay vì RE/RegisterAttack (Dùng Spy để lấy)
+                    local registerHit = nil
+                    pcall(function()
+                        registerHit = game:GetService("ReplicatedStorage").Modules.Net:FindFirstChild("RE/RegisterHit")
+                    end)
+                    
+                    if registerHit then
                         local melee = GetTool(true)
                         if _G.WeaveFastAttack then
                             local fruit = GetTool(false)
@@ -425,17 +432,17 @@ task.spawn(function()
                                 local currentTool = (attackCounter <= 2) and fruit or melee
                                 if hum.Parent and currentTool.Parent ~= char then hum:EquipTool(currentTool) end
                                 
-                                -- TỐC ĐỘ CAO: Spam remote 4 lần mỗi khung hình (Mạnh gấp đôi bản cũ)
-                                for i = 1, 4 do remote:FireServer(0.4000000059604645) end
+                                -- TỐC ĐỘ CAO: Spam RE/RegisterHit 1 lần mỗi khung hình (tránh throttle)
+                                pcall(function() registerHit:FireServer(0.4000000059604645) end)
                                 if attackCounter >= 4 then attackCounter = 0 end
                             elseif melee then
                                 if hum.Parent and melee.Parent ~= char then hum:EquipTool(melee) end
-                                for i = 1, 4 do remote:FireServer(0.4000000059604645) end
+                                pcall(function() registerHit:FireServer(0.4000000059604645) end)
                             end
                         else
                             if melee then
                                 if hum.Parent and melee.Parent ~= char then hum:EquipTool(melee) end
-                                for i = 1, 4 do remote:FireServer(0.4000000059604645) end
+                                pcall(function() registerHit:FireServer(0.4000000059604645) end)
                             end
                         end
                     end
