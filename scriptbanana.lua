@@ -277,20 +277,23 @@ local function TweenTo(targetCFrame)
         if connection then connection:Disconnect() end
     end)
     
+    --// FIX: THÊM TIMEOUT ĐỂ TRÁNH BỊ TREO
+    local timeoutCounter = 0
     while not completed and _G.AutoChest and hum.Health > 0 do
         root.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
-        task.wait()
+        timeoutCounter = timeoutCounter + 1
+        if timeoutCounter > 500 then -- 5 giây timeout (0.01 * 500 = 5s)
+            tween:Cancel()
+            if connection then connection:Disconnect() end
+            hum.PlatformStand = false
+            return false
+        end
+        task.wait(0.01)
     end
     
-    if not _G.AutoChest or hum.Health <= 0 then
-        tween:Cancel()
-        if connection then connection:Disconnect() end
-        hum.PlatformStand = false
-        return false
-    end
-    
+    --// FIX: CHỈ KIỂM TRA TWEEN ĐÃ HOÀN THÀNH HAY CHƯA
     hum.PlatformStand = false
-    return true
+    return completed
 end
 
 --// CHỈNH SỬA: QUÉT TOÀN MAP (MATH.HUGE) ĐỂ SĂN HẾT PLAYER TRONG PHÒNG TRIAL
@@ -461,18 +464,18 @@ task.spawn(function()
 end)
 
 --=============================================================================
---                    VÒNG LẶP RƯƠNG
+--                    VÒNG LẶP RƯƠNG (FIXED - BỎ CONDITION AUTOKILLPLAYERS)
 --=============================================================================
 task.spawn(function()
     while true do
         task.wait(0.1)
-        if _G.AutoChest and not _G.AutoKillPlayers then
+        if _G.AutoChest then
             local cPart, cModel = GetChest()
             if cPart then
                 MaintainHover()
                 if TweenTo(cPart.CFrame * CFrame.new(0, 2, 0)) then 
                     collectedChests[cModel] = true 
-                    task.wait(0.1) 
+                    task.wait(0.3) -- Thêm delay giữa các lần nhặt
                 end
             else
                 if _G.AutoHop then HopServer() end
