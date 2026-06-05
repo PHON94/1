@@ -142,4 +142,27 @@ RestoreBtn.TextColor3 = Color3.fromRGB(0,0,0)
 RestoreBtn.Visible = false
 Instance.new("UICorner", RestoreBtn).CornerRadius = UDim.new(1, 0)
 
-MinimizeBtn.MouseButton1Click:
+MinimizeBtn.MouseButton1Click:Connect(function()
+    MainFrame:TweenSize(UDim2.new(0,0,0,0), "Out", "Quart", 0.3, true)
+    task.wait(0.3)
+    MainFrame.Visible = false
+    RestoreBtn.Visible = true
+end)
+
+RestoreBtn.MouseButton1Click:Connect(function()
+    RestoreBtn.Visible = false
+    MainFrame.Visible = true
+    MainFrame:TweenSize(UDim2.new(0, 550, 0, 350), "Out", "Quart", 0.3, true)
+end)
+
+CloseBtn.MouseButton1Click:Connect(function() ScreenGui:Destroy() end)
+
+--// 5. HÀM TẠO TAB & TOGGLE (ĐÃ FIX LỖI TỰ CO GIÃN THEO NÚT)
+local function CreateTab(name, isDefault)
+    local TabBtn = Instance.new("TextButton", TabContainer)
+    TabBtn.Size = UDim2.new(1, 0, 0, 35)
+    TabBtn.BackgroundColor3 = isDefault and Color3.fromRGB(255, 215, 0) or Color3.fromRGB(30, 30, 30)
+    TabBtn.Text = name
+    TabBtn.TextColor3 = isDefault and Color3.fromRGB(0, 0, 0) or Color3.fromRGB(200, 200, 200)
+    TabBtn.Font = Enum.Font.GothamSemibold
+    TabBtn
