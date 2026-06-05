@@ -1,5 +1,5 @@
 --=============================================================================
---    BANANA HUB PREMIUM V16 - EDITION OVERCLOCK (SIÊU CẤP ĐỒ SÁT TRIAL)
+--    BANANA HUB PREMIUM V16 - OPTIMIZED FOR DELTA EXECUTOR (FIXED UI)
 --=============================================================================
 
 local Players = game:GetService("Players")
@@ -23,7 +23,7 @@ local MELEE_LIST = {
     "Dragon Talon", "Godhuman", "Sanguine Art"
 }
 
---// DỌN DẸP UI CŨ KHỎI CORE_GUI
+--// DỌN DẸP UI CŨ
 if game:GetService("CoreGui"):FindFirstChild("BananaHubPremium") then
     game:GetService("CoreGui").BananaHubPremium:Destroy()
 end
@@ -37,96 +37,92 @@ local function ApplyTween(obj, info, goal)
     return TweenService:Create(obj, TweenInfo.new(info, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), goal):Play()
 end
 
---// 1. KHUNG CHÍNH (MAIN FRAME)
+--// 1. KHUNG CHÍNH (THU GỌN KÍCH THƯỚC PHÙ HỢP MOBILE DƯỚI 500 PIXELS)
 local MainFrame = Instance.new("Frame", ScreenGui)
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 550, 0, 350)
-MainFrame.Position = UDim2.new(0.5, -275, 0.5, -175)
+MainFrame.Size = UDim2.new(0, 460, 0, 280) -- Thu gọn cho vừa màn hình Delta
+MainFrame.Position = UDim2.new(0.5, -230, 0.5, -140)
 MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
 MainFrame.BorderSizePixel = 0
 MainFrame.ClipsDescendants = true
 
-Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 12)
+Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 10)
 local MainStroke = Instance.new("UIStroke", MainFrame)
 MainStroke.Thickness = 1.5
 MainStroke.Color = Color3.fromRGB(45, 45, 45)
 
--- Hệ thống kéo thả Menu
+-- Hỗ trợ kéo thả trên cảm ứng Mobile
 local dragging, dragStart, startPos
 MainFrame.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
         dragging = true dragStart = input.Position startPos = MainFrame.Position
     end
 end)
 UserInputService.InputChanged:Connect(function(input)
-    if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+    if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
         local delta = input.Position - dragStart
         MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
     end
 end)
 UserInputService.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then dragging = false end
 end)
 
---// 2. THANH BÊN (SIDEBAR) & NỘI DUNG
+--// 2. THANH BÊN (SIDEBAR)
 local Sidebar = Instance.new("Frame", MainFrame)
-Sidebar.Size = UDim2.new(0, 160, 1, 0)
+Sidebar.Size = UDim2.new(0, 130, 1, 0)
 Sidebar.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 Sidebar.BorderSizePixel = 0
 
-local SidebarLine = Instance.new("Frame", Sidebar)
-SidebarLine.Size = UDim2.new(0, 1, 1, 0)
-SidebarLine.Position = UDim2.new(1, 0, 0, 0)
-SidebarLine.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
-
 local Logo = Instance.new("TextLabel", Sidebar)
-Logo.Size = UDim2.new(1, 0, 0, 60)
-Logo.Text = "BANANA OVERCLOCK"
-Logo.TextColor3 = Color3.fromRGB(255, 69, 0) -- Đổi màu cam đỏ rực rỡ bộc lộ sức mạnh
-Logo.TextSize = 16
+Logo.Size = UDim2.new(1, 0, 0, 45)
+Logo.Text = "BANANA HUB"
+Logo.TextColor3 = Color3.fromRGB(255, 69, 0)
+Logo.TextSize = 15
 Logo.Font = Enum.Font.GothamBold
 Logo.BackgroundTransparency = 1
 
 local TabContainer = Instance.new("Frame", Sidebar)
-TabContainer.Position = UDim2.new(0, 10, 0, 70)
-TabContainer.Size = UDim2.new(1, -20, 1, -80)
+TabContainer.Position = UDim2.new(0, 8, 0, 50)
+TabContainer.Size = UDim2.new(1, -16, 1, -60)
 TabContainer.BackgroundTransparency = 1
-Instance.new("UIListLayout", TabContainer).Padding = UDim.new(0, 8)
+local TabListLayout = Instance.new("UIListLayout", TabContainer)
+TabListLayout.Padding = UDim.new(0, 6)
 
 local ContentArea = Instance.new("Frame", MainFrame)
-ContentArea.Position = UDim2.new(0, 170, 0, 50)
-ContentArea.Size = UDim2.new(1, -180, 1, -60)
+ContentArea.Position = UDim2.new(0, 140, 0, 45)
+ContentArea.Size = UDim2.new(1, -150, 1, -55)
 ContentArea.BackgroundTransparency = 1
 
---// 3. NÚT THU GỌN / ĐÓNG MENU
+--// 3. NÚT THU GỌN / ĐÓNG MENU CHỐNG TRÀN SCREEN
 local TopButtons = Instance.new("Frame", MainFrame)
-TopButtons.Size = UDim2.new(1, -170, 0, 40)
-TopButtons.Position = UDim2.new(0, 170, 0, 0)
+TopButtons.Size = UDim2.new(1, -140, 0, 45)
+TopButtons.Position = UDim2.new(0, 140, 0, 0)
 TopButtons.BackgroundTransparency = 1
 
 local MinimizeBtn = Instance.new("TextButton", TopButtons)
-MinimizeBtn.Size = UDim2.new(0, 30, 0, 30)
-MinimizeBtn.Position = UDim2.new(1, -70, 0.5, -15)
+MinimizeBtn.Size = UDim2.new(0, 28, 0, 28)
+MinimizeBtn.Position = UDim2.new(1, -65, 0.5, -14)
 MinimizeBtn.Text = "-"
 MinimizeBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
 MinimizeBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
 MinimizeBtn.Font = Enum.Font.GothamBold
-MinimizeBtn.TextSize = 18
-Instance.new("UICorner", MinimizeBtn).CornerRadius = UDim.new(0, 6)
+MinimizeBtn.TextSize = 16
+Instance.new("UICorner", MinimizeBtn).CornerRadius = UDim.new(0, 5)
 
 local CloseBtn = MinimizeBtn:Clone()
 CloseBtn.Text = "×"
-CloseBtn.Position = UDim2.new(1, -35, 0.5, -15)
+CloseBtn.Position = UDim2.new(1, -32, 0.5, -14)
 CloseBtn.BackgroundColor3 = Color3.fromRGB(150, 50, 50)
 CloseBtn.Parent = TopButtons
 
 local RestoreBtn = Instance.new("TextButton", ScreenGui)
-RestoreBtn.Size = UDim2.new(0, 45, 0, 45)
-RestoreBtn.Position = UDim2.new(0, 15, 0, 15)
+RestoreBtn.Size = UDim2.new(0, 40, 0, 40)
+RestoreBtn.Position = UDim2.new(0, 10, 0, 10)
 RestoreBtn.BackgroundColor3 = Color3.fromRGB(255, 69, 0)
 RestoreBtn.Text = "⚡"
 RestoreBtn.Font = Enum.Font.GothamBold
-RestoreBtn.TextSize = 22
+RestoreBtn.TextSize = 20
 RestoreBtn.TextColor3 = Color3.fromRGB(255,255,255)
 RestoreBtn.Visible = false
 Instance.new("UICorner", RestoreBtn).CornerRadius = UDim.new(1, 0)
@@ -138,41 +134,41 @@ end)
 
 RestoreBtn.MouseButton1Click:Connect(function()
     RestoreBtn.Visible = false MainFrame.Visible = true
-    MainFrame:TweenSize(UDim2.new(0, 550, 0, 350), "Out", "Quart", 0.2, true)
+    MainFrame:TweenSize(UDim2.new(0, 460, 0, 280), "Out", "Quart", 0.2, true)
 end)
 
 CloseBtn.MouseButton1Click:Connect(function() ScreenGui:Destroy() end)
 
---// 4. HÀM TẠO TAB & TOGGLE (CHUẨN TỌA ĐỘ)
+--// 4. HÀM TẠO TAB & TOGGLE - BẮT BUỘC TÍNH TOÁN CANVAS ĐỘNG CHỐNG MẤT NÚT
 local function CreateTab(name, isDefault)
     local TabBtn = Instance.new("TextButton", TabContainer)
-    TabBtn.Size = UDim2.new(1, 0, 0, 35)
+    TabBtn.Size = UDim2.new(1, 0, 0, 32)
     TabBtn.BackgroundColor3 = isDefault and Color3.fromRGB(255, 69, 0) or Color3.fromRGB(30, 30, 30)
     TabBtn.Text = name
     TabBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
     TabBtn.Font = Enum.Font.GothamSemibold
-    TabBtn.TextSize = 13
-    Instance.new("UICorner", TabBtn).CornerRadius = UDim.new(0, 6)
+    TabBtn.TextSize = 12
+    Instance.new("UICorner", TabBtn).CornerRadius = UDim.new(0, 5)
 
     local Page = Instance.new("ScrollingFrame", ContentArea)
     Page.Size = UDim2.new(1, 0, 1, 0)
     Page.BackgroundTransparency = 1
     Page.Visible = isDefault
-    Page.ScrollBarThickness = 2
+    Page.ScrollBarThickness = 3
     Page.ScrollBarImageColor3 = Color3.fromRGB(255, 69, 0)
+    
+    -- Cơ chế khóa Canvas động cho Mobile Delta
     Page.AutomaticCanvasSize = Enum.AutomaticCanvasSize.Y
     Page.CanvasSize = UDim2.new(0, 0, 0, 0)
 
     local ListLayout = Instance.new("UIListLayout", Page)
-    ListLayout.Padding = UDim.new(0, 8)
+    ListLayout.Padding = UDim.new(0, 6)
     ListLayout.SortOrder = Enum.SortOrder.LayoutOrder
 
     TabBtn.MouseButton1Click:Connect(function()
         for _, p in pairs(ContentArea:GetChildren()) do p.Visible = false end
         for _, b in pairs(TabContainer:GetChildren()) do
-            if b:IsA("TextButton") then
-                b.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-            end
+            if b:IsA("TextButton") then b.BackgroundColor3 = Color3.fromRGB(30, 30, 30) end
         end
         Page.Visible = true
         TabBtn.BackgroundColor3 = Color3.fromRGB(255, 69, 0)
@@ -182,44 +178,44 @@ end
 
 local function AddToggle(page, text, callback)
     local Frame = Instance.new("Frame", page)
-    Frame.Size = UDim2.new(1, -10, 0, 42)
-    Frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-    Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 6)
+    Frame.Size = UDim2.new(1, -8, 0, 38)
+    Frame.BackgroundColor3 = Color3.fromRGB(28, 28, 28)
+    Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 5)
 
     local Label = Instance.new("TextLabel", Frame)
-    Label.Size = UDim2.new(1, -60, 1, 0)
-    Label.Position = UDim2.new(0, 12, 0, 0)
+    Label.Size = UDim2.new(1, -55, 1, 0)
+    Label.Position = UDim2.new(0, 10, 0, 0)
     Label.Text = text
     Label.TextColor3 = Color3.fromRGB(220, 220, 220)
-    Label.TextSize = 13
+    Label.TextSize = 12
     Label.Font = Enum.Font.Gotham
     Label.TextXAlignment = Enum.TextXAlignment.Left
     Label.BackgroundTransparency = 1
 
     local Tog = Instance.new("TextButton", Frame)
-    Tog.Size = UDim2.new(0, 36, 0, 18)
-    Tog.Position = UDim2.new(1, -48, 0.5, -9)
+    Tog.Size = UDim2.new(0, 32, 0, 16)
+    Tog.Position = UDim2.new(1, -42, 0.5, -8)
     Tog.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
     Tog.Text = ""
     Instance.new("UICorner", Tog).CornerRadius = UDim.new(1, 0)
     
     local TogCircle = Instance.new("Frame", Tog)
-    TogCircle.Size = UDim2.new(0, 14, 0, 14)
-    TogCircle.Position = UDim2.new(0, 2, 0.5, -7)
+    TogCircle.Size = UDim2.new(0, 12, 0, 12)
+    TogCircle.Position = UDim2.new(0, 2, 0.5, -6)
     TogCircle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     Instance.new("UICorner", TogCircle).CornerRadius = UDim.new(1, 0)
 
     local state = false
     Tog.MouseButton1Click:Connect(function()
         state = not state
-        ApplyTween(Tog, 0.15, {BackgroundColor3 = state and Color3.fromRGB(255, 69, 0) or Color3.fromRGB(50, 50, 50)})
-        ApplyTween(TogCircle, 0.15, {Position = state and UDim2.new(0, 20, 0.5, -7) or UDim2.new(0, 2, 0.5, -7)})
+        ApplyTween(Tog, 0.12, {BackgroundColor3 = state and Color3.fromRGB(255, 69, 0) or Color3.fromRGB(50, 50, 50)})
+        ApplyTween(TogCircle, 0.12, {Position = state and UDim2.new(0, 18, 0.5, -6) or UDim2.new(0, 2, 0.5, -6)})
         callback(state)
     end)
 end
 
 --=============================================================================
---         TÍCH HỢP TOÀN BỘ CÁC NÚT CHỨC NĂNG
+--         KHỞI TẠO NÚT CHỨC NĂNG CHUẨN KHÔNG BỊ TRÀN
 --=============================================================================
 local MainTab = CreateTab("Trang Chủ", true)
 AddToggle(MainTab, "Càn Quét Rương Tốc Độ (V10)", function(v) _G.AutoChest = v end)
@@ -227,7 +223,7 @@ AddToggle(MainTab, "Tự Động Đổi Server Thông Minh", function(v) _G.Auto
 
 local V4Tab = CreateTab("Tộc V4", false)
 AddToggle(V4Tab, "OVERCLOCK: Diệt Sạch Trial", function(v) _G.AutoKillPlayers = v end)
-AddToggle(V4Tab, "Đan Xen Fruit & Melee (Tốc Độ Cao)", function(v) _G.WeaveFastAttack = v v end)
+AddToggle(V4Tab, "Đan Xen Fruit & Melee (Tốc Độ Cao)", function(v) _G.WeaveFastAttack = v end)
 
 --=============================================================================
 --                         HỆ THỐNG LOGIC PHỤ TRỢ
@@ -329,82 +325,54 @@ local function GetChest()
 end
 
 --=============================================================================
---    SIÊU VÒNG LẶP FAST ATTACK OVERCLOCK - ĐÈ BẸT TOÀN BỘ HUB KHÁC
+--    SIÊU VÒNG LẶP FAST ATTACK OVERCLOCK KÍCH HOẠT QUA REMOTE
 --=============================================================================
 task.spawn(function()
     local attackCounter = 0
     while true do
-        RunService.Heartbeat:Wait() -- Chạy đồng bộ theo khung hình máy chủ cao nhất
-        
+        RunService.Heartbeat:Wait()
         if _G.AutoKillPlayers then
             local target = GetClosestPlayerInTrial()
             local char = LocalPlayer.Character
             local hum = char and char:FindFirstChildWhichIsA("Humanoid")
             local root = char and char:FindFirstChild("HumanoidRootPart")
-            
             if target and char and hum and root and hum.Health > 0 then
                 local tRoot = target.Character:FindFirstChild("HumanoidRootPart")
                 local tHum = target.Character:FindFirstChildWhichIsA("Humanoid")
-                
                 if tRoot and tHum and tHum.Health > 0 then
-                    -- 1. KHÓA CHẶT VỊ TRÍ (CFrame Manipulation Bypass Ragdoll)
-                    hum.PlatformStand = true -- Chống bị hiệu ứng đẩy lùi hoặc hất tung
-                    MaintainHover()
-                    
-                    -- Ép góc đứng ngay sau lưng đối thủ 2.2 studs để hitbox chạm mục tiêu tuyệt đối
+                    hum.PlatformStand = true MaintainHover()
                     root.CFrame = tRoot.CFrame * CFrame.new(0, 0, 2.2)
-                    root.AssemblyLinearVelocity = Vector3.new(0,0,0) -- Triệt tiêu quán tính rơi tự do
-                    
+                    root.AssemblyLinearVelocity = Vector3.new(0,0,0)
                     local remote = game:GetService("ReplicatedStorage"):WaitForChild("Modules"):WaitForChild("Net"):FindFirstChild("RE/RegisterAttack")
                     if remote then
                         local melee = GetTool(true)
-                        
-                        -- 2. CƠ CHẾ ĐAN XEN VŨ KHÍ SIÊU TỐC
                         if _G.WeaveFastAttack then
                             local fruit = GetTool(false)
                             if fruit and melee then
                                 attackCounter = attackCounter + 1
                                 local currentTool = (attackCounter <= 2) and fruit or melee
-                                
-                                if hum.Parent and currentTool.Parent ~= char then 
-                                    hum:EquipTool(currentTool) 
-                                end
-                                
-                                -- MULTI-FIRE OVERCLOCK: Nhân bản lệnh gửi gói tin sát thương lên 4 lần / 1 khung hình
-                                remote:FireServer(0.4000000059604645)
-                                remote:FireServer(0.4000000059604645)
-                                remote:FireServer(0.4000000059604645)
-                                remote:FireServer(0.4000000059604645)
-                                
+                                if hum.Parent and currentTool.Parent ~= char then hum:EquipTool(currentTool) end
+                                remote:FireServer(0.4000000059604645) remote:FireServer(0.4000000059604645)
+                                remote:FireServer(0.4000000059604645) remote:FireServer(0.4000000059604645)
                                 if attackCounter >= 4 then attackCounter = 0 end
                             elseif melee then
                                 if hum.Parent and melee.Parent ~= char then hum:EquipTool(melee) end
-                                remote:FireServer(0.4000000059604645)
-                                remote:FireServer(0.4000000059604645)
+                                remote:FireServer(0.4000000059604645) remote:FireServer(0.4000000059604645)
                             end
                         else
-                            -- 3. MELEE THUÂN - PHÁT HỎA TỐC ĐỘ MAX
                             if melee then
                                 if hum.Parent and melee.Parent ~= char then hum:EquipTool(melee) end
-                                -- Đốt cháy thanh máu đối thủ bằng cách nhồi 5 luồng gói tin cùng lúc
-                                remote:FireServer(0.4000000059604645)
-                                remote:FireServer(0.4000000059604645)
-                                remote:FireServer(0.4000000059604645)
-                                remote:FireServer(0.4000000059604645)
+                                remote:FireServer(0.4000000059604645) remote:FireServer(0.4000000059604645)
+                                remote:FireServer(0.4000000059604645) remote:FireServer(0.4000000059604645)
                                 remote:FireServer(0.4000000059604645)
                             end
                         end
                     end
                 end
-            else
-                if hum then hum.PlatformStand = false end
-                RemoveHover()
-            end
+            else if hum then hum.PlatformStand = false end RemoveHover() end
         else
-            local char = LocalPlayer.Character
-            local hum = char and char:FindFirstChildWhichIsA("Humanoid")
-            if hum then hum.PlatformStand = false end
-            RemoveHover()
+            local char = LocalPlayer.Character local hum = char and char:FindFirstChildWhichIsA("Humanoid")
+            if hum then hum.PlatformStand = false end RemoveHover()
         end
     end
 end)
@@ -419,10 +387,7 @@ task.spawn(function()
             local cPart, cModel = GetChest()
             if cPart then
                 MaintainHover()
-                if TweenTo(cPart.CFrame * CFrame.new(0, 2, 0)) then 
-                    collectedChests[cModel] = true 
-                    task.wait(0.15) 
-                end
+                if TweenTo(cPart.CFrame * CFrame.new(0, 2, 0)) then collectedChests[cModel] = true task.wait(0.15) end
             else
                 if _G.AutoHop then HopServer() end
             end
