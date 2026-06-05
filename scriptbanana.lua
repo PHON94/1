@@ -172,6 +172,7 @@ local function CreateTab(name, isDefault)
     Page.Size = UDim2.new(1, 0, 1, 0)
     Page.BackgroundTransparency = 1
     Page.Visible = isDefault
+    Page.PageNavigationMode = Enum.PageNavigationMode.Standard
     Page.ScrollBarThickness = 2
     Instance.new("UIListLayout", Page).Padding = UDim.new(0, 10)
 
@@ -365,54 +366,100 @@ local function GetFruitTool()
     return nil
 end
 
-local function GetIslands()
-    local targets = {}
-    for _, v in pairs(workspace:GetChildren()) do
-        if v:IsA("Model") and not Players:GetPlayerFromCharacter(v) and v.Name ~= "Chests" and not v.Name:find("NPC") then
-            local base = v:FindFirstChild("IslandPart") or v:FindFirstChildWhichIsA("BasePart")
-            if base and base.Size.Magnitude > 150 then table.insert(targets, base.CFrame) end
-        end
-    end
-    return targets
-end
-
-local function GetChest()
-    for _, v in pairs(workspace:GetChildren()) do
-        if v.Name:find("Chest") and not collectedChests[v] then
-            local part = v:FindFirstChild("HumanoidRootPart") or v:FindFirstChild("RootPart") or (v:IsA("BasePart") and v)
-            if part then return part, v end
-        end
-    end
-    for _, folderName in pairs({"Chests", "ChestModels", "ChestSpawns"}) do
-        local folder = workspace:FindFirstChild(folderName)
-        if folder then
-            for _, v in pairs(folder:GetChildren()) do
-                if v.Name:find("Chest") and not collectedChests[v] then
-                    local part = v:FindFirstChild("HumanoidRootPart") or v:FindFirstChild("RootPart") or (v:IsA("BasePart") and v)
-                    if part then return part, v end
-                end
-            end
-        end
-    end
-end
-
 --=============================================================================
---           XỬ LÝ CHẾ ĐỘ ĐÁNH THEO ĐÚNG YÊU CẦU PHÂN CHIA NÚT BẤT
+--           XỬ LÝ CHẾ ĐỘ ĐÁNH THEO ĐÚNG YÊU CẦU PHÂN CHIA NÚT BẤM
 --=============================================================================
 task.spawn(function()
+    local attackCounter = 0
     while true do
         RunService.Heartbeat:Wait()
+        
         if _G.AutoKillPlayers then
             local targetPlayer = GetClosestPlayerInTrial()
             local char = LocalPlayer.Character
             local hum = char and char:FindFirstChildWhichIsA("Humanoid")
+            local root = char and char:FindFirstChild("HumanoidRootPart")
             
-            if targetPlayer and char and hum then
-                local meleeTool = GetMeleeTool()
-                
-                -- CHẾ ĐỘ NÚT BÊN DƯỚI BẬT: Kết hợp đan xen (2 Fruit M1 -> 2 Melee M1)
-                if _G.WeaveFastAttack then
-                    local fruitTool = GetFruitTool()
-                    if fruitTool and meleeTool then
-                        hum:EquipTool(fruitTool)
-                        fruitTool:Activate()
+            if targetPlayer and char and hum and root then
+                local targetRoot = targetPlayer.Character:FindFirstChild("HumanoidRootPart")
+                if targetRoot then
+                    -- Giữ lơ lửng bám sát mục tiêu
+                    MaintainHover()
+                    root.CFrame = targetRoot.CFrame * CFrame.new(0, 0, 3) -- Đứng trước mặt mục tiêu 3 studs
+                    
+                    local meleeTool = GetMeleeTool()
+                    
+                    -- CHẾ ĐỘ 1: Đan xen vũ khí (Fruit & Melee) được bật
+                    if _G.WeaveFastAttack then
+                        local fruitTool = GetFruitTool()
+                        if fruitTool and meleeTool then
+                            attackCounter = attackCounter + 1
+                            
+                            if attackCounter <= 2 then
+                                -- Thực hiện 2 phát đánh bằng Trái ác quỷ
+                                if hum.Parent and fruitTool.Parent ~= char then
+                                    hum:EquipTool(fruitTool)
+                                end
+                                fruitTool:Activate()
+                            else
+                                -- Thực hiện 2 phát đánh bằng Melee
+                                if hum.Parent and meleeTool.Parent ~= char then
+                                    hum:EquipTool(meleeTool)
+                                end
+                                meleeTool:Activate()
+                            end
+                            
+                            -- Reset bộ đếm chu kỳ sau khi đủ 4 lần nhấn (2 Fruit + 2 Melee)
+                            if attackCounter >= 4 then
+                                attackCounter = 0
+                            end
+                        elseif meleeTool then
+                            -- Nếu bật đan xen nhưng không tìm thấy Trái, tự động dùng Melee thuần
+                            if hum.Parent and meleeTool.Parent ~= char then
+                                hum:EquipTool(meleeTool)
+                            end
+                            meleeTool:Activate()
+                        end
+                    else
+                        -- CHẾ ĐỘ 2: Melee thuần túy (Khi tắt Đan xen vũ khí)
+                        if meleeTool then
+                            if hum.Parent and meleeTool.Parent ~= char then
+                                hum:EquipTool(meleeTool)
+                            end
+                            meleeTool:Activate()
+                        end
+                    end
+                end
+            else
+                RemoveHover()
+            end
+        else
+            RemoveHover()
+        end
+    end
+end)
+
+--=============================================================================
+--           VÒNG LẶP CHÍNH - AUTO CHEST & AUTO HOP
+--=============================================================================
+task.spawn(function()
+    while true do
+        task.wait(0.5)
+        if _G.AutoChest and not _G.AutoKillPlayers then
+            local chestPart, chestModel = GetChest()
+            if chestPart then
+                MaintainHover()
+                local success = TweenTo(chestPart.CFrame * CFrame.new(0, 2, 0))
+                if success then
+                    collectedChests[chestModel] = true
+                    task.wait(0.2)
+                end
+            else
+                -- Khi hết rương trong server thì tự động nhảy sang server khác nếu AutoHop bật
+                if _G.AutoHop then
+                    HopServer()
+                end
+            end
+        end
+    end
+end)
