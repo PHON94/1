@@ -1,5 +1,5 @@
 --=============================================================================
---    BANANA HUB V16 - PHIÊN BẢN TWEEN MƯỢT MÀ & NOCLIP ĐA ĐẢO
+--    BANANA HUB V16 - PHIÊN BẢN ĐỒ SÁT TRIAL SIÊU TỐC & EXPAND HITBOX
 --=============================================================================
 
 local Players = game:GetService("Players")
@@ -7,7 +7,7 @@ local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local HttpService = game:GetService("HttpService")
 local TeleportService = game:GetService("TeleportService")
-local TweenService = game:GetService("TweenService") -- Thêm TweenService
+local TweenService = game:GetService("TweenService")
 local LocalPlayer = Players.LocalPlayer
 
 --// TRẠNG THÁI
@@ -254,7 +254,6 @@ local function RemoveHover()
     if bv then bv:Destroy() end
 end
 
---// HÀM TWEEN DI CHUYỂN MƯỢT MÀ KHÔNG BỊ GIẬT RE-CHECK
 local function TweenTo(targetCFrame)
     local char = LocalPlayer.Character
     local root = char and char:FindFirstChild("HumanoidRootPart")
@@ -262,7 +261,7 @@ local function TweenTo(targetCFrame)
     if not root or not hum or hum.Health <= 0 then return false end
     
     local distance = (root.Position - targetCFrame.Position).Magnitude
-    local speed = 350 -- Tốc độ bay (studs/giây), có thể chỉnh lên tầm 350-400 nếu muốn nhanh hơn
+    local speed = 350 
     local duration = distance / speed
     
     hum.PlatformStand = true
@@ -278,9 +277,8 @@ local function TweenTo(targetCFrame)
         if connection then connection:Disconnect() end
     end)
     
-    -- Vòng lặp chờ tween hoàn thành hoặc khi tắt tính năng nâng cao
     while not completed and _G.AutoChest and hum.Health > 0 do
-        root.AssemblyLinearVelocity = Vector3.new(0, 0, 0) -- Triệt tiêu trọng lực khi đang tween
+        root.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
         task.wait()
     end
     
@@ -295,8 +293,9 @@ local function TweenTo(targetCFrame)
     return true
 end
 
+--// CHỈNH SỬA: QUÉT TOÀN MAP (MATH.HUGE) ĐỂ SĂN HẾT PLAYER TRONG PHÒNG TRIAL
 local function GetClosestPlayerInTrial()
-    local closest, shortDist = nil, 250
+    local closest, shortDist = nil, math.huge
     local myRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
     if not myRoot then return nil end
     for _, p in pairs(Players:GetPlayers()) do
@@ -322,7 +321,6 @@ local function GetTool(isMelee)
     return nil
 end
 
---// HÀM QUÉT RƯƠNG THÔNG MINH TOÀN BỘ ĐẢO THEO KHOẢNG CÁCH GẦN NHẤT
 local function GetChest()
     local myRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
     if not myRoot then return nil, nil end
@@ -344,22 +342,12 @@ local function GetChest()
         end
     end
     
-    -- Kiểm tra tầng gốc Workspace (Dành cho Sea 1)
-    for _, v in pairs(workspace:GetChildren()) do 
-        check(v) 
-    end
-    
-    -- Quét sâu toàn bộ các thư mục chứa rương của Blox Fruits trên tất cả các đảo (Sea 2 & Sea 3)
+    for _, v in pairs(workspace:GetChildren()) do check(v) end
     local targetFolders = {"Chests", "ChestModels", "ChestSpawns"}
     for _, fName in pairs(targetFolders) do
         local f = workspace:FindFirstChild(fName)
-        if f then 
-            for _, v in pairs(f:GetDescendants()) do 
-                check(v) 
-            end 
-        end
+        if f then for _, v in pairs(f:GetDescendants()) do check(v) end end
     end
-    
     return closestPart, closestModel
 end
 
@@ -377,8 +365,33 @@ RunService.Stepped:Connect(function()
     end
 end)
 
+--// CHỈNH SỬA: VÒNG LẶP TỰ ĐỘNG TĂNG PHẠM VI HITBOX (EXPAND HITBOX) CỦA PLAYER KHÁC
+task.spawn(function()
+    while true do
+        task.wait(0.3)
+        for _, p in pairs(Players:GetPlayers()) do
+            if p ~= LocalPlayer and p.Character then
+                local root = p.Character:FindFirstChild("HumanoidRootPart")
+                if root then
+                    if _G.AutoKillPlayers then
+                        -- Phóng to hitbox lên kích thước 15x15x15 và tắt va chạm để đánh chuẩn hơn
+                        root.Size = Vector3.new(15, 15, 15)
+                        root.CanCollide = false
+                    else
+                        -- Khôi phục kích thước gốc khi tắt chức năng
+                        if root.Size ~= Vector3.new(2, 2, 1) then
+                            root.Size = Vector3.new(2, 2, 1)
+                            root.CanCollide = true
+                        end
+                    end
+                end
+            end
+        end
+    end
+end)
+
 --=============================================================================
---    VÒNG LẶP SÁT THƯƠNG
+--    VÒNG LẶP SÁT THƯƠNG (NÂNG CẤP ĐỒ SÁT SPEED CAO)
 --=============================================================================
 task.spawn(function()
     local attackCounter = 0
@@ -389,13 +402,19 @@ task.spawn(function()
             local char = LocalPlayer.Character
             local hum = char and char:FindFirstChildWhichIsA("Humanoid")
             local root = char and char:FindFirstChild("HumanoidRootPart")
+            
             if target and char and hum and root and hum.Health > 0 then
                 local tRoot = target.Character:FindFirstChild("HumanoidRootPart")
                 local tHum = target.Character:FindFirstChildWhichIsA("Humanoid")
+                
                 if tRoot and tHum and tHum.Health > 0 then
-                    hum.PlatformStand = true MaintainHover()
+                    hum.PlatformStand = true 
+                    MaintainHover()
+                    
+                    -- Dịch chuyển áp sát liên tục vào vị trí mục tiêu
                     root.CFrame = tRoot.CFrame * CFrame.new(0, 0, 2.2)
-                    root.AssemblyLinearVelocity = Vector3.new(0,0,0)
+                    root.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
+                    
                     local remote = game:GetService("ReplicatedStorage"):WaitForChild("Modules"):WaitForChild("Net"):FindFirstChild("RE/RegisterAttack")
                     if remote then
                         local melee = GetTool(true)
@@ -405,24 +424,31 @@ task.spawn(function()
                                 attackCounter = attackCounter + 1
                                 local currentTool = (attackCounter <= 2) and fruit or melee
                                 if hum.Parent and currentTool.Parent ~= char then hum:EquipTool(currentTool) end
-                                remote:FireServer(0.4000000059604645) remote:FireServer(0.4000000059604645)
+                                
+                                -- TỐC ĐỘ CAO: Spam remote 4 lần mỗi khung hình (Mạnh gấp đôi bản cũ)
+                                for i = 1, 4 do remote:FireServer(0.4000000059604645) end
                                 if attackCounter >= 4 then attackCounter = 0 end
                             elseif melee then
                                 if hum.Parent and melee.Parent ~= char then hum:EquipTool(melee) end
-                                remote:FireServer(0.4000000059604645) remote:FireServer(0.4000000059604645)
+                                for i = 1, 4 do remote:FireServer(0.4000000059604645) end
                             end
                         else
                             if melee then
                                 if hum.Parent and melee.Parent ~= char then hum:EquipTool(melee) end
-                                remote:FireServer(0.4000000059604645) remote:FireServer(0.4000000059604645)
+                                for i = 1, 4 do remote:FireServer(0.4000000059604645) end
                             end
                         end
                     end
                 end
-            else if hum then hum.PlatformStand = false end RemoveHover() end
+            else 
+                if hum then hum.PlatformStand = false end 
+                RemoveHover() 
+            end
         else
-            local char = LocalPlayer.Character local hum = char and char:FindFirstChildWhichIsA("Humanoid")
-            if hum then hum.PlatformStand = false end RemoveHover()
+            local char = LocalPlayer.Character 
+            local hum = char and char:FindFirstChildWhichIsA("Humanoid")
+            if hum then hum.PlatformStand = false end 
+            RemoveHover()
         end
     end
 end)
@@ -437,7 +463,6 @@ task.spawn(function()
             local cPart, cModel = GetChest()
             if cPart then
                 MaintainHover()
-                -- Thay vì Teleport giật, sử dụng TweenTo để bay mượt qua các đảo
                 if TweenTo(cPart.CFrame * CFrame.new(0, 2, 0)) then 
                     collectedChests[cModel] = true 
                     task.wait(0.1) 
