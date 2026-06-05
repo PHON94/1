@@ -1,5 +1,5 @@
 --=============================================================================
---    BANANA HUB V16 - PHIÊN BẢN ÉP TOẠ ĐỘ TUYỆT ĐỐI (TRỊ DELTA MẤT NÚT CỘT PHẢI)
+--    BANANA HUB V16 - PHIÊN BẢN TWEEN MƯỢT MÀ & NOCLIP ĐA ĐẢO
 --=============================================================================
 
 local Players = game:GetService("Players")
@@ -7,6 +7,7 @@ local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local HttpService = game:GetService("HttpService")
 local TeleportService = game:GetService("TeleportService")
+local TweenService = game:GetService("TweenService") -- Thêm TweenService
 local LocalPlayer = Players.LocalPlayer
 
 --// TRẠNG THÁI
@@ -121,7 +122,6 @@ local pages = {}
 local tabButtons = {}
 
 local function CreateTab(name, isDefault)
-    -- Ép toạ độ nút danh mục bên trái
     local TabBtn = Instance.new("TextButton", Sidebar)
     TabBtn.Size = UDim2.new(1, -10, 0, 32)
     TabBtn.Position = UDim2.new(0, 5, 0, 45 + (tabCount * 36))
@@ -132,7 +132,6 @@ local function CreateTab(name, isDefault)
     TabBtn.TextSize = 14
     Instance.new("UICorner", TabBtn).CornerRadius = UDim.new(0, 4)
 
-    -- Khung chứa chức năng bên phải
     local Page = Instance.new("Frame", ContentArea)
     Page.Size = UDim2.new(1, 0, 1, 0)
     Page.Position = UDim2.new(0, 0, 0, 0)
@@ -158,7 +157,6 @@ local function CreateTab(name, isDefault)
 end
 
 local function AddToggle(pageData, text, callback)
-    -- Ép toạ độ nút chức năng bên phải
     local Frame = Instance.new("Frame", pageData.frame)
     Frame.Size = UDim2.new(1, -10, 0, 36)
     Frame.Position = UDim2.new(0, 0, 0, pageData.itemCount * 42)
@@ -256,14 +254,43 @@ local function RemoveHover()
     if bv then bv:Destroy() end
 end
 
+--// HÀM TWEEN DI CHUYỂN MƯỢT MÀ KHÔNG BỊ GIẬT RE-CHECK
 local function TweenTo(targetCFrame)
     local char = LocalPlayer.Character
     local root = char and char:FindFirstChild("HumanoidRootPart")
     local hum = char and char:FindFirstChildWhichIsA("Humanoid")
-    if not root or not hum then return false end
-    hum.PlatformStand = true root.Anchored = false 
-    root.CFrame = targetCFrame
-    task.wait(0.1)
+    if not root or not hum or hum.Health <= 0 then return false end
+    
+    local distance = (root.Position - targetCFrame.Position).Magnitude
+    local speed = 350 -- Tốc độ bay (studs/giây), có thể chỉnh lên tầm 350-400 nếu muốn nhanh hơn
+    local duration = distance / speed
+    
+    hum.PlatformStand = true
+    
+    local tweenInfo = TweenInfo.new(duration, Enum.EasingStyle.Linear)
+    local tween = TweenService:Create(root, tweenInfo, {CFrame = targetCFrame})
+    tween:Play()
+    
+    local completed = false
+    local connection
+    connection = tween.Completed:Connect(function()
+        completed = true
+        if connection then connection:Disconnect() end
+    end)
+    
+    -- Vòng lặp chờ tween hoàn thành hoặc khi tắt tính năng nâng cao
+    while not completed and _G.AutoChest and hum.Health > 0 do
+        root.AssemblyLinearVelocity = Vector3.new(0, 0, 0) -- Triệt tiêu trọng lực khi đang tween
+        task.wait()
+    end
+    
+    if not _G.AutoChest or hum.Health <= 0 then
+        tween:Cancel()
+        if connection then connection:Disconnect() end
+        hum.PlatformStand = false
+        return false
+    end
+    
     hum.PlatformStand = false
     return true
 end
@@ -295,18 +322,60 @@ local function GetTool(isMelee)
     return nil
 end
 
+--// HÀM QUÉT RƯƠNG THÔNG MINH TOÀN BỘ ĐẢO THEO KHOẢNG CÁCH GẦN NHẤT
 local function GetChest()
+    local myRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if not myRoot then return nil, nil end
+    
+    local closestPart, closestModel = nil, nil
+    local shortestDistance = math.huge
+    
     local function check(v)
         if v.Name:find("Chest") and not collectedChests[v] then
-            return v:FindFirstChild("HumanoidRootPart") or v:FindFirstChild("RootPart") or (v:IsA("BasePart") and v)
+            local part = v:FindFirstChild("HumanoidRootPart") or v:FindFirstChild("RootPart") or (v:IsA("BasePart") and v)
+            if part then
+                local distance = (myRoot.Position - part.Position).Magnitude
+                if distance < shortestDistance then
+                    shortestDistance = distance
+                    closestPart = part
+                    closestModel = v
+                end
+            end
         end
     end
-    for _, v in pairs(workspace:GetChildren()) do local p = check(v) if p then return p, v end end
-    for _, fName in pairs({"Chests", "ChestModels", "ChestSpawns"}) do
-        local f = workspace:FindFirstChild(fName)
-        if f then for _, v in pairs(f:GetChildren()) do local p = check(v) if p then return p, v end end end
+    
+    -- Kiểm tra tầng gốc Workspace (Dành cho Sea 1)
+    for _, v in pairs(workspace:GetChildren()) do 
+        check(v) 
     end
+    
+    -- Quét sâu toàn bộ các thư mục chứa rương của Blox Fruits trên tất cả các đảo (Sea 2 & Sea 3)
+    local targetFolders = {"Chests", "ChestModels", "ChestSpawns"}
+    for _, fName in pairs(targetFolders) do
+        local f = workspace:FindFirstChild(fName)
+        if f then 
+            for _, v in pairs(f:GetDescendants()) do 
+                check(v) 
+            end 
+        end
+    end
+    
+    return closestPart, closestModel
 end
+
+--// VÒNG LẶP LIÊN TỤC KHÓA NOCLIP XUYÊN TƯỜNG (ANTI-KẸT ĐẢO)
+RunService.Stepped:Connect(function()
+    if _G.AutoChest or _G.AutoKillPlayers then
+        local char = LocalPlayer.Character
+        if char then
+            for _, child in pairs(char:GetDescendants()) do
+                if child:IsA("BasePart") and child.CanCollide then
+                    child.CanCollide = false
+                end
+            end
+        end
+    end
+end)
 
 --=============================================================================
 --    VÒNG LẶP SÁT THƯƠNG
@@ -363,12 +432,16 @@ end)
 --=============================================================================
 task.spawn(function()
     while true do
-        task.wait(0.5)
+        task.wait(0.1)
         if _G.AutoChest and not _G.AutoKillPlayers then
             local cPart, cModel = GetChest()
             if cPart then
                 MaintainHover()
-                if TweenTo(cPart.CFrame * CFrame.new(0, 2, 0)) then collectedChests[cModel] = true task.wait(0.2) end
+                -- Thay vì Teleport giật, sử dụng TweenTo để bay mượt qua các đảo
+                if TweenTo(cPart.CFrame * CFrame.new(0, 2, 0)) then 
+                    collectedChests[cModel] = true 
+                    task.wait(0.1) 
+                end
             else
                 if _G.AutoHop then HopServer() end
             end
