@@ -1,5 +1,5 @@
 --=============================================================================
---         BANANA HUB PREMIUM V16 - PHÂN CHIA MELEE THUẦN & ĐAN XEN VŨ KHÍ
+--    BANANA HUB PREMIUM V16 - EDITION OVERCLOCK (SIÊU CẤP ĐỒ SÁT TRIAL)
 --=============================================================================
 
 local Players = game:GetService("Players")
@@ -81,9 +81,9 @@ SidebarLine.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
 
 local Logo = Instance.new("TextLabel", Sidebar)
 Logo.Size = UDim2.new(1, 0, 0, 60)
-Logo.Text = "BANANA HUB"
-Logo.TextColor3 = Color3.fromRGB(255, 215, 0)
-Logo.TextSize = 20
+Logo.Text = "BANANA OVERCLOCK"
+Logo.TextColor3 = Color3.fromRGB(255, 69, 0) -- Đổi màu cam đỏ rực rỡ bộc lộ sức mạnh
+Logo.TextSize = 16
 Logo.Font = Enum.Font.GothamBold
 Logo.BackgroundTransparency = 1
 
@@ -123,11 +123,11 @@ CloseBtn.Parent = TopButtons
 local RestoreBtn = Instance.new("TextButton", ScreenGui)
 RestoreBtn.Size = UDim2.new(0, 45, 0, 45)
 RestoreBtn.Position = UDim2.new(0, 15, 0, 15)
-RestoreBtn.BackgroundColor3 = Color3.fromRGB(255, 215, 0)
-RestoreBtn.Text = "B"
+RestoreBtn.BackgroundColor3 = Color3.fromRGB(255, 69, 0)
+RestoreBtn.Text = "⚡"
 RestoreBtn.Font = Enum.Font.GothamBold
 RestoreBtn.TextSize = 22
-RestoreBtn.TextColor3 = Color3.fromRGB(0,0,0)
+RestoreBtn.TextColor3 = Color3.fromRGB(255,255,255)
 RestoreBtn.Visible = false
 Instance.new("UICorner", RestoreBtn).CornerRadius = UDim.new(1, 0)
 
@@ -143,13 +143,13 @@ end)
 
 CloseBtn.MouseButton1Click:Connect(function() ScreenGui:Destroy() end)
 
---// 4. HÀM TẠO TAB & TOGGLE (ĐÃ SỬA LỖI TỌA ĐỘ POSITION)
+--// 4. HÀM TẠO TAB & TOGGLE (CHUẨN TỌA ĐỘ)
 local function CreateTab(name, isDefault)
     local TabBtn = Instance.new("TextButton", TabContainer)
     TabBtn.Size = UDim2.new(1, 0, 0, 35)
-    TabBtn.BackgroundColor3 = isDefault and Color3.fromRGB(255, 215, 0) or Color3.fromRGB(30, 30, 30)
+    TabBtn.BackgroundColor3 = isDefault and Color3.fromRGB(255, 69, 0) or Color3.fromRGB(30, 30, 30)
     TabBtn.Text = name
-    TabBtn.TextColor3 = isDefault and Color3.fromRGB(0, 0, 0) or Color3.fromRGB(200, 200, 200)
+    TabBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
     TabBtn.Font = Enum.Font.GothamSemibold
     TabBtn.TextSize = 13
     Instance.new("UICorner", TabBtn).CornerRadius = UDim.new(0, 6)
@@ -159,7 +159,7 @@ local function CreateTab(name, isDefault)
     Page.BackgroundTransparency = 1
     Page.Visible = isDefault
     Page.ScrollBarThickness = 2
-    Page.ScrollBarImageColor3 = Color3.fromRGB(255, 215, 0)
+    Page.ScrollBarImageColor3 = Color3.fromRGB(255, 69, 0)
     Page.AutomaticCanvasSize = Enum.AutomaticCanvasSize.Y
     Page.CanvasSize = UDim2.new(0, 0, 0, 0)
 
@@ -172,12 +172,10 @@ local function CreateTab(name, isDefault)
         for _, b in pairs(TabContainer:GetChildren()) do
             if b:IsA("TextButton") then
                 b.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-                b.TextColor3 = Color3.fromRGB(200, 200, 200)
             end
         end
         Page.Visible = true
-        TabBtn.BackgroundColor3 = Color3.fromRGB(255, 215, 0)
-        TabBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
+        TabBtn.BackgroundColor3 = Color3.fromRGB(255, 69, 0)
     end)
     return Page
 end
@@ -185,13 +183,12 @@ end
 local function AddToggle(page, text, callback)
     local Frame = Instance.new("Frame", page)
     Frame.Size = UDim2.new(1, -10, 0, 42)
-    Frame.BackgroundColor3 = Color3.fromRGB(255, 25, 25)
-    Frame.BackgroundTransparency = 0.96
+    Frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
     Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 6)
 
     local Label = Instance.new("TextLabel", Frame)
     Label.Size = UDim2.new(1, -60, 1, 0)
-    Label.Position = UDim2.new(0, 12, 0, 0) -- Đã sửa lỗi thiếu tham số ở đây
+    Label.Position = UDim2.new(0, 12, 0, 0)
     Label.Text = text
     Label.TextColor3 = Color3.fromRGB(220, 220, 220)
     Label.TextSize = 13
@@ -215,22 +212,22 @@ local function AddToggle(page, text, callback)
     local state = false
     Tog.MouseButton1Click:Connect(function()
         state = not state
-        ApplyTween(Tog, 0.15, {BackgroundColor3 = state and Color3.fromRGB(255, 215, 0) or Color3.fromRGB(50, 50, 50)})
+        ApplyTween(Tog, 0.15, {BackgroundColor3 = state and Color3.fromRGB(255, 69, 0) or Color3.fromRGB(50, 50, 50)})
         ApplyTween(TogCircle, 0.15, {Position = state and UDim2.new(0, 20, 0.5, -7) or UDim2.new(0, 2, 0.5, -7)})
         callback(state)
     end)
 end
 
 --=============================================================================
---         TÍCH HỢP TOÀN BỘ CÁC NÚT CHỨC NĂNG CŨ VÀ MỚI
+--         TÍCH HỢP TOÀN BỘ CÁC NÚT CHỨC NĂNG
 --=============================================================================
 local MainTab = CreateTab("Trang Chủ", true)
 AddToggle(MainTab, "Càn Quét Rương Tốc Độ (V10)", function(v) _G.AutoChest = v end)
 AddToggle(MainTab, "Tự Động Đổi Server Thông Minh", function(v) _G.AutoHop = v end)
 
 local V4Tab = CreateTab("Tộc V4", false)
-AddToggle(V4Tab, "Tự Động Đồ Sát Trial", function(v) _G.AutoKillPlayers = v end)
-AddToggle(V4Tab, "Đan Xen Fruit & Melee (M1)", function(v) _G.WeaveFastAttack = v end)
+AddToggle(V4Tab, "OVERCLOCK: Diệt Sạch Trial", function(v) _G.AutoKillPlayers = v end)
+AddToggle(V4Tab, "Đan Xen Fruit & Melee (Tốc Độ Cao)", function(v) _G.WeaveFastAttack = v v end)
 
 --=============================================================================
 --                         HỆ THỐNG LOGIC PHỤ TRỢ
@@ -332,62 +329,100 @@ local function GetChest()
 end
 
 --=============================================================================
---         VÒNG LẶP FAST ATTACK QUA REMOTE REGISTERATTACK BẠN GỬI
+--    SIÊU VÒNG LẶP FAST ATTACK OVERCLOCK - ĐÈ BẸT TOÀN BỘ HUB KHÁC
 --=============================================================================
 task.spawn(function()
-    local attackCounter, lastAttackTime, attackCooldown = 0, 0, 0.05
+    local attackCounter = 0
     while true do
-        RunService.Heartbeat:Wait()
+        RunService.Heartbeat:Wait() -- Chạy đồng bộ theo khung hình máy chủ cao nhất
+        
         if _G.AutoKillPlayers then
             local target = GetClosestPlayerInTrial()
             local char = LocalPlayer.Character
             local hum = char and char:FindFirstChildWhichIsA("Humanoid")
             local root = char and char:FindFirstChild("HumanoidRootPart")
-            if target and char and hum and root then
+            
+            if target and char and hum and root and hum.Health > 0 then
                 local tRoot = target.Character:FindFirstChild("HumanoidRootPart")
-                if tRoot then
-                    MaintainHover() root.CFrame = tRoot.CFrame * CFrame.new(0, 0, 2.5)
-                    local melee = GetTool(true)
-                    if (root.Position - tRoot.Position).Magnitude <= 15 and (tick() - lastAttackTime) >= attackCooldown then
-                        local remote = game:GetService("ReplicatedStorage"):WaitForChild("Modules"):WaitForChild("Net"):FindFirstChild("RE/RegisterAttack")
-                        if remote then
-                            if _G.WeaveFastAttack then
-                                local fruit = GetTool(false)
-                                if fruit and melee then
-                                    attackCounter = attackCounter + 1
-                                    local tool = attackCounter <= 2 and fruit or melee
-                                    if hum.Parent and tool.Parent ~= char then hum:EquipTool(tool) end
-                                    remote:FireServer(0.4000000059604645) lastAttackTime = tick()
-                                    if attackCounter >= 4 then attackCounter = 0 end
-                                elseif melee then
-                                    if hum.Parent and melee.Parent ~= char then hum:EquipTool(melee) end
-                                    remote:FireServer(0.4000000059604645) lastAttackTime = tick()
+                local tHum = target.Character:FindFirstChildWhichIsA("Humanoid")
+                
+                if tRoot and tHum and tHum.Health > 0 then
+                    -- 1. KHÓA CHẶT VỊ TRÍ (CFrame Manipulation Bypass Ragdoll)
+                    hum.PlatformStand = true -- Chống bị hiệu ứng đẩy lùi hoặc hất tung
+                    MaintainHover()
+                    
+                    -- Ép góc đứng ngay sau lưng đối thủ 2.2 studs để hitbox chạm mục tiêu tuyệt đối
+                    root.CFrame = tRoot.CFrame * CFrame.new(0, 0, 2.2)
+                    root.AssemblyLinearVelocity = Vector3.new(0,0,0) -- Triệt tiêu quán tính rơi tự do
+                    
+                    local remote = game:GetService("ReplicatedStorage"):WaitForChild("Modules"):WaitForChild("Net"):FindFirstChild("RE/RegisterAttack")
+                    if remote then
+                        local melee = GetTool(true)
+                        
+                        -- 2. CƠ CHẾ ĐAN XEN VŨ KHÍ SIÊU TỐC
+                        if _G.WeaveFastAttack then
+                            local fruit = GetTool(false)
+                            if fruit and melee then
+                                attackCounter = attackCounter + 1
+                                local currentTool = (attackCounter <= 2) and fruit or melee
+                                
+                                if hum.Parent and currentTool.Parent ~= char then 
+                                    hum:EquipTool(currentTool) 
                                 end
-                            else
-                                if melee then
-                                    if hum.Parent and melee.Parent ~= char then hum:EquipTool(melee) end
-                                    remote:FireServer(0.4000000059604645) lastAttackTime = tick()
-                                end
+                                
+                                -- MULTI-FIRE OVERCLOCK: Nhân bản lệnh gửi gói tin sát thương lên 4 lần / 1 khung hình
+                                remote:FireServer(0.4000000059604645)
+                                remote:FireServer(0.4000000059604645)
+                                remote:FireServer(0.4000000059604645)
+                                remote:FireServer(0.4000000059604645)
+                                
+                                if attackCounter >= 4 then attackCounter = 0 end
+                            elseif melee then
+                                if hum.Parent and melee.Parent ~= char then hum:EquipTool(melee) end
+                                remote:FireServer(0.4000000059604645)
+                                remote:FireServer(0.4000000059604645)
+                            end
+                        else
+                            -- 3. MELEE THUÂN - PHÁT HỎA TỐC ĐỘ MAX
+                            if melee then
+                                if hum.Parent and melee.Parent ~= char then hum:EquipTool(melee) end
+                                -- Đốt cháy thanh máu đối thủ bằng cách nhồi 5 luồng gói tin cùng lúc
+                                remote:FireServer(0.4000000059604645)
+                                remote:FireServer(0.4000000059604645)
+                                remote:FireServer(0.4000000059604645)
+                                remote:FireServer(0.4000000059604645)
+                                remote:FireServer(0.4000000059604645)
                             end
                         end
                     end
                 end
-            else RemoveHover() end
-        else RemoveHover() end
+            else
+                if hum then hum.PlatformStand = false end
+                RemoveHover()
+            end
+        else
+            local char = LocalPlayer.Character
+            local hum = char and char:FindFirstChildWhichIsA("Humanoid")
+            if hum then hum.PlatformStand = false end
+            RemoveHover()
+        end
     end
 end)
 
 --=============================================================================
---       VÒNG LẶP CHÍNH CHẠY CHỨC NĂNG NHẶT RƯƠNG CŨ & TỰ HOP SERVER
+--                    VÒNG LẶP PHỤ: QUÉT VÀ NHẶT RƯƠNG V10
 --=============================================================================
 task.spawn(function()
     while true do
-        task.wait(0.5)
+        task.wait(0.4)
         if _G.AutoChest and not _G.AutoKillPlayers then
             local cPart, cModel = GetChest()
             if cPart then
                 MaintainHover()
-                if TweenTo(cPart.CFrame * CFrame.new(0, 2, 0)) then collectedChests[cModel] = true task.wait(0.2) end
+                if TweenTo(cPart.CFrame * CFrame.new(0, 2, 0)) then 
+                    collectedChests[cModel] = true 
+                    task.wait(0.15) 
+                end
             else
                 if _G.AutoHop then HopServer() end
             end
