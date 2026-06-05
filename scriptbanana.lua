@@ -1,9 +1,8 @@
 --=============================================================================
---    BANANA HUB PREMIUM V16 - OPTIMIZED FOR DELTA EXECUTOR (FIXED UI)
+--    BANANA HUB PREMIUM V16 - STYLE FRONT MENU V10 (OPTIMIZED FOR DELTA)
 --=============================================================================
 
 local Players = game:GetService("Players")
-local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local HttpService = game:GetService("HttpService")
@@ -33,25 +32,17 @@ local ScreenGui = Instance.new("ScreenGui", game:GetService("CoreGui"))
 ScreenGui.Name = "BananaHubPremium"
 ScreenGui.ResetOnSpawn = false
 
-local function ApplyTween(obj, info, goal)
-    return TweenService:Create(obj, TweenInfo.new(info, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), goal):Play()
-end
-
---// 1. KHUNG CHÍNH (THU GỌN KÍCH THƯỚC PHÙ HỢP MOBILE DƯỚI 500 PIXELS)
+--// 1. KHUNG CHÍNH (PHONG CÁCH V10 CHUẨN)
 local MainFrame = Instance.new("Frame", ScreenGui)
 MainFrame.Name = "MainFrame"
-MainFrame.Size = UDim2.new(0, 460, 0, 280) -- Thu gọn cho vừa màn hình Delta
-MainFrame.Position = UDim2.new(0.5, -230, 0.5, -140)
-MainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+MainFrame.Size = UDim2.new(0, 420, 0, 260)
+MainFrame.Position = UDim2.new(0.5, -210, 0.5, -130)
+MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25) -- Màu nền tối V10
 MainFrame.BorderSizePixel = 0
-MainFrame.ClipsDescendants = true
 
-Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 10)
-local MainStroke = Instance.new("UIStroke", MainFrame)
-MainStroke.Thickness = 1.5
-MainStroke.Color = Color3.fromRGB(45, 45, 45)
+Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 5)
 
--- Hỗ trợ kéo thả trên cảm ứng Mobile
+-- Hệ thống kéo thả bằng Touch cho Mobile
 local dragging, dragStart, startPos
 MainFrame.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
@@ -68,134 +59,131 @@ UserInputService.InputEnded:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then dragging = false end
 end)
 
---// 2. THANH BÊN (SIDEBAR)
-local Sidebar = Instance.new("Frame", MainFrame)
-Sidebar.Size = UDim2.new(0, 130, 1, 0)
-Sidebar.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-Sidebar.BorderSizePixel = 0
+--// 2. THANH TIÊU ĐỀ BÊN TRÊN (TOP BAR BANANA V10)
+local TopBar = Instance.new("Frame", MainFrame)
+TopBar.Size = UDim2.new(1, 0, 0, 35)
+TopBar.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
+TopBar.BorderSizePixel = 0
+Instance.new("UICorner", TopBar).CornerRadius = UDim.new(0, 5)
 
-local Logo = Instance.new("TextLabel", Sidebar)
-Logo.Size = UDim2.new(1, 0, 0, 45)
-Logo.Text = "BANANA HUB"
-Logo.TextColor3 = Color3.fromRGB(255, 69, 0)
-Logo.TextSize = 15
-Logo.Font = Enum.Font.GothamBold
-Logo.BackgroundTransparency = 1
+local Title = Instance.new("TextLabel", TopBar)
+Title.Size = UDim2.new(0, 150, 1, 0)
+Title.Position = UDim2.new(0, 12, 0, 0)
+Title.Text = "Banana Hub V10"
+Title.TextColor3 = Color3.fromRGB(255, 255, 0) -- Màu vàng chuối đặc trưng
+Title.TextSize = 15
+Title.Font = Enum.Font.SourceSansBold
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.BackgroundTransparency = 1
 
-local TabContainer = Instance.new("Frame", Sidebar)
-TabContainer.Position = UDim2.new(0, 8, 0, 50)
-TabContainer.Size = UDim2.new(1, -16, 1, -60)
-TabContainer.BackgroundTransparency = 1
-local TabListLayout = Instance.new("UIListLayout", TabContainer)
-TabListLayout.Padding = UDim.new(0, 6)
-
-local ContentArea = Instance.new("Frame", MainFrame)
-ContentArea.Position = UDim2.new(0, 140, 0, 45)
-ContentArea.Size = UDim2.new(1, -150, 1, -55)
-ContentArea.BackgroundTransparency = 1
-
---// 3. NÚT THU GỌN / ĐÓNG MENU CHỐNG TRÀN SCREEN
-local TopButtons = Instance.new("Frame", MainFrame)
-TopButtons.Size = UDim2.new(1, -140, 0, 45)
-TopButtons.Position = UDim2.new(0, 140, 0, 0)
-TopButtons.BackgroundTransparency = 1
-
-local MinimizeBtn = Instance.new("TextButton", TopButtons)
-MinimizeBtn.Size = UDim2.new(0, 28, 0, 28)
-MinimizeBtn.Position = UDim2.new(1, -65, 0.5, -14)
-MinimizeBtn.Text = "-"
-MinimizeBtn.TextColor3 = Color3.fromRGB(200, 200, 200)
-MinimizeBtn.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-MinimizeBtn.Font = Enum.Font.GothamBold
-MinimizeBtn.TextSize = 16
-Instance.new("UICorner", MinimizeBtn).CornerRadius = UDim.new(0, 5)
-
-local CloseBtn = MinimizeBtn:Clone()
-CloseBtn.Text = "×"
-CloseBtn.Position = UDim2.new(1, -32, 0.5, -14)
+-- Nút đóng / thu gọn
+local CloseBtn = Instance.new("TextButton", TopBar)
+CloseBtn.Size = UDim2.new(0, 22, 0, 22)
+CloseBtn.Position = UDim2.new(1, -28, 0.5, -11)
+CloseBtn.Text = "X"
+CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
 CloseBtn.BackgroundColor3 = Color3.fromRGB(150, 50, 50)
-CloseBtn.Parent = TopButtons
+CloseBtn.Font = Enum.Font.SourceSansBold
+CloseBtn.TextSize = 12
+Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 4)
+
+local MinimizeBtn = CloseBtn:Clone()
+MinimizeBtn.Text = "-"
+MinimizeBtn.Position = UDim2.new(1, -55, 0.5, -11)
+MinimizeBtn.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+MinimizeBtn.Parent = TopBar
 
 local RestoreBtn = Instance.new("TextButton", ScreenGui)
 RestoreBtn.Size = UDim2.new(0, 40, 0, 40)
-RestoreBtn.Position = UDim2.new(0, 10, 0, 10)
-RestoreBtn.BackgroundColor3 = Color3.fromRGB(255, 69, 0)
-RestoreBtn.Text = "⚡"
-RestoreBtn.Font = Enum.Font.GothamBold
-RestoreBtn.TextSize = 20
-RestoreBtn.TextColor3 = Color3.fromRGB(255,255,255)
+RestoreBtn.Position = UDim2.new(0, 15, 0, 15)
+RestoreBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 0)
+RestoreBtn.Text = "Chuối"
+RestoreBtn.Font = Enum.Font.SourceSansBold
+RestoreBtn.TextSize = 14
+RestoreBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
 RestoreBtn.Visible = false
 Instance.new("UICorner", RestoreBtn).CornerRadius = UDim.new(1, 0)
 
-MinimizeBtn.MouseButton1Click:Connect(function()
-    MainFrame:TweenSize(UDim2.new(0,0,0,0), "Out", "Quart", 0.2, true)
-    task.wait(0.2) MainFrame.Visible = false RestoreBtn.Visible = true
-end)
-
-RestoreBtn.MouseButton1Click:Connect(function()
-    RestoreBtn.Visible = false MainFrame.Visible = true
-    MainFrame:TweenSize(UDim2.new(0, 460, 0, 280), "Out", "Quart", 0.2, true)
-end)
-
+MinimizeBtn.MouseButton1Click:Connect(function() MainFrame.Visible = false RestoreBtn.Visible = true end)
+RestoreBtn.MouseButton1Click:Connect(function() RestoreBtn.Visible = false MainFrame.Visible = true end)
 CloseBtn.MouseButton1Click:Connect(function() ScreenGui:Destroy() end)
 
---// 4. HÀM TẠO TAB & TOGGLE - BẮT BUỘC TÍNH TOÁN CANVAS ĐỘNG CHỐNG MẤT NÚT
-local function CreateTab(name, isDefault)
-    local TabBtn = Instance.new("TextButton", TabContainer)
-    TabBtn.Size = UDim2.new(1, 0, 0, 32)
-    TabBtn.BackgroundColor3 = isDefault and Color3.fromRGB(255, 69, 0) or Color3.fromRGB(30, 30, 30)
+--// 3. THANH DIỀU HƯỚNG TAB BÊN TRÊN CHUẨN V10 (TOP TABS FRAME)
+local TabBar = Instance.new("Frame", MainFrame)
+TabBar.Size = UDim2.new(1, -16, 0, 30)
+TabBar.Position = UDim2.new(0, 8, 0, 40)
+TabBar.BackgroundTransparency = 1
+local TabListLayout = Instance.new("UIListLayout", TabBar)
+TabListLayout.FillDirection = Enum.FillDirection.Horizontal
+TabListLayout.Padding = UDim.new(0, 6)
+
+-- Vùng hiển thị nội dung phía dưới thanh Tab
+local ContentArea = Instance.new("Frame", MainFrame)
+ContentArea.Position = UDim2.new(0, 8, 0, 75)
+ContentArea.Size = UDim2.new(1, -16, 1, -83)
+ContentArea.BackgroundTransparency = 1
+
+--// 4. HÀM TẠO TAB & TOGGLE NẰM NGANG V10
+local firstTab = true
+local function CreateTab(name)
+    local TabBtn = Instance.new("TextButton", TabBar)
+    TabBtn.Size = UDim2.new(0, 90, 1, 0) -- Kích thước dàn ngang
+    TabBtn.BackgroundColor3 = firstTab and Color3.fromRGB(255, 255, 0) or Color3.fromRGB(35, 35, 35)
     TabBtn.Text = name
-    TabBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-    TabBtn.Font = Enum.Font.GothamSemibold
-    TabBtn.TextSize = 12
-    Instance.new("UICorner", TabBtn).CornerRadius = UDim.new(0, 5)
+    TabBtn.TextColor3 = firstTab and Color3.fromRGB(0, 0, 0) or Color3.fromRGB(230, 230, 230)
+    TabBtn.Font = Enum.Font.SourceSansBold
+    TabBtn.TextSize = 13
+    Instance.new("UICorner", TabBtn).CornerRadius = UDim.new(0, 4)
 
     local Page = Instance.new("ScrollingFrame", ContentArea)
     Page.Size = UDim2.new(1, 0, 1, 0)
     Page.BackgroundTransparency = 1
-    Page.Visible = isDefault
+    Page.Visible = firstTab
     Page.ScrollBarThickness = 3
-    Page.ScrollBarImageColor3 = Color3.fromRGB(255, 69, 0)
-    
-    -- Cơ chế khóa Canvas động cho Mobile Delta
+    Page.ScrollBarImageColor3 = Color3.fromRGB(255, 255, 0)
     Page.AutomaticCanvasSize = Enum.AutomaticCanvasSize.Y
     Page.CanvasSize = UDim2.new(0, 0, 0, 0)
 
     local ListLayout = Instance.new("UIListLayout", Page)
     ListLayout.Padding = UDim.new(0, 6)
-    ListLayout.SortOrder = Enum.SortOrder.LayoutOrder
 
     TabBtn.MouseButton1Click:Connect(function()
         for _, p in pairs(ContentArea:GetChildren()) do p.Visible = false end
-        for _, b in pairs(TabContainer:GetChildren()) do
-            if b:IsA("TextButton") then b.BackgroundColor3 = Color3.fromRGB(30, 30, 30) end
+        for _, b in pairs(TabBar:GetChildren()) do
+            if b:IsA("TextButton") then 
+                b.BackgroundColor3 = Color3.fromRGB(35, 35, 35) 
+                b.TextColor3 = Color3.fromRGB(230, 230, 230)
+            end
         end
         Page.Visible = true
-        TabBtn.BackgroundColor3 = Color3.fromRGB(255, 69, 0)
+        TabBtn.BackgroundColor3 = Color3.fromRGB(255, 255, 0)
+        TabBtn.TextColor3 = Color3.fromRGB(0, 0, 0)
     end)
+    
+    firstTab = false
     return Page
 end
 
 local function AddToggle(page, text, callback)
     local Frame = Instance.new("Frame", page)
-    Frame.Size = UDim2.new(1, -8, 0, 38)
-    Frame.BackgroundColor3 = Color3.fromRGB(28, 28, 28)
-    Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 5)
+    Frame.Size = UDim2.new(1, -6, 0, 36)
+    Frame.BackgroundColor3 = Color3.fromRGB(32, 32, 32)
+    Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 4)
 
     local Label = Instance.new("TextLabel", Frame)
-    Label.Size = UDim2.new(1, -55, 1, 0)
+    Label.Size = UDim2.new(1, -50, 1, 0)
     Label.Position = UDim2.new(0, 10, 0, 0)
     Label.Text = text
-    Label.TextColor3 = Color3.fromRGB(220, 220, 220)
-    Label.TextSize = 12
-    Label.Font = Enum.Font.Gotham
+    Label.TextColor3 = Color3.fromRGB(240, 240, 240)
+    Label.TextSize = 13
+    Label.Font = Enum.Font.SourceSans
     Label.TextXAlignment = Enum.TextXAlignment.Left
     Label.BackgroundTransparency = 1
 
     local Tog = Instance.new("TextButton", Frame)
-    Tog.Size = UDim2.new(0, 32, 0, 16)
-    Tog.Position = UDim2.new(1, -42, 0.5, -8)
-    Tog.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    Tog.Size = UDim2.new(0, 30, 0, 16)
+    Tog.Position = UDim2.new(1, -40, 0.5, -8)
+    Tog.BackgroundColor3 = Color3.fromRGB(55, 55, 55)
     Tog.Text = ""
     Instance.new("UICorner", Tog).CornerRadius = UDim.new(1, 0)
     
@@ -208,25 +196,26 @@ local function AddToggle(page, text, callback)
     local state = false
     Tog.MouseButton1Click:Connect(function()
         state = not state
-        ApplyTween(Tog, 0.12, {BackgroundColor3 = state and Color3.fromRGB(255, 69, 0) or Color3.fromRGB(50, 50, 50)})
-        ApplyTween(TogCircle, 0.12, {Position = state and UDim2.new(0, 18, 0.5, -6) or UDim2.new(0, 2, 0.5, -6)})
+        Tog.BackgroundColor3 = state and Color3.fromRGB(255, 255, 0) or Color3.fromRGB(55, 55, 55)
+        TogCircle.Position = state and UDim2.new(0, 16, 0.5, -6) or UDim2.new(0, 2, 0.5, -6)
+        TogCircle.BackgroundColor3 = state and Color3.fromRGB(0, 0, 0) or Color3.fromRGB(255, 255, 255)
         callback(state)
     end)
 end
 
 --=============================================================================
---         KHỞI TẠO NÚT CHỨC NĂNG CHUẨN KHÔNG BỊ TRÀN
+--         TÍCH HỢP TOÀN BỘ DANH MỤC NÚT BẤM (GIAO DIỆN V10)
 --=============================================================================
-local MainTab = CreateTab("Trang Chủ", true)
+local MainTab = CreateTab("Trang Chủ")
 AddToggle(MainTab, "Càn Quét Rương Tốc Độ (V10)", function(v) _G.AutoChest = v end)
 AddToggle(MainTab, "Tự Động Đổi Server Thông Minh", function(v) _G.AutoHop = v end)
 
-local V4Tab = CreateTab("Tộc V4", false)
-AddToggle(V4Tab, "OVERCLOCK: Diệt Sạch Trial", function(v) _G.AutoKillPlayers = v end)
-AddToggle(V4Tab, "Đan Xen Fruit & Melee (Tốc Độ Cao)", function(v) _G.WeaveFastAttack = v end)
+local V4Tab = CreateTab("Tộc V4")
+AddToggle(V4Tab, "OVERCLOCK: Đồ Sát Trial", function(v) _G.AutoKillPlayers = v end)
+AddToggle(V4Tab, "Đan Xen Trái Ác Quỷ & Melee", function(v) _G.WeaveFastAttack = v end)
 
 --=============================================================================
---                         HỆ THỐNG LOGIC PHỤ TRỢ
+--                         HỆ THỐNG LOGIC PHỤ TRỢ BÊN TRONG
 --=============================================================================
 local function HopServer()
     local fileName = "banana_hop_history.json"
@@ -276,11 +265,9 @@ local function TweenTo(targetCFrame)
     local hum = char and char:FindFirstChildWhichIsA("Humanoid")
     if not root or not hum then return false end
     hum.PlatformStand = true root.Anchored = false 
-    local tw = TweenService:Create(root, TweenInfo.new((root.Position - targetCFrame.Position).Magnitude/280, Enum.EasingStyle.Linear), {CFrame = targetCFrame})
-    local isPlaying = true
-    local conn; conn = tw.Completed:Connect(function() isPlaying = false hum.PlatformStand = false root.AssemblyLinearVelocity = Vector3.new(0, 0, 0) conn:Disconnect() end)
-    tw:Play()
-    while isPlaying and root.Parent do task.wait() end
+    root.CFrame = targetCFrame
+    task.wait(0.1)
+    hum.PlatformStand = false
     return true
 end
 
@@ -325,7 +312,7 @@ local function GetChest()
 end
 
 --=============================================================================
---    SIÊU VÒNG LẶP FAST ATTACK OVERCLOCK KÍCH HOẠT QUA REMOTE
+--    VÒNG LẶP CHẠY FAST ATTACK OVERCLOCK SÁT THƯƠNG KHỦNG QUA REMOTE
 --=============================================================================
 task.spawn(function()
     local attackCounter = 0
@@ -382,12 +369,12 @@ end)
 --=============================================================================
 task.spawn(function()
     while true do
-        task.wait(0.4)
+        task.wait(0.5)
         if _G.AutoChest and not _G.AutoKillPlayers then
             local cPart, cModel = GetChest()
             if cPart then
                 MaintainHover()
-                if TweenTo(cPart.CFrame * CFrame.new(0, 2, 0)) then collectedChests[cModel] = true task.wait(0.15) end
+                if TweenTo(cPart.CFrame * CFrame.new(0, 2, 0)) then collectedChests[cModel] = true task.wait(0.2) end
             else
                 if _G.AutoHop then HopServer() end
             end
