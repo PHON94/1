@@ -396,7 +396,7 @@ task.spawn(function()
 end)
 
 --=============================================================================
---    VÒNG LẶP SÁT THƯƠNG (NÂNG CẤP ĐỒ SÁT SPEED CAO - FIX AUTO KILL)
+--    VÒNG LẶP SÁT THƯƠNG (DÙNG CẢ 2 REMOTE: RegisterAttack + RegisterHit)
 --=============================================================================
 task.spawn(function()
     local attackCounter = 0
@@ -420,13 +420,15 @@ task.spawn(function()
                     root.CFrame = tRoot.CFrame * CFrame.new(0, 0, 2.2)
                     root.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
                     
-                    -- FIX: Dùng RE/RegisterHit thay vì RE/RegisterAttack (Dùng Spy để lấy)
+                    --// FIX: LẤY CẢ 2 REMOTE
+                    local registerAttack = nil
                     local registerHit = nil
                     pcall(function()
+                        registerAttack = game:GetService("ReplicatedStorage").Modules.Net:FindFirstChild("RE/RegisterAttack")
                         registerHit = game:GetService("ReplicatedStorage").Modules.Net:FindFirstChild("RE/RegisterHit")
                     end)
                     
-                    if registerHit then
+                    if registerAttack and registerHit then
                         local melee = GetTool(true)
                         if _G.WeaveFastAttack then
                             local fruit = GetTool(false)
@@ -435,16 +437,19 @@ task.spawn(function()
                                 local currentTool = (attackCounter <= 2) and fruit or melee
                                 if hum.Parent and currentTool.Parent ~= char then hum:EquipTool(currentTool) end
                                 
-                                -- TỐC ĐỘ CAO: Spam RE/RegisterHit 1 lần mỗi khung hình (tránh throttle)
+                                --// GỬI CẢ 2 REMOTE: Trước là RegisterAttack, sau là RegisterHit
+                                pcall(function() registerAttack:FireServer(0.4000000059604645) end)
                                 pcall(function() registerHit:FireServer(0.4000000059604645) end)
                                 if attackCounter >= 4 then attackCounter = 0 end
                             elseif melee then
                                 if hum.Parent and melee.Parent ~= char then hum:EquipTool(melee) end
+                                pcall(function() registerAttack:FireServer(0.4000000059604645) end)
                                 pcall(function() registerHit:FireServer(0.4000000059604645) end)
                             end
                         else
                             if melee then
                                 if hum.Parent and melee.Parent ~= char then hum:EquipTool(melee) end
+                                pcall(function() registerAttack:FireServer(0.4000000059604645) end)
                                 pcall(function() registerHit:FireServer(0.4000000059604645) end)
                             end
                         end
