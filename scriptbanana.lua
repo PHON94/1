@@ -23,6 +23,12 @@ local MELEE_LIST = {
     "Dragon Talon", "Godhuman", "Sanguine Art"
 }
 
+--// CACHE REMOTE
+local remoteCache = { registerAttack = nil, registerHit = nil }
+local lastAttackTime = 0
+local ATTACK_COOLDOWN = 0.1 -- 100ms giữa các attack
+local PLAYER_DETECTION_RANGE = 300 -- 300 stud
+
 --// XÓA GIAO DIỆN CŨ
 if game:GetService("CoreGui"):FindFirstChild("PhongdzHub") then
     game:GetService("CoreGui").PhongdzHub:Destroy()
@@ -296,17 +302,22 @@ local function TweenTo(targetCFrame)
     return completed
 end
 
---// CHỈNH SỬA: QUÉT TOÀN MAP (MATH.HUGE) ĐỂ SĂN HẾT PLAYER TRONG PHÒNG TRIAL
+--// ✅ CHỈNH SỬA: Quét người trong phạm vi 300 stud
 local function GetClosestPlayerInTrial()
-    local closest, shortDist = nil, math.huge
+    local closest, shortDist = nil, PLAYER_DETECTION_RANGE
     local myRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
     if not myRoot then return nil end
+    
     for _, p in pairs(Players:GetPlayers()) do
         if p ~= LocalPlayer and p.Character and p.Character:FindFirstChild("HumanoidRootPart") then
             local hum = p.Character:FindFirstChildWhichIsA("Humanoid")
             if hum and hum.Health > 0 then
                 local dist = (myRoot.Position - p.Character.HumanoidRootPart.Position).Magnitude
-                if dist < shortDist then shortDist = dist closest = p end
+                -- Chỉ tính người trong phạm vi 300 stud
+                if dist < shortDist then 
+                    shortDist = dist 
+                    closest = p 
+                end
             end
         end
     end
@@ -324,34 +335,64 @@ local function GetTool(isMelee)
     return nil
 end
 
-local function GetChest()
+--// CACHE REMOTE HÀM
+local function CacheRemotes()
+    if not remoteCache.registerAttack or not remoteCache.registerHit then
+        pcall(function()
+            local net = game:GetService("ReplicatedStorage").Modules.Net
+            remoteCache.registerAttack = net:FindFirstChild("RE/RegisterAttack")
+            remoteCache.registerHit = net:FindFirstChild("RE/RegisterHit")
+        end)
+    end
+    return remoteCache.registerAttack, remoteCache.registerHit
+end
+
+--// ✅ TỐI ƯU: Quét TẤT CẢ rương trong toàn map (FIX CẤUTRÚC CHEST)
+local function GetAllChests()
     local myRoot = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-    if not myRoot then return nil, nil end
+    if not myRoot then return {} end
     
-    local closestPart, closestModel = nil, nil
-    local shortestDistance = math.huge
+    local chests = {}
+    local checkedModels = setmetatable({}, {__mode = "k"})
     
-    local function check(v)
-        if v.Name:find("Chest") and not collectedChests[v] then
+    local function checkChest(v)
+        if checkedModels[v] then return end
+        checkedModels[v] = true
+        
+        -- Tìm Chest1, Chest2, Chest3 (không phải folder "Chest")
+        if (v.Name == "Chest1" or v.Name == "Chest2" or v.Name == "Chest3") and not collectedChests[v] then
             local part = v:FindFirstChild("HumanoidRootPart") or v:FindFirstChild("RootPart") or (v:IsA("BasePart") and v)
             if part then
-                local distance = (myRoot.Position - part.Position).Magnitude
-                if distance < shortestDistance then
-                    shortestDistance = distance
-                    closestPart = part
-                    closestModel = v
-                end
+                local dist = (myRoot.Position - part.Position).Magnitude
+                table.insert(chests, { part = part, model = v, distance = dist })
             end
         end
     end
     
-    for _, v in pairs(workspace:GetChildren()) do check(v) end
-    local targetFolders = {"Chests", "ChestModels", "ChestSpawns"}
-    for _, fName in pairs(targetFolders) do
-        local f = workspace:FindFirstChild(fName)
-        if f then for _, v in pairs(f:GetDescendants()) do check(v) end end
+    -- Quét ChestModels/Map (chỉ quét Map, bỏ Elements vì đó là quái)
+    local chestModels = workspace:FindFirstChild("ChestModels")
+    if chestModels then
+        local mapFolder = chestModels:FindFirstChild("Map")
+        if mapFolder then
+            -- Quét tất cả descendants để tìm Chest1, Chest2, Chest3
+            for _, v in pairs(mapFolder:GetDescendants()) do
+                checkChest(v)
+            end
+        end
     end
-    return closestPart, closestModel
+    
+    -- Fallback: Quét trực tiếp Chests folder nếu có
+    local chestFolder = workspace:FindFirstChild("Chests")
+    if chestFolder then
+        for _, v in pairs(chestFolder:GetDescendants()) do
+            checkChest(v)
+        end
+    end
+    
+    -- Sắp xếp theo khoảng cách
+    table.sort(chests, function(a, b) return a.distance < b.distance end)
+    
+    return chests
 end
 
 --// VÒNG LẶP LIÊN TỤC KHÓA NOCLIP XUYÊN TƯỜNG (ANTI-KẸT ĐẢO)
@@ -359,10 +400,9 @@ RunService.Stepped:Connect(function()
     if _G.AutoChest or _G.AutoKillPlayers then
         local char = LocalPlayer.Character
         if char then
-            for _, child in pairs(char:GetDescendants()) do
-                if child:IsA("BasePart") and child.CanCollide then
-                    child.CanCollide = false
-                end
+            local root = char:FindFirstChild("HumanoidRootPart")
+            if root and root.CanCollide then
+                root.CanCollide = false
             end
         end
     end
@@ -370,20 +410,24 @@ end)
 
 --// CHỈNH SỬA: VÒNG LẶP TỰ ĐỘNG TĂNG PHẠM VI HITBOX (EXPAND HITBOX) CỦA PLAYER KHÁC
 task.spawn(function()
+    local playerStates = {}
     while true do
         task.wait(0.3)
         for _, p in pairs(Players:GetPlayers()) do
             if p ~= LocalPlayer and p.Character then
                 local root = p.Character:FindFirstChild("HumanoidRootPart")
                 if root then
-                    if _G.AutoKillPlayers then
-                        -- Phóng to hitbox lên kích thước 25x25x25 (lớn hơn trước) và tắt va chạm để đánh chuẩn hơn
-                        root.Size = Vector3.new(25, 25, 25)
-                        root.CanCollide = false
-                        root.Transparency = 0.5 -- Cho dễ nhìn
-                    else
-                        -- Khôi phục kích thước gốc khi tắt chức năng
-                        if root.Size ~= Vector3.new(2, 2, 1) then
+                    local shouldExpand = _G.AutoKillPlayers
+                    local cached = playerStates[p]
+                    
+                    -- Chỉ update nếu trạng thái thay đổi
+                    if cached ~= shouldExpand then
+                        playerStates[p] = shouldExpand
+                        if shouldExpand then
+                            root.Size = Vector3.new(25, 25, 25)
+                            root.CanCollide = false
+                            root.Transparency = 0.5
+                        else
                             root.Size = Vector3.new(2, 2, 1)
                             root.CanCollide = true
                             root.Transparency = 0
@@ -420,37 +464,40 @@ task.spawn(function()
                     root.CFrame = tRoot.CFrame * CFrame.new(0, 0, 2.2)
                     root.AssemblyLinearVelocity = Vector3.new(0, 0, 0)
                     
-                    --// FIX: LẤY CẢ 2 REMOTE
-                    local registerAttack = nil
-                    local registerHit = nil
-                    pcall(function()
-                        registerAttack = game:GetService("ReplicatedStorage").Modules.Net:FindFirstChild("RE/RegisterAttack")
-                        registerHit = game:GetService("ReplicatedStorage").Modules.Net:FindFirstChild("RE/RegisterHit")
-                    end)
+                    --// ✅ TỐI ƯU: Cache remote + Giảm spam với cooldown
+                    local registerAttack, registerHit = CacheRemotes()
                     
                     if registerAttack and registerHit then
-                        local melee = GetTool(true)
-                        if _G.WeaveFastAttack then
-                            local fruit = GetTool(false)
-                            if fruit and melee then
-                                attackCounter = attackCounter + 1
-                                local currentTool = (attackCounter <= 2) and fruit or melee
-                                if hum.Parent and currentTool.Parent ~= char then hum:EquipTool(currentTool) end
-                                
-                                --// GỬI CẢ 2 REMOTE: Trước là RegisterAttack, sau là RegisterHit
-                                pcall(function() registerAttack:FireServer(0.4000000059604645) end)
-                                pcall(function() registerHit:FireServer(0.4000000059604645) end)
-                                if attackCounter >= 4 then attackCounter = 0 end
-                            elseif melee then
-                                if hum.Parent and melee.Parent ~= char then hum:EquipTool(melee) end
-                                pcall(function() registerAttack:FireServer(0.4000000059604645) end)
-                                pcall(function() registerHit:FireServer(0.4000000059604645) end)
-                            end
-                        else
-                            if melee then
-                                if hum.Parent and melee.Parent ~= char then hum:EquipTool(melee) end
-                                pcall(function() registerAttack:FireServer(0.4000000059604645) end)
-                                pcall(function() registerHit:FireServer(0.4000000059604645) end)
+                        local currentTime = tick()
+                        -- Chỉ gửi nếu đủ cooldown (0.1 giây)
+                        if currentTime - lastAttackTime > ATTACK_COOLDOWN then
+                            local melee = GetTool(true)
+                            if _G.WeaveFastAttack then
+                                local fruit = GetTool(false)
+                                if fruit and melee then
+                                    attackCounter = attackCounter + 1
+                                    local currentTool = (attackCounter <= 2) and fruit or melee
+                                    if hum.Parent and currentTool.Parent ~= char then hum:EquipTool(currentTool) end
+                                    
+                                    --// GỬI CẢ 2 REMOTE: Với cooldown an toàn
+                                    pcall(function() registerAttack:FireServer(0.4000000059604645) end)
+                                    pcall(function() registerHit:FireServer(0.4000000059604645) end)
+                                    lastAttackTime = currentTime
+                                    
+                                    if attackCounter >= 4 then attackCounter = 0 end
+                                elseif melee then
+                                    if hum.Parent and melee.Parent ~= char then hum:EquipTool(melee) end
+                                    pcall(function() registerAttack:FireServer(0.4000000059604645) end)
+                                    pcall(function() registerHit:FireServer(0.4000000059604645) end)
+                                    lastAttackTime = currentTime
+                                end
+                            else
+                                if melee then
+                                    if hum.Parent and melee.Parent ~= char then hum:EquipTool(melee) end
+                                    pcall(function() registerAttack:FireServer(0.4000000059604645) end)
+                                    pcall(function() registerHit:FireServer(0.4000000059604645) end)
+                                    lastAttackTime = currentTime
+                                end
                             end
                         end
                     end
@@ -469,22 +516,33 @@ task.spawn(function()
 end)
 
 --=============================================================================
---                    VÒNG LẶP RƯƠNG (FIXED - BỎ CONDITION AUTOKILLPLAYERS)
+--         VÒNG LẶP RƯƠNG (CẢI THIỆN - Quét TẤT CẢ RƯƠNG TOÀN MAP)
 --=============================================================================
 task.spawn(function()
     while true do
         task.wait(0.1)
         if _G.AutoChest then
-            local cPart, cModel = GetChest()
-            if cPart then
+            local allChests = GetAllChests()
+            
+            if #allChests > 0 then
                 MaintainHover()
-                if TweenTo(cPart.CFrame * CFrame.new(0, 2, 0)) then 
-                    collectedChests[cModel] = true 
-                    task.wait(0.3) -- Thêm delay giữa các lần nhặt
+                -- Quét lần lượt từ gần đến xa
+                for _, chestData in pairs(allChests) do
+                    if _G.AutoChest then
+                        if TweenTo(chestData.part.CFrame * CFrame.new(0, 2, 0)) then 
+                            collectedChests[chestData.model] = true 
+                            task.wait(0.2) -- Delay trước khi quét cái tiếp theo
+                        end
+                    end
                 end
             else
-                if _G.AutoHop then HopServer() end
+                -- Không còn rương nữa, đổi server
+                if _G.AutoHop then 
+                    HopServer() 
+                end
             end
+        else
+            RemoveHover()
         end
     end
-end)
+end())
