@@ -1,386 +1,108 @@
 --=============================================================================
--- PHONGDZ HUB - FARM LEVEL ONLY
+-- PHONGDZ HUB — FARM LEVEL + FAST ATTACK
+-- CLEAN REBUILD / COORDINATE UI
 --=============================================================================
 
-local Players = game:GetService("Players")
-local UserInputService = game:GetService("UserInputService")
-local TweenService = game:GetService("TweenService")
-local RunService = game:GetService("RunService")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local LocalPlayer = Players.LocalPlayer
+local Players=game:GetService("Players")
+local UserInputService=game:GetService("UserInputService")
+local TweenService=game:GetService("TweenService")
+local RunService=game:GetService("RunService")
+local ReplicatedStorage=game:GetService("ReplicatedStorage")
+local LocalPlayer=Players.LocalPlayer
 
-_G.AutoLevel = false
-_G.Fast_Delay = 0.01
+_G.AutoLevel=false
+_G.Fast_Delay=0.01
 
--- Sea detection from source.
-local Sea1, Sea2, Sea3 = false, false, false
-if game.PlaceId == 2753915549 then
-    Sea1 = true
-elseif game.PlaceId == 4442272183 then
-    Sea2 = true
-elseif game.PlaceId == 7449423635 then
-    Sea3 = true
-end
+local Sea1,Sea2,Sea3=false,false,false
+if game.PlaceId==2753915549 then Sea1=true elseif game.PlaceId==4442272183 then Sea2=true elseif game.PlaceId==7449423635 then Sea3=true end
 
 --=============================================================================
--- UI ONLY
---=============================================================================
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
-
-local PlayerGui = LocalPlayer:WaitForChild("PlayerGui", 10)
-local CoreGui = game:GetService("CoreGui")
-
-local oldPlayerGui = PlayerGui and PlayerGui:FindFirstChild("PhongdzHub_FarmLevel")
-if oldPlayerGui then
-    oldPlayerGui:Destroy()
-end
-
-local oldCoreGui = CoreGui:FindFirstChild("PhongdzHub_FarmLevel")
-if oldCoreGui then
-    oldCoreGui:Destroy()
-end
-
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "PhongdzHub_FarmLevel"
-ScreenGui.ResetOnSpawn = false
-ScreenGui.IgnoreGuiInset = true
-ScreenGui.DisplayOrder = 999999
-ScreenGui.Enabled = true
-
--- PlayerGui is the normal and most reliable parent for a client UI.
--- CoreGui is only used as a fallback when PlayerGui is unavailable.
-local guiParent = PlayerGui or CoreGui
-ScreenGui.Parent = guiParent
-
-local MainFrame = Instance.new("Frame")
-MainFrame.Parent = ScreenGui
-MainFrame.Size = UDim2.fromOffset(440, 235)
-MainFrame.Position = UDim2.fromOffset(0, 0)
-MainFrame.BackgroundColor3 = Color3.fromRGB(18,18,22)
-MainFrame.BorderSizePixel = 0
-Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0,10)
-
---=============================================================================
--- FORCE COORDINATE MENU
+-- NEW MENU — ABSOLUTE PIXEL COORDINATES
 --=============================================================================
 
-local MENU_W = 440
-local MENU_H = 235
-local MenuX = 0
-local MenuY = 0
+local PlayerGui=LocalPlayer:WaitForChild("PlayerGui",10)
+if not PlayerGui then return end
+local old=PlayerGui:FindFirstChild("PhongdzHub_FarmLevel")
+if old then old:Destroy() end
 
-local function ForceMenuCoordinate(x, y)
-    local camera = workspace.CurrentCamera
-    local viewport = camera and camera.ViewportSize or Vector2.new(1920, 1080)
+local ScreenGui=Instance.new("ScreenGui")
+ScreenGui.Name="PhongdzHub_FarmLevel"
+ScreenGui.ResetOnSpawn=false
+ScreenGui.IgnoreGuiInset=true
+ScreenGui.DisplayOrder=999999
+ScreenGui.ZIndexBehavior=Enum.ZIndexBehavior.Sibling
+ScreenGui.Parent=PlayerGui
 
-    MenuX = math.floor(tonumber(x) or MenuX)
-    MenuY = math.floor(tonumber(y) or MenuY)
-
-    -- Không cho menu bị đẩy ra ngoài màn hình.
-    MenuX = math.clamp(MenuX, 0, math.max(0, viewport.X - MENU_W))
-    MenuY = math.clamp(MenuY, 0, math.max(0, viewport.Y - MENU_H))
-
-    MainFrame.AnchorPoint = Vector2.zero
-    MainFrame.Size = UDim2.fromOffset(MENU_W, MENU_H)
-    MainFrame.Position = UDim2.fromOffset(MenuX, MenuY)
+local W,H=440,250
+local X,Y=0,0
+local function viewport() local c=workspace.CurrentCamera return c and c.ViewportSize or Vector2.new(1920,1080) end
+local MainFrame=Instance.new("Frame")
+MainFrame.Name="MainFrame"
+MainFrame.Size=UDim2.fromOffset(W,H)
+MainFrame.BackgroundColor3=Color3.fromRGB(16,18,24)
+MainFrame.BorderSizePixel=0
+MainFrame.Parent=ScreenGui
+local function forceXY(x,y)
+ local v=viewport(); X=math.clamp(math.floor(tonumber(x) or X),0,math.max(0,v.X-W)); Y=math.clamp(math.floor(tonumber(y) or Y),0,math.max(0,v.Y-H)); MainFrame.Position=UDim2.fromOffset(X,Y)
 end
+local function center() local v=viewport(); forceXY((v.X-W)/2,(v.Y-H)/2) end
+local c=Instance.new("UICorner",MainFrame); c.CornerRadius=UDim.new(0,14)
+local st=Instance.new("UIStroke",MainFrame); st.Color=Color3.fromRGB(255,211,65); st.Transparency=.4
+center()
 
-local function ForceMenuCenter()
-    local camera = workspace.CurrentCamera
-    local viewport = camera and camera.ViewportSize or Vector2.new(1920, 1080)
+local Header=Instance.new("Frame",MainFrame); Header.Size=UDim2.fromOffset(W,62); Header.BackgroundColor3=Color3.fromRGB(23,25,32); Header.BorderSizePixel=0; Header.Active=true
+local hc=Instance.new("UICorner",Header); hc.CornerRadius=UDim.new(0,14)
+local mask=Instance.new("Frame",Header); mask.Position=UDim2.fromOffset(0,48); mask.Size=UDim2.fromOffset(W,14); mask.BackgroundColor3=Header.BackgroundColor3; mask.BorderSizePixel=0
+local title=Instance.new("TextLabel",Header); title.Position=UDim2.fromOffset(18,9); title.Size=UDim2.fromOffset(270,24); title.BackgroundTransparency=1; title.Text="PHONGDZ HUB"; title.Font=Enum.Font.GothamBlack; title.TextSize=18; title.TextColor3=Color3.fromRGB(255,211,65); title.TextXAlignment=Enum.TextXAlignment.Left
+local sub=Instance.new("TextLabel",Header); sub.Position=UDim2.fromOffset(19,35); sub.Size=UDim2.fromOffset(270,16); sub.BackgroundTransparency=1; sub.Text="FARM LEVEL  •  FAST ATTACK"; sub.Font=Enum.Font.GothamMedium; sub.TextSize=9; sub.TextColor3=Color3.fromRGB(145,150,163); sub.TextXAlignment=Enum.TextXAlignment.Left
 
-    ForceMenuCoordinate(
-        math.floor((viewport.X - MENU_W) / 2),
-        math.floor((viewport.Y - MENU_H) / 2)
-    )
-end
+local Minimize=Instance.new("TextButton",Header); Minimize.Size=UDim2.fromOffset(30,30); Minimize.Position=UDim2.fromOffset(W-72,16); Minimize.Text="—"; Minimize.Font=Enum.Font.GothamBold; Minimize.TextSize=16; Minimize.TextColor3=Color3.fromRGB(235,235,240); Minimize.BackgroundColor3=Color3.fromRGB(42,45,54); Minimize.BorderSizePixel=0; Minimize.AutoButtonColor=false; Instance.new("UICorner",Minimize).CornerRadius=UDim.new(0,9)
+local Close=Instance.new("TextButton",Header); Close.Size=UDim2.fromOffset(30,30); Close.Position=UDim2.fromOffset(W-36,16); Close.Text="×"; Close.Font=Enum.Font.GothamBold; Close.TextSize=19; Close.TextColor3=Color3.fromRGB(255,240,240); Close.BackgroundColor3=Color3.fromRGB(145,53,60); Close.BorderSizePixel=0; Close.AutoButtonColor=false; Instance.new("UICorner",Close).CornerRadius=UDim.new(0,9)
 
--- Ép menu vào giữa ngay khi tạo.
-ForceMenuCenter()
+local Card=Instance.new("Frame",MainFrame); Card.Position=UDim2.fromOffset(16,77); Card.Size=UDim2.fromOffset(W-32,58); Card.BackgroundColor3=Color3.fromRGB(22,25,33); Card.BorderSizePixel=0; Instance.new("UICorner",Card).CornerRadius=UDim.new(0,10)
+local ct=Instance.new("TextLabel",Card); ct.Position=UDim2.fromOffset(13,7); ct.Size=UDim2.fromOffset(W-60,20); ct.BackgroundTransparency=1; ct.Text="Automatic Level Farming"; ct.Font=Enum.Font.GothamBold; ct.TextSize=12; ct.TextColor3=Color3.fromRGB(241,243,247); ct.TextXAlignment=Enum.TextXAlignment.Left
+local cd=Instance.new("TextLabel",Card); cd.Position=UDim2.fromOffset(13,30); cd.Size=UDim2.fromOffset(W-60,20); cd.BackgroundTransparency=1; cd.Text="Quest → đúng mob → kéo lên → Fast Attack"; cd.Font=Enum.Font.Gotham; cd.TextSize=9; cd.TextColor3=Color3.fromRGB(143,149,162); cd.TextXAlignment=Enum.TextXAlignment.Left
 
+local ToggleFrame=Instance.new("Frame",MainFrame); ToggleFrame.Position=UDim2.fromOffset(16,145); ToggleFrame.Size=UDim2.fromOffset(W-32,54); ToggleFrame.BackgroundColor3=Color3.fromRGB(22,25,33); ToggleFrame.BorderSizePixel=0; Instance.new("UICorner",ToggleFrame).CornerRadius=UDim.new(0,10)
+local ToggleText=Instance.new("TextLabel",ToggleFrame); ToggleText.Position=UDim2.fromOffset(13,6); ToggleText.Size=UDim2.fromOffset(280,20); ToggleText.BackgroundTransparency=1; ToggleText.Text="FARM LEVEL + FAST ATTACK"; ToggleText.Font=Enum.Font.GothamBold; ToggleText.TextSize=11; ToggleText.TextColor3=Color3.fromRGB(240,242,247); ToggleText.TextXAlignment=Enum.TextXAlignment.Left
+local Status=Instance.new("TextLabel",ToggleFrame); Status.Position=UDim2.fromOffset(13,29); Status.Size=UDim2.fromOffset(280,17); Status.BackgroundTransparency=1; Status.Text="● OFF"; Status.Font=Enum.Font.GothamMedium; Status.TextSize=9; Status.TextColor3=Color3.fromRGB(130,135,148); Status.TextXAlignment=Enum.TextXAlignment.Left
+local Toggle=Instance.new("TextButton",ToggleFrame); Toggle.Size=UDim2.fromOffset(52,29); Toggle.Position=UDim2.fromOffset(W-84,12); Toggle.Text=""; Toggle.BackgroundColor3=Color3.fromRGB(55,59,70); Toggle.BorderSizePixel=0; Toggle.AutoButtonColor=false; Instance.new("UICorner",Toggle).CornerRadius=UDim.new(1,0)
+local Knob=Instance.new("Frame",Toggle); Knob.Size=UDim2.fromOffset(23,23); Knob.Position=UDim2.fromOffset(3,3); Knob.BackgroundColor3=Color3.fromRGB(225,228,235); Knob.BorderSizePixel=0; Instance.new("UICorner",Knob).CornerRadius=UDim.new(1,0)
+local hint=Instance.new("TextLabel",MainFrame); hint.Position=UDim2.fromOffset(16,212); hint.Size=UDim2.fromOffset(W-32,18); hint.BackgroundTransparency=1; hint.Text="Kéo header để di chuyển  •  — để thu nhỏ"; hint.Font=Enum.Font.GothamMedium; hint.TextSize=8; hint.TextColor3=Color3.fromRGB(86,91,104); hint.TextXAlignment=Enum.TextXAlignment.Center
 
-local Stroke = Instance.new("UIStroke", MainFrame)
-Stroke.Color = Color3.fromRGB(255,215,0)
-Stroke.Transparency = 0.35
+local Launcher=Instance.new("TextButton",ScreenGui); Launcher.Size=UDim2.fromOffset(58,58); Launcher.BackgroundColor3=Color3.fromRGB(255,211,65); Launcher.BorderSizePixel=0; Launcher.Text="P"; Launcher.Font=Enum.Font.GothamBlack; Launcher.TextSize=22; Launcher.TextColor3=Color3.fromRGB(16,18,24); Launcher.Visible=false; Launcher.ZIndex=100; Instance.new("UICorner",Launcher).CornerRadius=UDim.new(1,0)
 
-local Header = Instance.new("Frame", MainFrame)
-Header.Size = UDim2.new(1,0,0,52)
-Header.BackgroundColor3 = Color3.fromRGB(24,24,30)
-Header.BorderSizePixel = 0
-Instance.new("UICorner", Header).CornerRadius = UDim.new(0,10)
+local dragging=false; local dragStart=Vector2.zero; local dragOrigin=Vector2.zero
+Header.InputBegan:Connect(function(i) if i.UserInputType==Enum.UserInputType.MouseButton1 or i.UserInputType==Enum.UserInputType.Touch then dragging=true; dragStart=i.Position; dragOrigin=Vector2.new(X,Y) end end)
+UserInputService.InputChanged:Connect(function(i) if dragging and (i.UserInputType==Enum.UserInputType.MouseMovement or i.UserInputType==Enum.UserInputType.Touch) then local d=i.Position-dragStart; forceXY(dragOrigin.X+d.X,dragOrigin.Y+d.Y) end end)
+UserInputService.InputEnded:Connect(function(i) if i.UserInputType==Enum.UserInputType.MouseButton1 or i.UserInputType==Enum.UserInputType.Touch then dragging=false end end)
 
-local Title = Instance.new("TextLabel", Header)
-Title.BackgroundTransparency = 1
-Title.Position = UDim2.fromOffset(18,7)
-Title.Size = UDim2.new(1,-90,0,25)
-Title.Text = "PHONGDZ HUB"
-Title.Font = Enum.Font.GothamBold
-Title.TextSize = 19
-Title.TextColor3 = Color3.fromRGB(255,215,0)
-Title.TextXAlignment = Enum.TextXAlignment.Left
-
-local Sub = Instance.new("TextLabel", Header)
-Sub.BackgroundTransparency = 1
-Sub.Position = UDim2.fromOffset(18,29)
-Sub.Size = UDim2.new(1,-90,0,17)
-Sub.Text = "FARM LEVEL • FAST ATTACK"
-Sub.Font = Enum.Font.Gotham
-Sub.TextSize = 10
-Sub.TextColor3 = Color3.fromRGB(145,145,155)
-Sub.TextXAlignment = Enum.TextXAlignment.Left
-
-local Close = Instance.new("TextButton", Header)
-Close.Size = UDim2.fromOffset(28,28)
-Close.Position = UDim2.new(1,-38,0,12)
-Close.Text = "×"
-Close.Font = Enum.Font.GothamBold
-Close.TextSize = 20
-Close.TextColor3 = Color3.fromRGB(255,255,255)
-Close.BackgroundColor3 = Color3.fromRGB(180,55,55)
-Instance.new("UICorner", Close).CornerRadius = UDim.new(0,7)
-Close.Activated:Connect(function() ScreenGui:Destroy() end)
-
-local Content = Instance.new("Frame", MainFrame)
-Content.BackgroundTransparency = 1
-Content.Position = UDim2.fromOffset(16,66)
-Content.Size = UDim2.new(1,-32,1,-80)
-
-local Info = Instance.new("TextLabel", Content)
-Info.BackgroundTransparency = 1
-Info.Size = UDim2.new(1,0,0,48)
-Info.Text = "Tự nhận quest → tìm đúng mob theo level →\ndi chuyển → Fast Attack → lặp lại."
-Info.Font = Enum.Font.Gotham
-Info.TextSize = 12
-Info.TextColor3 = Color3.fromRGB(185,185,195)
-Info.TextXAlignment = Enum.TextXAlignment.Left
-Info.TextYAlignment = Enum.TextYAlignment.Center
-
-local ToggleFrame = Instance.new("Frame", Content)
-ToggleFrame.Position = UDim2.fromOffset(0,58)
-ToggleFrame.Size = UDim2.new(1,0,0,48)
-ToggleFrame.BackgroundColor3 = Color3.fromRGB(30,30,37)
-ToggleFrame.BorderSizePixel = 0
-Instance.new("UICorner", ToggleFrame).CornerRadius = UDim.new(0,8)
-
-local ToggleText = Instance.new("TextLabel", ToggleFrame)
-ToggleText.BackgroundTransparency = 1
-ToggleText.Position = UDim2.fromOffset(14,0)
-ToggleText.Size = UDim2.new(1,-80,1,0)
-ToggleText.Text = "FARM LEVEL + FAST ATTACK"
-ToggleText.Font = Enum.Font.GothamBold
-ToggleText.TextSize = 13
-ToggleText.TextColor3 = Color3.fromRGB(245,245,245)
-ToggleText.TextXAlignment = Enum.TextXAlignment.Left
-
-local Toggle = Instance.new("TextButton", ToggleFrame)
-Toggle.Position = UDim2.new(1,-58,0.5,-12)
-Toggle.Size = UDim2.fromOffset(44,24)
-Toggle.Text = ""
-Toggle.BackgroundColor3 = Color3.fromRGB(65,65,72)
-Instance.new("UICorner", Toggle).CornerRadius = UDim.new(1,0)
-
-local Knob = Instance.new("Frame", Toggle)
-Knob.Size = UDim2.fromOffset(18,18)
-Knob.Position = UDim2.fromOffset(3,3)
-Knob.BackgroundColor3 = Color3.fromRGB(210,210,215)
-Instance.new("UICorner", Knob).CornerRadius = UDim.new(1,0)
-
-local Status = Instance.new("TextLabel", Content)
-Status.BackgroundTransparency = 1
-Status.Position = UDim2.fromOffset(0,116)
-Status.Size = UDim2.new(1,0,0,24)
-Status.Text = "● OFF"
-Status.Font = Enum.Font.GothamBold
-Status.TextSize = 11
-Status.TextColor3 = Color3.fromRGB(140,140,150)
-Status.TextXAlignment = Enum.TextXAlignment.Left
-
-local dragging=false
-local dragStart,startPos
-Header.InputBegan:Connect(function(i)
-    if i.UserInputType==Enum.UserInputType.MouseButton1 or i.UserInputType==Enum.UserInputType.Touch then
-        dragging=true; dragStart=i.Position; startPos=Vector2.new(MenuX, MenuY)
-    end
-end)
-UserInputService.InputChanged:Connect(function(i)
-    if dragging and (i.UserInputType==Enum.UserInputType.MouseMovement or i.UserInputType==Enum.UserInputType.Touch) then
-        local d=i.Position-dragStart
-        ForceMenuCoordinate(startPos.X + d.X, startPos.Y + d.Y)
-    end
-end)
-UserInputService.InputEnded:Connect(function(i)
-    if i.UserInputType==Enum.UserInputType.MouseButton1 or i.UserInputType==Enum.UserInputType.Touch then dragging=false end
-end)
-
--- Giữ tọa độ hợp lệ khi đổi kích thước màn hình / xoay mobile.
-RunService.RenderStepped:Connect(function()
-    if ScreenGui.Parent then
-        ForceMenuCoordinate(MenuX, MenuY)
-    end
-end)
-
+local minimized=false; local saveX,saveY=X,Y
+local function minimize() if minimized then return end; minimized=true; saveX,saveY=X,Y; local v=viewport(); Launcher.Position=UDim2.fromOffset(math.clamp(X+190,0,math.max(0,v.X-58)),math.clamp(Y+96,0,math.max(0,v.Y-58))); MainFrame.Visible=false; Launcher.Visible=true end
+local function restore() if not minimized then return end; minimized=false; Launcher.Visible=false; MainFrame.Visible=true; forceXY(saveX,saveY) end
+Minimize.Activated:Connect(minimize); Launcher.Activated:Connect(restore); Close.Activated:Connect(function() _G.AutoLevel=false; ScreenGui:Destroy() end)
+local lastV=viewport(); RunService.RenderStepped:Connect(function() local v=viewport(); if v.X~=lastV.X or v.Y~=lastV.Y then lastV=v; forceXY(X,Y); if Launcher.Visible then Launcher.Position=UDim2.fromOffset(math.clamp(X+190,0,math.max(0,v.X-58)),math.clamp(Y+96,0,math.max(0,v.Y-58))) end end end)
 
 --=============================================================================
--- FARM ENGINE ONLY
+-- FARM LEVEL + FAST ATTACK — SOURCE ROUTINE
 --=============================================================================
-local function GetRoot()
-    local c=LocalPlayer.Character
-    return c and c:FindFirstChild("HumanoidRootPart")
-end
 
-local function Tween(cf)
-    local root=GetRoot()
-    if not root then return end
-    local dist=(cf.Position-root.Position).Magnitude
-    local speed=350
-    local tween=TweenService:Create(root,TweenInfo.new(math.max(dist/speed,0.05),Enum.EasingStyle.Linear),{CFrame=cf})
-    tween:Play()
-end
-
-local function EquipFarmWeapon()
-    local char=LocalPlayer.Character
-    local hum=char and char:FindFirstChildOfClass("Humanoid")
-    if not hum then return nil end
-    for _,tool in ipairs(char:GetChildren()) do
-        if tool:IsA("Tool") then return tool end
-    end
-    for _,tool in ipairs(LocalPlayer.Backpack:GetChildren()) do
-        if tool:IsA("Tool") then
-            pcall(function() hum:EquipTool(tool) end)
-            return tool
-        end
-    end
-end
-
-local function AutoHaki()
-    local char=LocalPlayer.Character
-    if char and not char:FindFirstChild("HasBuso") then
-        pcall(function()
-            ReplicatedStorage.Remotes.CommF_:InvokeServer("Buso")
-        end)
-    end
-end
-
-local AttackRemote, HitRemote
-local function FastAttack()
-    if not AttackRemote or not HitRemote then
-        local net=ReplicatedStorage:FindFirstChild("Modules") and ReplicatedStorage.Modules:FindFirstChild("Net")
-        if net then
-            AttackRemote=net:FindFirstChild("RE/RegisterAttack")
-            HitRemote=net:FindFirstChild("RE/RegisterHit")
-        end
-    end
-    if not AttackRemote or not HitRemote then return end
-
-    local enemies=workspace:FindFirstChild("Enemies")
-    local root=GetRoot()
-    if not enemies or not root then return end
-
-    local hits={}
-    local lastHead=nil
-    for _,mob in ipairs(enemies:GetChildren()) do
-        local hum=mob:FindFirstChildOfClass("Humanoid")
-        local head=mob:FindFirstChild("Head")
-        if hum and head and hum.Health>0 and (root.Position-head.Position).Magnitude<=60 then
-            table.insert(hits,{mob,head})
-            lastHead=head
-        end
-    end
-
-    if lastHead and #hits>0 then
-        pcall(function()
-            AttackRemote:FireServer(1e-9)
-            HitRemote:FireServer(lastHead,hits)
-        end)
-    end
-end
-
-local function QuestText()
-    local pg=LocalPlayer:FindFirstChild("PlayerGui")
-    local main=pg and pg:FindFirstChild("Main")
-    local quest=main and main:FindFirstChild("Quest")
-    local title=quest and quest:FindFirstChild("Container") and quest.Container:FindFirstChild("QuestTitle")
-    local text=title and title:FindFirstChild("Title")
-    return quest,text
-end
-
-local function RunFarm()
-    CheckLevel()
-    local quest,title=QuestText()
-    if not quest or not title then return end
-
-    local hasCorrectQuest=quest.Visible and string.find(title.Text or "",NameMon or "")
-    if not hasCorrectQuest then
-        pcall(function() ReplicatedStorage.Remotes.CommF_:InvokeServer("AbandonQuest") end)
-        Tween(CFrameQ)
-        local root=GetRoot()
-        if root and (root.Position-CFrameQ.Position).Magnitude<=7 then
-            pcall(function()
-                ReplicatedStorage.Remotes.CommF_:InvokeServer("StartQuest",NameQuest,QuestLv)
-            end)
-        end
-        return
-    end
-
-    local enemies=workspace:FindFirstChild("Enemies")
-    if not enemies then return end
-
-    local found=false
-    for _,mob in ipairs(enemies:GetChildren()) do
-        local hum=mob:FindFirstChild("Humanoid")
-        local rootPart=mob:FindFirstChild("HumanoidRootPart")
-        if hum and rootPart and hum.Health>0 and mob.Name==Ms then
-            found=true
-            repeat
-                if not _G.AutoLevel then break end
-                task.wait(_G.Fast_Delay)
-                AutoHaki()
-                EquipFarmWeapon()
-                Tween(rootPart.CFrame*CFrame.new(0,40,0))
-                FastAttack()
-                rootPart.Size=Vector3.new(60,60,60)
-                rootPart.CanCollide=false
-            until not mob.Parent or hum.Health<=0 or not quest.Visible or not _G.AutoLevel
-        end
-    end
-
-    if not found then
-        local spawns=workspace:FindFirstChild("_WorldOrigin") and workspace._WorldOrigin:FindFirstChild("EnemySpawns")
-        if spawns then
-            for _,spawnPart in ipairs(spawns:GetChildren()) do
-                if string.find(spawnPart.Name,NameMon or "") then
-                    local root=GetRoot()
-                    if root and (root.Position-spawnPart.Position).Magnitude>=10 then
-                        Tween(spawnPart.CFrame*CFrame.new(0,40,0))
-                        break
-                    end
-                end
-            end
-        end
-    end
-end
+local function GetRoot() local c=LocalPlayer.Character return c and c:FindFirstChild("HumanoidRootPart") end
+local function TweenTo(cf) local r=GetRoot(); if not r or typeof(cf)~="CFrame" then return end; local d=(cf.Position-r.Position).Magnitude; local t=TweenService:Create(r,TweenInfo.new(math.max(d/350,.05),Enum.EasingStyle.Linear),{CFrame=cf}); t:Play() end
+local function EquipFarmWeapon() local c=LocalPlayer.Character; local h=c and c:FindFirstChildOfClass("Humanoid"); if not h then return end; for _,tool in ipairs(c:GetChildren()) do if tool:IsA("Tool") then return tool end end; local b=LocalPlayer:FindFirstChildOfClass("Backpack"); if b then for _,tool in ipairs(b:GetChildren()) do if tool:IsA("Tool") then pcall(function() h:EquipTool(tool) end); return tool end end end end
+local function AutoHaki() local c=LocalPlayer.Character; local rem=ReplicatedStorage:FindFirstChild("Remotes"); local comm=rem and rem:FindFirstChild("CommF_"); if c and not c:FindFirstChild("HasBuso") and comm then pcall(function() comm:InvokeServer("Buso") end) end end
+local AttackRemote,HitRemote
+local function ResolveAttackRemotes() if AttackRemote and HitRemote then return true end; local modules=ReplicatedStorage:FindFirstChild("Modules"); local net=modules and modules:FindFirstChild("Net"); if not net then return false end; AttackRemote=net:FindFirstChild("RE/RegisterAttack"); HitRemote=net:FindFirstChild("RE/RegisterHit"); return AttackRemote~=nil and HitRemote~=nil end
+local function FastAttack() if not ResolveAttackRemotes() then return end; local enemies=workspace:FindFirstChild("Enemies"); local root=GetRoot(); if not enemies or not root then return end; local hits={}; local lastHead; for _,mob in ipairs(enemies:GetChildren()) do local hum=mob:FindFirstChildOfClass("Humanoid"); local head=mob:FindFirstChild("Head"); if hum and head and hum.Health>0 and (root.Position-head.Position).Magnitude<=60 then hits[#hits+1]={mob,head}; lastHead=head end end; if lastHead and #hits>0 then pcall(function() AttackRemote:FireServer(1e-9); HitRemote:FireServer(lastHead,hits) end) end end
+local function QuestText() local pg=LocalPlayer:FindFirstChild("PlayerGui"); local main=pg and pg:FindFirstChild("Main"); local q=main and main:FindFirstChild("Quest"); local c=q and q:FindFirstChild("Container"); local qt=c and c:FindFirstChild("QuestTitle"); return q,qt and qt:FindFirstChild("Title") end
+local function RunFarm() CheckLevel(); if not NameMon or not NameQuest or not CFrameQ then return end; local q,title=QuestText(); if not q or not title then return end; local correct=q.Visible and string.find(tostring(title.Text or ""),tostring(NameMon),1,true); if not correct then local rem=ReplicatedStorage:FindFirstChild("Remotes"); local comm=rem and rem:FindFirstChild("CommF_"); if comm then pcall(function() comm:InvokeServer("AbandonQuest") end) end; TweenTo(CFrameQ); local root=GetRoot(); if root and (root.Position-CFrameQ.Position).Magnitude<=7 and comm then pcall(function() comm:InvokeServer("StartQuest",NameQuest,QuestLv) end) end; return end; local enemies=workspace:FindFirstChild("Enemies"); if not enemies then return end; local found=false; for _,mob in ipairs(enemies:GetChildren()) do local hum=mob:FindFirstChildOfClass("Humanoid"); local rp=mob:FindFirstChild("HumanoidRootPart"); if hum and rp and hum.Health>0 and mob.Name==Ms then found=true; repeat if not _G.AutoLevel then break end; task.wait(_G.Fast_Delay); AutoHaki(); EquipFarmWeapon(); TweenTo(rp.CFrame*CFrame.new(0,40,0)); FastAttack(); pcall(function() rp.Size=Vector3.new(60,60,60); rp.CanCollide=false end) until not mob.Parent or hum.Health<=0 or not q.Visible or not _G.AutoLevel end end; if not found then local wo=workspace:FindFirstChild("_WorldOrigin"); local sp=wo and wo:FindFirstChild("EnemySpawns"); if sp then for _,part in ipairs(sp:GetChildren()) do if string.find(tostring(part.Name),tostring(NameMon),1,true) then local root=GetRoot(); if root and (root.Position-part.Position).Magnitude>=10 then TweenTo(part.CFrame*CFrame.new(0,40,0)); break end end end end end end
 
 local enabled=false
-Toggle.Activated:Connect(function()
-    enabled=not enabled
-    _G.AutoLevel=enabled
-    if enabled then
-        Toggle.BackgroundColor3=Color3.fromRGB(255,215,0)
-        Knob.Position=UDim2.fromOffset(23,3)
-        Knob.BackgroundColor3=Color3.fromRGB(15,15,18)
-        Status.Text="● FARM LEVEL ĐANG CHẠY"
-        Status.TextColor3=Color3.fromRGB(80,220,120)
-    else
-        Toggle.BackgroundColor3=Color3.fromRGB(65,65,72)
-        Knob.Position=UDim2.fromOffset(3,3)
-        Knob.BackgroundColor3=Color3.fromRGB(210,210,215)
-        Status.Text="● OFF"
-        Status.TextColor3=Color3.fromRGB(140,140,150)
-    end
-end)
+local function setFarm(state) enabled=state; _G.AutoLevel=state; if state then Toggle.BackgroundColor3=Color3.fromRGB(255,211,65); Knob.Position=UDim2.fromOffset(26,3); Knob.BackgroundColor3=Color3.fromRGB(15,16,20); Status.Text="● FARM LEVEL ĐANG CHẠY"; Status.TextColor3=Color3.fromRGB(88,224,132) else Toggle.BackgroundColor3=Color3.fromRGB(55,59,70); Knob.Position=UDim2.fromOffset(3,3); Knob.BackgroundColor3=Color3.fromRGB(225,228,235); Status.Text="● OFF"; Status.TextColor3=Color3.fromRGB(130,135,148) end end
+Toggle.Activated:Connect(function() setFarm(not enabled) end)
 
--- Source-derived level routing is inserted below.
+task.spawn(function() while ScreenGui.Parent do if _G.AutoLevel then pcall(RunFarm) end task.wait() end end)
+
 function CheckLevel()
     local v197 = game:GetService("Players").LocalPlayer.Data.Level.Value;
     if Sea1 then
@@ -1022,12 +744,3 @@ function CheckLevel()
         end
     end
 end
-
-
-task.spawn(function()
-    while task.wait() do
-        if _G.AutoLevel then
-            pcall(RunFarm)
-        end
-    end
-end)
