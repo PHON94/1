@@ -1,10 +1,11 @@
--=============================================================================
+--=============================================================================
 -- PHONGDZ HUB - FARM LEVEL ONLY
 --=============================================================================
 
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local LocalPlayer = Players.LocalPlayer
 
@@ -55,10 +56,49 @@ ScreenGui.Parent = guiParent
 local MainFrame = Instance.new("Frame")
 MainFrame.Parent = ScreenGui
 MainFrame.Size = UDim2.fromOffset(440, 235)
-MainFrame.Position = UDim2.new(0.5, -220, 0.5, -117)
+MainFrame.Position = UDim2.fromOffset(0, 0)
 MainFrame.BackgroundColor3 = Color3.fromRGB(18,18,22)
 MainFrame.BorderSizePixel = 0
 Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0,10)
+
+--=============================================================================
+-- FORCE COORDINATE MENU
+--=============================================================================
+
+local MENU_W = 440
+local MENU_H = 235
+local MenuX = 0
+local MenuY = 0
+
+local function ForceMenuCoordinate(x, y)
+    local camera = workspace.CurrentCamera
+    local viewport = camera and camera.ViewportSize or Vector2.new(1920, 1080)
+
+    MenuX = math.floor(tonumber(x) or MenuX)
+    MenuY = math.floor(tonumber(y) or MenuY)
+
+    -- Không cho menu bị đẩy ra ngoài màn hình.
+    MenuX = math.clamp(MenuX, 0, math.max(0, viewport.X - MENU_W))
+    MenuY = math.clamp(MenuY, 0, math.max(0, viewport.Y - MENU_H))
+
+    MainFrame.AnchorPoint = Vector2.zero
+    MainFrame.Size = UDim2.fromOffset(MENU_W, MENU_H)
+    MainFrame.Position = UDim2.fromOffset(MenuX, MenuY)
+end
+
+local function ForceMenuCenter()
+    local camera = workspace.CurrentCamera
+    local viewport = camera and camera.ViewportSize or Vector2.new(1920, 1080)
+
+    ForceMenuCoordinate(
+        math.floor((viewport.X - MENU_W) / 2),
+        math.floor((viewport.Y - MENU_H) / 2)
+    )
+end
+
+-- Ép menu vào giữa ngay khi tạo.
+ForceMenuCenter()
+
 
 local Stroke = Instance.new("UIStroke", MainFrame)
 Stroke.Color = Color3.fromRGB(255,215,0)
@@ -160,18 +200,26 @@ local dragging=false
 local dragStart,startPos
 Header.InputBegan:Connect(function(i)
     if i.UserInputType==Enum.UserInputType.MouseButton1 or i.UserInputType==Enum.UserInputType.Touch then
-        dragging=true; dragStart=i.Position; startPos=MainFrame.Position
+        dragging=true; dragStart=i.Position; startPos=Vector2.new(MenuX, MenuY)
     end
 end)
 UserInputService.InputChanged:Connect(function(i)
     if dragging and (i.UserInputType==Enum.UserInputType.MouseMovement or i.UserInputType==Enum.UserInputType.Touch) then
         local d=i.Position-dragStart
-        MainFrame.Position=UDim2.new(startPos.X.Scale,startPos.X.Offset+d.X,startPos.Y.Scale,startPos.Y.Offset+d.Y)
+        ForceMenuCoordinate(startPos.X + d.X, startPos.Y + d.Y)
     end
 end)
 UserInputService.InputEnded:Connect(function(i)
     if i.UserInputType==Enum.UserInputType.MouseButton1 or i.UserInputType==Enum.UserInputType.Touch then dragging=false end
 end)
+
+-- Giữ tọa độ hợp lệ khi đổi kích thước màn hình / xoay mobile.
+RunService.RenderStepped:Connect(function()
+    if ScreenGui.Parent then
+        ForceMenuCoordinate(MenuX, MenuY)
+    end
+end)
+
 
 --=============================================================================
 -- FARM ENGINE ONLY
