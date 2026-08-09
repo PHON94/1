@@ -1,4 +1,4 @@
---=============================================================================
+-=============================================================================
 -- PHONGDZ HUB - FARM LEVEL ONLY
 --=============================================================================
 
@@ -22,628 +22,289 @@ elseif game.PlaceId == 7449423635 then
 end
 
 --=============================================================================
--- UI — PHONGDZ HUB / CLEAN BUILD
+-- UI ONLY
 --=============================================================================
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
 
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui", 10)
 local CoreGui = game:GetService("CoreGui")
-local RunService = game:GetService("RunService")
 
-local oldGui = CoreGui:FindFirstChild("PhongdzHub_FarmLevel")
-if oldGui then
-    oldGui:Destroy()
+local oldPlayerGui = PlayerGui and PlayerGui:FindFirstChild("PhongdzHub_FarmLevel")
+if oldPlayerGui then
+    oldPlayerGui:Destroy()
+end
+
+local oldCoreGui = CoreGui:FindFirstChild("PhongdzHub_FarmLevel")
+if oldCoreGui then
+    oldCoreGui:Destroy()
 end
 
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "PhongdzHub_FarmLevel"
 ScreenGui.ResetOnSpawn = false
-ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-ScreenGui.Parent = CoreGui
+ScreenGui.IgnoreGuiInset = true
+ScreenGui.DisplayOrder = 999999
+ScreenGui.Enabled = true
 
-local function New(className, parent, props)
-    local object = Instance.new(className)
-    for property, value in pairs(props or {}) do
-        object[property] = value
-    end
-    object.Parent = parent
-    return object
-end
+-- PlayerGui is the normal and most reliable parent for a client UI.
+-- CoreGui is only used as a fallback when PlayerGui is unavailable.
+local guiParent = PlayerGui or CoreGui
+ScreenGui.Parent = guiParent
 
-local function Round(parent, radius)
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, radius)
-    corner.Parent = parent
-    return corner
-end
+local MainFrame = Instance.new("Frame")
+MainFrame.Parent = ScreenGui
+MainFrame.Size = UDim2.fromOffset(440, 235)
+MainFrame.Position = UDim2.new(0.5, -220, 0.5, -117)
+MainFrame.BackgroundColor3 = Color3.fromRGB(18,18,22)
+MainFrame.BorderSizePixel = 0
+Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0,10)
 
-local function AddStroke(parent, color, transparency, thickness)
-    local stroke = Instance.new("UIStroke")
-    stroke.Color = color
-    stroke.Transparency = transparency or 0
-    stroke.Thickness = thickness or 1
-    stroke.Parent = parent
-    return stroke
-end
+local Stroke = Instance.new("UIStroke", MainFrame)
+Stroke.Color = Color3.fromRGB(255,215,0)
+Stroke.Transparency = 0.35
 
-local function SafeTween(instance, duration, properties, style, direction)
-    local ok, tween = pcall(function()
-        return TweenService:Create(
-            instance,
-            TweenInfo.new(
-                duration,
-                style or Enum.EasingStyle.Quart,
-                direction or Enum.EasingDirection.Out
-            ),
-            properties
-        )
-    end)
+local Header = Instance.new("Frame", MainFrame)
+Header.Size = UDim2.new(1,0,0,52)
+Header.BackgroundColor3 = Color3.fromRGB(24,24,30)
+Header.BorderSizePixel = 0
+Instance.new("UICorner", Header).CornerRadius = UDim.new(0,10)
 
-    if ok and tween then
-        tween:Play()
-        return tween
-    end
-end
+local Title = Instance.new("TextLabel", Header)
+Title.BackgroundTransparency = 1
+Title.Position = UDim2.fromOffset(18,7)
+Title.Size = UDim2.new(1,-90,0,25)
+Title.Text = "PHONGDZ HUB"
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 19
+Title.TextColor3 = Color3.fromRGB(255,215,0)
+Title.TextXAlignment = Enum.TextXAlignment.Left
 
--- Main panel.
-local MainFrame = New("Frame", ScreenGui, {
-    Name = "MainFrame",
-    Size = UDim2.fromOffset(455, 270),
-    Position = UDim2.new(0.5, -227, 0.5, -135),
-    BackgroundColor3 = Color3.fromRGB(15, 17, 22),
-    BorderSizePixel = 0,
-    ClipsDescendants = true,
-    Active = true,
-})
-Round(MainFrame, 14)
-AddStroke(MainFrame, Color3.fromRGB(255, 210, 65), 0.55, 1)
+local Sub = Instance.new("TextLabel", Header)
+Sub.BackgroundTransparency = 1
+Sub.Position = UDim2.fromOffset(18,29)
+Sub.Size = UDim2.new(1,-90,0,17)
+Sub.Text = "FARM LEVEL • FAST ATTACK"
+Sub.Font = Enum.Font.Gotham
+Sub.TextSize = 10
+Sub.TextColor3 = Color3.fromRGB(145,145,155)
+Sub.TextXAlignment = Enum.TextXAlignment.Left
 
--- Header.
-local Header = New("Frame", MainFrame, {
-    Name = "Header",
-    Size = UDim2.new(1, 0, 0, 66),
-    BackgroundColor3 = Color3.fromRGB(21, 23, 30),
-    BorderSizePixel = 0,
-    Active = true,
-})
-Round(Header, 14)
+local Close = Instance.new("TextButton", Header)
+Close.Size = UDim2.fromOffset(28,28)
+Close.Position = UDim2.new(1,-38,0,12)
+Close.Text = "×"
+Close.Font = Enum.Font.GothamBold
+Close.TextSize = 20
+Close.TextColor3 = Color3.fromRGB(255,255,255)
+Close.BackgroundColor3 = Color3.fromRGB(180,55,55)
+Instance.new("UICorner", Close).CornerRadius = UDim.new(0,7)
+Close.Activated:Connect(function() ScreenGui:Destroy() end)
 
-local HeaderMask = New("Frame", Header, {
-    Size = UDim2.new(1, 0, 0, 15),
-    Position = UDim2.new(0, 0, 1, -15),
-    BackgroundColor3 = Color3.fromRGB(21, 23, 30),
-    BorderSizePixel = 0,
-})
+local Content = Instance.new("Frame", MainFrame)
+Content.BackgroundTransparency = 1
+Content.Position = UDim2.fromOffset(16,66)
+Content.Size = UDim2.new(1,-32,1,-80)
 
-local Logo = New("Frame", Header, {
-    Size = UDim2.fromOffset(38, 38),
-    Position = UDim2.fromOffset(15, 14),
-    BackgroundColor3 = Color3.fromRGB(255, 207, 62),
-    BorderSizePixel = 0,
-})
-Round(Logo, 11)
+local Info = Instance.new("TextLabel", Content)
+Info.BackgroundTransparency = 1
+Info.Size = UDim2.new(1,0,0,48)
+Info.Text = "Tự nhận quest → tìm đúng mob theo level →\ndi chuyển → Fast Attack → lặp lại."
+Info.Font = Enum.Font.Gotham
+Info.TextSize = 12
+Info.TextColor3 = Color3.fromRGB(185,185,195)
+Info.TextXAlignment = Enum.TextXAlignment.Left
+Info.TextYAlignment = Enum.TextYAlignment.Center
 
-New("TextLabel", Logo, {
-    BackgroundTransparency = 1,
-    Size = UDim2.fromScale(1, 1),
-    Text = "P",
-    Font = Enum.Font.GothamBlack,
-    TextSize = 21,
-    TextColor3 = Color3.fromRGB(15, 16, 20),
-})
+local ToggleFrame = Instance.new("Frame", Content)
+ToggleFrame.Position = UDim2.fromOffset(0,58)
+ToggleFrame.Size = UDim2.new(1,0,0,48)
+ToggleFrame.BackgroundColor3 = Color3.fromRGB(30,30,37)
+ToggleFrame.BorderSizePixel = 0
+Instance.new("UICorner", ToggleFrame).CornerRadius = UDim.new(0,8)
 
-New("TextLabel", Header, {
-    BackgroundTransparency = 1,
-    Position = UDim2.fromOffset(65, 10),
-    Size = UDim2.new(1, -165, 0, 25),
-    Text = "PHONGDZ HUB",
-    Font = Enum.Font.GothamBlack,
-    TextSize = 18,
-    TextColor3 = Color3.fromRGB(248, 248, 250),
-    TextXAlignment = Enum.TextXAlignment.Left,
-})
+local ToggleText = Instance.new("TextLabel", ToggleFrame)
+ToggleText.BackgroundTransparency = 1
+ToggleText.Position = UDim2.fromOffset(14,0)
+ToggleText.Size = UDim2.new(1,-80,1,0)
+ToggleText.Text = "FARM LEVEL + FAST ATTACK"
+ToggleText.Font = Enum.Font.GothamBold
+ToggleText.TextSize = 13
+ToggleText.TextColor3 = Color3.fromRGB(245,245,245)
+ToggleText.TextXAlignment = Enum.TextXAlignment.Left
 
-New("TextLabel", Header, {
-    BackgroundTransparency = 1,
-    Position = UDim2.fromOffset(66, 36),
-    Size = UDim2.new(1, -165, 0, 16),
-    Text = "FARM LEVEL  •  FAST ATTACK",
-    Font = Enum.Font.GothamMedium,
-    TextSize = 9,
-    TextColor3 = Color3.fromRGB(145, 150, 163),
-    TextXAlignment = Enum.TextXAlignment.Left,
-})
+local Toggle = Instance.new("TextButton", ToggleFrame)
+Toggle.Position = UDim2.new(1,-58,0.5,-12)
+Toggle.Size = UDim2.fromOffset(44,24)
+Toggle.Text = ""
+Toggle.BackgroundColor3 = Color3.fromRGB(65,65,72)
+Instance.new("UICorner", Toggle).CornerRadius = UDim.new(1,0)
 
-local Minimize = New("TextButton", Header, {
-    Size = UDim2.fromOffset(32, 32),
-    Position = UDim2.new(1, -77, 0, 17),
-    BackgroundColor3 = Color3.fromRGB(37, 40, 49),
-    BorderSizePixel = 0,
-    Text = "—",
-    Font = Enum.Font.GothamBold,
-    TextSize = 16,
-    TextColor3 = Color3.fromRGB(225, 228, 235),
-    AutoButtonColor = false,
-})
-Round(Minimize, 9)
+local Knob = Instance.new("Frame", Toggle)
+Knob.Size = UDim2.fromOffset(18,18)
+Knob.Position = UDim2.fromOffset(3,3)
+Knob.BackgroundColor3 = Color3.fromRGB(210,210,215)
+Instance.new("UICorner", Knob).CornerRadius = UDim.new(1,0)
 
-local Close = New("TextButton", Header, {
-    Size = UDim2.fromOffset(32, 32),
-    Position = UDim2.new(1, -39, 0, 17),
-    BackgroundColor3 = Color3.fromRGB(132, 51, 58),
-    BorderSizePixel = 0,
-    Text = "×",
-    Font = Enum.Font.GothamBold,
-    TextSize = 19,
-    TextColor3 = Color3.fromRGB(255, 238, 238),
-    AutoButtonColor = false,
-})
-Round(Close, 9)
+local Status = Instance.new("TextLabel", Content)
+Status.BackgroundTransparency = 1
+Status.Position = UDim2.fromOffset(0,116)
+Status.Size = UDim2.new(1,0,0,24)
+Status.Text = "● OFF"
+Status.Font = Enum.Font.GothamBold
+Status.TextSize = 11
+Status.TextColor3 = Color3.fromRGB(140,140,150)
+Status.TextXAlignment = Enum.TextXAlignment.Left
 
--- Content.
-local Content = New("Frame", MainFrame, {
-    Name = "Content",
-    Position = UDim2.fromOffset(18, 82),
-    Size = UDim2.new(1, -36, 1, -98),
-    BackgroundTransparency = 1,
-})
-
-local InfoCard = New("Frame", Content, {
-    Size = UDim2.new(1, 0, 0, 66),
-    BackgroundColor3 = Color3.fromRGB(22, 25, 33),
-    BorderSizePixel = 0,
-})
-Round(InfoCard, 11)
-AddStroke(InfoCard, Color3.fromRGB(67, 71, 84), 0.75, 1)
-
-New("TextLabel", InfoCard, {
-    BackgroundTransparency = 1,
-    Position = UDim2.fromOffset(14, 9),
-    Size = UDim2.new(1, -28, 0, 21),
-    Text = "Automatic Level Farming",
-    Font = Enum.Font.GothamBold,
-    TextSize = 13,
-    TextColor3 = Color3.fromRGB(240, 242, 247),
-    TextXAlignment = Enum.TextXAlignment.Left,
-})
-
-New("TextLabel", InfoCard, {
-    BackgroundTransparency = 1,
-    Position = UDim2.fromOffset(14, 32),
-    Size = UDim2.new(1, -28, 0, 22),
-    Text = "Quest → đúng mob theo level → di chuyển → Fast Attack",
-    Font = Enum.Font.Gotham,
-    TextSize = 10,
-    TextColor3 = Color3.fromRGB(145, 150, 163),
-    TextXAlignment = Enum.TextXAlignment.Left,
-})
-
-local ToggleFrame = New("Frame", Content, {
-    Position = UDim2.fromOffset(0, 78),
-    Size = UDim2.new(1, 0, 0, 66),
-    BackgroundColor3 = Color3.fromRGB(22, 25, 33),
-    BorderSizePixel = 0,
-})
-Round(ToggleFrame, 11)
-local ToggleStroke = AddStroke(ToggleFrame, Color3.fromRGB(67, 71, 84), 0.75, 1)
-
-New("TextLabel", ToggleFrame, {
-    BackgroundTransparency = 1,
-    Position = UDim2.fromOffset(14, 9),
-    Size = UDim2.new(1, -105, 0, 21),
-    Text = "FARM LEVEL + FAST ATTACK",
-    Font = Enum.Font.GothamBold,
-    TextSize = 12,
-    TextColor3 = Color3.fromRGB(240, 242, 247),
-    TextXAlignment = Enum.TextXAlignment.Left,
-})
-
-local Status = New("TextLabel", ToggleFrame, {
-    BackgroundTransparency = 1,
-    Position = UDim2.fromOffset(14, 34),
-    Size = UDim2.new(1, -105, 0, 17),
-    Text = "●  OFF  •  No Clip tắt",
-    Font = Enum.Font.GothamMedium,
-    TextSize = 9,
-    TextColor3 = Color3.fromRGB(130, 135, 148),
-    TextXAlignment = Enum.TextXAlignment.Left,
-})
-
-local Toggle = New("TextButton", ToggleFrame, {
-    Size = UDim2.fromOffset(52, 29),
-    Position = UDim2.new(1, -67, 0.5, -14),
-    BackgroundColor3 = Color3.fromRGB(55, 59, 70),
-    BorderSizePixel = 0,
-    Text = "",
-    AutoButtonColor = false,
-})
-Round(Toggle, 15)
-
-local Knob = New("Frame", Toggle, {
-    Size = UDim2.fromOffset(23, 23),
-    Position = UDim2.fromOffset(3, 3),
-    BackgroundColor3 = Color3.fromRGB(225, 228, 235),
-    BorderSizePixel = 0,
-})
-Round(Knob, 12)
-
-New("TextLabel", Content, {
-    BackgroundTransparency = 1,
-    Position = UDim2.fromOffset(0, 154),
-    Size = UDim2.new(1, 0, 0, 18),
-    Text = "KÉO HEADER ĐỂ DI CHUYỂN  •  — THU NHỎ",
-    Font = Enum.Font.GothamMedium,
-    TextSize = 8,
-    TextColor3 = Color3.fromRGB(88, 93, 106),
-    TextXAlignment = Enum.TextXAlignment.Center,
-})
-
--- Circular launcher used while minimized.
-local Launcher = New("TextButton", ScreenGui, {
-    Name = "Launcher",
-    Size = UDim2.fromOffset(58, 58),
-    Position = UDim2.new(0.5, -29, 0.5, -29),
-    BackgroundColor3 = Color3.fromRGB(255, 207, 62),
-    BorderSizePixel = 0,
-    Text = "",
-    AutoButtonColor = false,
-    Visible = false,
-})
-Round(Launcher, 29)
-AddStroke(Launcher, Color3.fromRGB(255, 238, 150), 0.12, 2)
-
-local LauncherInner = New("Frame", Launcher, {
-    Size = UDim2.fromOffset(46, 46),
-    Position = UDim2.fromOffset(6, 6),
-    BackgroundColor3 = Color3.fromRGB(17, 19, 24),
-    BorderSizePixel = 0,
-})
-Round(LauncherInner, 23)
-
-New("TextLabel", LauncherInner, {
-    BackgroundTransparency = 1,
-    Size = UDim2.fromScale(1, 1),
-    Text = "P",
-    Font = Enum.Font.GothamBlack,
-    TextSize = 22,
-    TextColor3 = Color3.fromRGB(255, 211, 70),
-})
-
--- Dragging.
-local dragging = false
-local dragStart
-local startPosition
-
-Header.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1
-        or input.UserInputType == Enum.UserInputType.Touch then
-        dragging = true
-        dragStart = input.Position
-        startPosition = MainFrame.Position
+local dragging=false
+local dragStart,startPos
+Header.InputBegan:Connect(function(i)
+    if i.UserInputType==Enum.UserInputType.MouseButton1 or i.UserInputType==Enum.UserInputType.Touch then
+        dragging=true; dragStart=i.Position; startPos=MainFrame.Position
     end
 end)
-
-UserInputService.InputChanged:Connect(function(input)
-    if not dragging then return end
-    if input.UserInputType ~= Enum.UserInputType.MouseMovement
-        and input.UserInputType ~= Enum.UserInputType.Touch then
-        return
-    end
-
-    local delta = input.Position - dragStart
-    MainFrame.Position = UDim2.new(
-        startPosition.X.Scale,
-        startPosition.X.Offset + delta.X,
-        startPosition.Y.Scale,
-        startPosition.Y.Offset + delta.Y
-    )
-end)
-
-UserInputService.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1
-        or input.UserInputType == Enum.UserInputType.Touch then
-        dragging = false
+UserInputService.InputChanged:Connect(function(i)
+    if dragging and (i.UserInputType==Enum.UserInputType.MouseMovement or i.UserInputType==Enum.UserInputType.Touch) then
+        local d=i.Position-dragStart
+        MainFrame.Position=UDim2.new(startPos.X.Scale,startPos.X.Offset+d.X,startPos.Y.Scale,startPos.Y.Offset+d.Y)
     end
 end)
-
-local minimized = false
-local savedPosition = MainFrame.Position
-
-local function MinimizeMenu()
-    if minimized then return end
-
-    minimized = true
-    savedPosition = MainFrame.Position
-
-    Launcher.Position = UDim2.new(
-        savedPosition.X.Scale,
-        savedPosition.X.Offset + 198,
-        savedPosition.Y.Scale,
-        savedPosition.Y.Offset + 106
-    )
-
-    MainFrame.Visible = false
-    Launcher.Visible = true
-end
-
-local function RestoreMenu()
-    if not minimized then return end
-
-    minimized = false
-    Launcher.Visible = false
-    MainFrame.Position = savedPosition
-    MainFrame.Visible = true
-end
-
-Minimize.MouseButton1Click:Connect(MinimizeMenu)
-Launcher.MouseButton1Click:Connect(RestoreMenu)
-
-Minimize.MouseEnter:Connect(function()
-    SafeTween(Minimize, 0.12, {
-        BackgroundColor3 = Color3.fromRGB(55, 59, 70)
-    })
-end)
-
-Minimize.MouseLeave:Connect(function()
-    SafeTween(Minimize, 0.12, {
-        BackgroundColor3 = Color3.fromRGB(37, 40, 49)
-    })
-end)
-
-Close.MouseButton1Click:Connect(function()
-    _G.AutoLevel = false
-    ScreenGui:Destroy()
+UserInputService.InputEnded:Connect(function(i)
+    if i.UserInputType==Enum.UserInputType.MouseButton1 or i.UserInputType==Enum.UserInputType.Touch then dragging=false end
 end)
 
 --=============================================================================
--- NO CLIP
+-- FARM ENGINE ONLY
 --=============================================================================
-
-local NoClipConnection
-
-local function StartNoClip()
-    if NoClipConnection then
-        NoClipConnection:Disconnect()
-    end
-
-    NoClipConnection = RunService.Stepped:Connect(function()
-        if not _G.AutoLevel then return end
-
-        local character = LocalPlayer.Character
-        if not character then return end
-
-        for _, part in ipairs(character:GetDescendants()) do
-            if part:IsA("BasePart") then
-                part.CanCollide = false
-            end
-        end
-    end)
-end
-
-local function StopNoClip()
-    if NoClipConnection then
-        NoClipConnection:Disconnect()
-        NoClipConnection = nil
-    end
-end
-
-local function ResetNoClipState()
-    local character = LocalPlayer.Character
-    if not character then return end
-
-    for _, part in ipairs(character:GetDescendants()) do
-        if part:IsA("BasePart") then
-            part.CanCollide = true
-        end
-    end
-end
-
---=============================================================================
--- FARM ENGINE
---=============================================================================
-
 local function GetRoot()
-    local character = LocalPlayer.Character
-    return character and character:FindFirstChild("HumanoidRootPart")
+    local c=LocalPlayer.Character
+    return c and c:FindFirstChild("HumanoidRootPart")
 end
 
 local function Tween(cf)
-    local root = GetRoot()
+    local root=GetRoot()
     if not root then return end
-
-    local distance = (cf.Position - root.Position).Magnitude
-    local speed = 350
-
-    local tween = TweenService:Create(
-        root,
-        TweenInfo.new(
-            math.max(distance / speed, 0.05),
-            Enum.EasingStyle.Linear
-        ),
-        {CFrame = cf}
-    )
-
+    local dist=(cf.Position-root.Position).Magnitude
+    local speed=350
+    local tween=TweenService:Create(root,TweenInfo.new(math.max(dist/speed,0.05),Enum.EasingStyle.Linear),{CFrame=cf})
     tween:Play()
 end
 
 local function EquipFarmWeapon()
-    local character = LocalPlayer.Character
-    local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-    if not humanoid then return nil end
-
-    for _, tool in ipairs(character:GetChildren()) do
+    local char=LocalPlayer.Character
+    local hum=char and char:FindFirstChildOfClass("Humanoid")
+    if not hum then return nil end
+    for _,tool in ipairs(char:GetChildren()) do
+        if tool:IsA("Tool") then return tool end
+    end
+    for _,tool in ipairs(LocalPlayer.Backpack:GetChildren()) do
         if tool:IsA("Tool") then
+            pcall(function() hum:EquipTool(tool) end)
             return tool
         end
     end
-
-    for _, tool in ipairs(LocalPlayer.Backpack:GetChildren()) do
-        if tool:IsA("Tool") then
-            pcall(function()
-                humanoid:EquipTool(tool)
-            end)
-            return tool
-        end
-    end
-
-    return nil
 end
 
 local function AutoHaki()
-    local character = LocalPlayer.Character
-    if character and not character:FindFirstChild("HasBuso") then
+    local char=LocalPlayer.Character
+    if char and not char:FindFirstChild("HasBuso") then
         pcall(function()
             ReplicatedStorage.Remotes.CommF_:InvokeServer("Buso")
         end)
     end
 end
 
-local AttackRemote
-local HitRemote
-
-local function ResolveAttackRemotes()
-    if AttackRemote and HitRemote then
-        return true
-    end
-
-    local modules = ReplicatedStorage:FindFirstChild("Modules")
-    local net = modules and modules:FindFirstChild("Net")
-
-    if not net then
-        return false
-    end
-
-    AttackRemote = net:FindFirstChild("RE/RegisterAttack")
-    HitRemote = net:FindFirstChild("RE/RegisterHit")
-
-    return AttackRemote ~= nil and HitRemote ~= nil
-end
-
+local AttackRemote, HitRemote
 local function FastAttack()
-    if not ResolveAttackRemotes() then return end
+    if not AttackRemote or not HitRemote then
+        local net=ReplicatedStorage:FindFirstChild("Modules") and ReplicatedStorage.Modules:FindFirstChild("Net")
+        if net then
+            AttackRemote=net:FindFirstChild("RE/RegisterAttack")
+            HitRemote=net:FindFirstChild("RE/RegisterHit")
+        end
+    end
+    if not AttackRemote or not HitRemote then return end
 
-    local enemies = workspace:FindFirstChild("Enemies")
-    local root = GetRoot()
+    local enemies=workspace:FindFirstChild("Enemies")
+    local root=GetRoot()
     if not enemies or not root then return end
 
-    local hits = {}
-    local lastHead
-
-    for _, mob in ipairs(enemies:GetChildren()) do
-        local humanoid = mob:FindFirstChildOfClass("Humanoid")
-        local head = mob:FindFirstChild("Head")
-
-        if humanoid
-            and head
-            and humanoid.Health > 0
-            and (root.Position - head.Position).Magnitude <= 60 then
-
-            table.insert(hits, {mob, head})
-            lastHead = head
+    local hits={}
+    local lastHead=nil
+    for _,mob in ipairs(enemies:GetChildren()) do
+        local hum=mob:FindFirstChildOfClass("Humanoid")
+        local head=mob:FindFirstChild("Head")
+        if hum and head and hum.Health>0 and (root.Position-head.Position).Magnitude<=60 then
+            table.insert(hits,{mob,head})
+            lastHead=head
         end
     end
 
-    if not lastHead or #hits == 0 then return end
-
-    pcall(function()
-        AttackRemote:FireServer(1e-9)
-        HitRemote:FireServer(lastHead, hits)
-    end)
+    if lastHead and #hits>0 then
+        pcall(function()
+            AttackRemote:FireServer(1e-9)
+            HitRemote:FireServer(lastHead,hits)
+        end)
+    end
 end
 
 local function QuestText()
-    local playerGui = LocalPlayer:FindFirstChild("PlayerGui")
-    local main = playerGui and playerGui:FindFirstChild("Main")
-    local quest = main and main:FindFirstChild("Quest")
-    local container = quest and quest:FindFirstChild("Container")
-    local questTitle = container and container:FindFirstChild("QuestTitle")
-    local title = questTitle and questTitle:FindFirstChild("Title")
-
-    return quest, title
+    local pg=LocalPlayer:FindFirstChild("PlayerGui")
+    local main=pg and pg:FindFirstChild("Main")
+    local quest=main and main:FindFirstChild("Quest")
+    local title=quest and quest:FindFirstChild("Container") and quest.Container:FindFirstChild("QuestTitle")
+    local text=title and title:FindFirstChild("Title")
+    return quest,text
 end
 
 local function RunFarm()
     CheckLevel()
-
-    local quest, title = QuestText()
+    local quest,title=QuestText()
     if not quest or not title then return end
 
-    local hasCorrectQuest =
-        quest.Visible
-        and string.find(title.Text or "", NameMon or "", 1, true)
-
+    local hasCorrectQuest=quest.Visible and string.find(title.Text or "",NameMon or "")
     if not hasCorrectQuest then
-        pcall(function()
-            ReplicatedStorage.Remotes.CommF_:InvokeServer("AbandonQuest")
-        end)
-
+        pcall(function() ReplicatedStorage.Remotes.CommF_:InvokeServer("AbandonQuest") end)
         Tween(CFrameQ)
-
-        local root = GetRoot()
-        if root and (root.Position - CFrameQ.Position).Magnitude <= 7 then
+        local root=GetRoot()
+        if root and (root.Position-CFrameQ.Position).Magnitude<=7 then
             pcall(function()
-                ReplicatedStorage.Remotes.CommF_:InvokeServer(
-                    "StartQuest",
-                    NameQuest,
-                    QuestLv
-                )
+                ReplicatedStorage.Remotes.CommF_:InvokeServer("StartQuest",NameQuest,QuestLv)
             end)
         end
-
         return
     end
 
-    local enemies = workspace:FindFirstChild("Enemies")
+    local enemies=workspace:FindFirstChild("Enemies")
     if not enemies then return end
 
-    local found = false
-
-    for _, mob in ipairs(enemies:GetChildren()) do
-        local humanoid = mob:FindFirstChildOfClass("Humanoid")
-        local rootPart = mob:FindFirstChild("HumanoidRootPart")
-
-        if humanoid
-            and rootPart
-            and humanoid.Health > 0
-            and mob.Name == Ms then
-
-            found = true
-
+    local found=false
+    for _,mob in ipairs(enemies:GetChildren()) do
+        local hum=mob:FindFirstChild("Humanoid")
+        local rootPart=mob:FindFirstChild("HumanoidRootPart")
+        if hum and rootPart and hum.Health>0 and mob.Name==Ms then
+            found=true
             repeat
                 if not _G.AutoLevel then break end
-
                 task.wait(_G.Fast_Delay)
-
                 AutoHaki()
                 EquipFarmWeapon()
-
-                -- Same source-style position used by the clean build.
-                Tween(rootPart.CFrame * CFrame.new(0, 40, 0))
+                Tween(rootPart.CFrame*CFrame.new(0,40,0))
                 FastAttack()
-
-                pcall(function()
-                    rootPart.Size = Vector3.new(60, 60, 60)
-                    rootPart.CanCollide = false
-                end)
-
-            until not mob.Parent
-                or humanoid.Health <= 0
-                or not quest.Visible
-                or not _G.AutoLevel
+                rootPart.Size=Vector3.new(60,60,60)
+                rootPart.CanCollide=false
+            until not mob.Parent or hum.Health<=0 or not quest.Visible or not _G.AutoLevel
         end
     end
 
     if not found then
-        local worldOrigin = workspace:FindFirstChild("_WorldOrigin")
-        local spawns = worldOrigin and worldOrigin:FindFirstChild("EnemySpawns")
-
+        local spawns=workspace:FindFirstChild("_WorldOrigin") and workspace._WorldOrigin:FindFirstChild("EnemySpawns")
         if spawns then
-            for _, spawnPart in ipairs(spawns:GetChildren()) do
-                if string.find(spawnPart.Name, NameMon or "", 1, true) then
-                    local root = GetRoot()
-
-                    if root
-                        and (root.Position - spawnPart.Position).Magnitude >= 10 then
-
-                        Tween(spawnPart.CFrame * CFrame.new(0, 40, 0))
+            for _,spawnPart in ipairs(spawns:GetChildren()) do
+                if string.find(spawnPart.Name,NameMon or "") then
+                    local root=GetRoot()
+                    if root and (root.Position-spawnPart.Position).Magnitude>=10 then
+                        Tween(spawnPart.CFrame*CFrame.new(0,40,0))
                         break
                     end
                 end
@@ -652,47 +313,26 @@ local function RunFarm()
     end
 end
 
-local enabled = false
-
-Toggle.MouseButton1Click:Connect(function()
-    enabled = not enabled
-    _G.AutoLevel = enabled
-
+local enabled=false
+Toggle.Activated:Connect(function()
+    enabled=not enabled
+    _G.AutoLevel=enabled
     if enabled then
-        StartNoClip()
-
-        Toggle.BackgroundColor3 = Color3.fromRGB(255, 207, 62)
-        Knob.Position = UDim2.fromOffset(26, 3)
-        Knob.BackgroundColor3 = Color3.fromRGB(15, 16, 20)
-        ToggleStroke.Color = Color3.fromRGB(255, 207, 62)
-        ToggleStroke.Transparency = 0.35
-
-        Status.Text = "●  RUNNING  •  No Clip bật"
-        Status.TextColor3 = Color3.fromRGB(90, 225, 135)
+        Toggle.BackgroundColor3=Color3.fromRGB(255,215,0)
+        Knob.Position=UDim2.fromOffset(23,3)
+        Knob.BackgroundColor3=Color3.fromRGB(15,15,18)
+        Status.Text="● FARM LEVEL ĐANG CHẠY"
+        Status.TextColor3=Color3.fromRGB(80,220,120)
     else
-        StopNoClip()
-        ResetNoClipState()
-
-        Toggle.BackgroundColor3 = Color3.fromRGB(55, 59, 70)
-        Knob.Position = UDim2.fromOffset(3, 3)
-        Knob.BackgroundColor3 = Color3.fromRGB(225, 228, 235)
-        ToggleStroke.Color = Color3.fromRGB(67, 71, 84)
-        ToggleStroke.Transparency = 0.75
-
-        Status.Text = "●  OFF  •  No Clip tắt"
-        Status.TextColor3 = Color3.fromRGB(130, 135, 148)
+        Toggle.BackgroundColor3=Color3.fromRGB(65,65,72)
+        Knob.Position=UDim2.fromOffset(3,3)
+        Knob.BackgroundColor3=Color3.fromRGB(210,210,215)
+        Status.Text="● OFF"
+        Status.TextColor3=Color3.fromRGB(140,140,150)
     end
 end)
 
-LocalPlayer.CharacterAdded:Connect(function()
-    if _G.AutoLevel then
-        task.wait(0.5)
-        StartNoClip()
-    end
-end)
-
--- Source-derived CheckLevel() follows immediately after this UI/engine section.
-
+-- Source-derived level routing is inserted below.
 function CheckLevel()
     local v197 = game:GetService("Players").LocalPlayer.Data.Level.Value;
     if Sea1 then
