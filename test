@@ -202,10 +202,15 @@ SideTitle.TextColor3 = Color3.fromRGB(145, 150, 163)
 SideTitle.TextXAlignment = Enum.TextXAlignment.Left
 SideTitle.Parent = Sidebar
 
-local TabContainer = Instance.new("Frame")
+local TabContainer = Instance.new("ScrollingFrame")
 TabContainer.Position = UDim2.fromOffset(8, 38)
 TabContainer.Size = UDim2.fromOffset(112, H - 50)
 TabContainer.BackgroundTransparency = 1
+TabContainer.BorderSizePixel = 0
+TabContainer.ScrollBarThickness = 3
+TabContainer.ScrollingDirection = Enum.ScrollingDirection.Y
+TabContainer.CanvasSize = UDim2.fromOffset(0, 0)
+TabContainer.AutomaticCanvasSize = Enum.AutomaticSize.Y
 TabContainer.Parent = Sidebar
 
 local tabLayout = Instance.new("UIListLayout")
@@ -464,6 +469,7 @@ SettingsFrame.Name = "SettingsFarm"
 SettingsFrame.Position = UDim2.fromOffset(156, 76)
 SettingsFrame.Size = UDim2.fromOffset(W - 172, H - 88)
 SettingsFrame.BackgroundColor3 = Color3.fromRGB(22, 25, 33)
+SettingsFrame.ClipsDescendants = true
 SettingsFrame.BorderSizePixel = 0
 SettingsFrame.Visible = false
 SettingsFrame.Parent = Main
@@ -527,6 +533,13 @@ local weaponLayout = Instance.new("UIListLayout")
 weaponLayout.Padding = UDim.new(0, 3)
 weaponLayout.Parent = WeaponList
 
+weaponLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    WeaponList.CanvasSize = UDim2.fromOffset(
+        0,
+        weaponLayout.AbsoluteContentSize.Y + 8
+    )
+end)
+
 _G.FarmWeapon = _G.FarmWeapon or "Auto"
 
 local function refreshWeaponList()
@@ -587,6 +600,20 @@ end
 WeaponDropdown.Activated:Connect(function()
     refreshWeaponList()
     WeaponList.Visible = not WeaponList.Visible
+end)
+
+-- Scroll the Settings panel with the mouse wheel / touch drag.
+SettingsFrame.Active = true
+SettingsFrame.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseWheel then
+        local dy = -input.Position.Z * 32
+        local maxY = math.max(0, 380 - SettingsFrame.AbsoluteSize.Y)
+        SettingsFrame.Position = SettingsFrame.Position -- keep UI stable
+        WeaponList.CanvasPosition = Vector2.new(
+            0,
+            math.clamp(WeaponList.CanvasPosition.Y + dy, 0, math.max(0, WeaponList.AbsoluteCanvasSize.Y - WeaponList.AbsoluteSize.Y))
+        )
+    end
 end)
 
 local GatherLabel = Instance.new("TextLabel")
@@ -782,6 +809,13 @@ Close.Activated:Connect(function()
     _G.AutoBone = false
     _G.GatherMobs = false
 
+    if ActiveTween then
+        pcall(function()
+            ActiveTween:Cancel()
+            ActiveTween:Destroy()
+        end)
+        ActiveTween = nil
+    end
     if _G.__PhongdzFlightTween then
         pcall(function()
             _G.__PhongdzFlightTween:Cancel()
@@ -898,6 +932,8 @@ task.spawn(function()
     end
 end)
 
+local ActiveTween
+
 local function TweenTo(cf)
     local root = GetRoot()
     if not root or not cf then return end
@@ -905,37 +941,35 @@ local function TweenTo(cf)
     local distance = (root.Position - cf.Position).Magnitude
     if distance < 2 then return end
 
-    -- Smooth, frame-synced flight: avoid repeatedly creating tweens
-    -- and avoid stacking movement controllers while farming.
-    local speed = math.max(1, tonumber(_G.FlySpeed) or 300)
-    local duration = math.clamp(distance / speed, 0.035, 0.45)
-
-    if _G.__PhongdzFlightTween then
-        pcall(function()
-            _G.__PhongdzFlightTween:Cancel()
-            _G.__PhongdzFlightTween:Destroy()
+    -- One active tween at a time, but don't cancel/recreate it every farm tick.
+    if ActiveTween then
+        local ok, state = pcall(function()
+            return ActiveTween.PlaybackState
         end)
-        _G.__PhongdzFlightTween = nil
+        if ok and state == Enum.PlaybackState.Playing then
+            local current = root.CFrame.Position
+            if (current - cf.Position).Magnitude < 8 then
+                return
+            end
+            pcall(function() ActiveTween:Cancel() end)
+        end
+        pcall(function() ActiveTween:Destroy() end)
+        ActiveTween = nil
     end
 
-    local tweenInfo = TweenInfo.new(
-        duration,
-        Enum.EasingStyle.Linear,
-        Enum.EasingDirection.Out,
-        0,
-        false,
-        0
+    local speed = math.max(1, tonumber(_G.FlySpeed) or 300)
+    local duration = math.clamp(distance / speed, 0.08, 0.8)
+
+    local tween = TweenService:Create(
+        root,
+        TweenInfo.new(duration, Enum.EasingStyle.Linear, Enum.EasingDirection.Out),
+        {CFrame = cf}
     )
 
-    local tween = TweenService:Create(root, tweenInfo, {
-        CFrame = cf
-    })
-
-    _G.__PhongdzFlightTween = tween
-
+    ActiveTween = tween
     tween.Completed:Connect(function()
-        if _G.__PhongdzFlightTween == tween then
-            _G.__PhongdzFlightTween = nil
+        if ActiveTween == tween then
+            ActiveTween = nil
         end
         pcall(function() tween:Destroy() end)
     end)
