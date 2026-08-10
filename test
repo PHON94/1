@@ -781,6 +781,14 @@ Close.Activated:Connect(function()
     _G.AutoLevel = false
     _G.AutoBone = false
     _G.GatherMobs = false
+
+    if _G.__PhongdzFlightTween then
+        pcall(function()
+            _G.__PhongdzFlightTween:Cancel()
+            _G.__PhongdzFlightTween:Destroy()
+        end)
+        _G.__PhongdzFlightTween = nil
+    end
     bringmob = false
     FarmPos = nil
     MonFarm = nil
@@ -890,43 +898,49 @@ task.spawn(function()
     end
 end)
 
-local function TweenTo(cf) local r=GetRoot(); if not r or typeof(cf)~="CFrame" then return end; local d=(cf.Position-r.Position).Magnitude; local t=TweenService:Create(r,TweenInfo.new(math.max(d/350,.05),Enum.EasingStyle.Linear),{CFrame=cf}); t:Play() end
-local function EquipFarmWeapon()
-    local c = LocalPlayer.Character
-    local h = c and c:FindFirstChildOfClass("Humanoid")
-    if not h then return end
+local function TweenTo(cf)
+    local root = GetRoot()
+    if not root or not cf then return end
 
-    local selected = _G.FarmWeapon or "Auto"
-    local b = LocalPlayer:FindFirstChildOfClass("Backpack")
+    local distance = (root.Position - cf.Position).Magnitude
+    if distance < 2 then return end
 
-    if selected ~= "Auto" then
-        local equipped = c:FindFirstChild(selected)
-        if equipped and equipped:IsA("Tool") then
-            return equipped
-        end
+    -- Smooth, frame-synced flight: avoid repeatedly creating tweens
+    -- and avoid stacking movement controllers while farming.
+    local speed = math.max(1, tonumber(_G.FlySpeed) or 300)
+    local duration = math.clamp(distance / speed, 0.035, 0.45)
 
-        local selectedTool = b and b:FindFirstChild(selected)
-        if selectedTool and selectedTool:IsA("Tool") then
-            pcall(function() h:EquipTool(selectedTool) end)
-            return selectedTool
-        end
+    if _G.__PhongdzFlightTween then
+        pcall(function()
+            _G.__PhongdzFlightTween:Cancel()
+            _G.__PhongdzFlightTween:Destroy()
+        end)
+        _G.__PhongdzFlightTween = nil
     end
 
-    -- Preserve the source's Auto behavior when no weapon is selected.
-    for _, tool in ipairs(c:GetChildren()) do
-        if tool:IsA("Tool") then
-            return tool
-        end
-    end
+    local tweenInfo = TweenInfo.new(
+        duration,
+        Enum.EasingStyle.Linear,
+        Enum.EasingDirection.Out,
+        0,
+        false,
+        0
+    )
 
-    if b then
-        for _, tool in ipairs(b:GetChildren()) do
-            if tool:IsA("Tool") then
-                pcall(function() h:EquipTool(tool) end)
-                return tool
-            end
+    local tween = TweenService:Create(root, tweenInfo, {
+        CFrame = cf
+    })
+
+    _G.__PhongdzFlightTween = tween
+
+    tween.Completed:Connect(function()
+        if _G.__PhongdzFlightTween == tween then
+            _G.__PhongdzFlightTween = nil
         end
-    end
+        pcall(function() tween:Destroy() end)
+    end)
+
+    tween:Play()
 end
 local function AutoHaki() local c=LocalPlayer.Character; local rem=ReplicatedStorage:FindFirstChild("Remotes"); local comm=rem and rem:FindFirstChild("CommF_"); if c and not c:FindFirstChild("HasBuso") and comm then pcall(function() comm:InvokeServer("Buso") end) end end
 local AttackRemote,HitRemote
