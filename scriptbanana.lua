@@ -1,97 +1,226 @@
 --=============================================================================
--- PHONGDZ HUB — FARM LEVEL + FAST ATTACK
--- CLEAN REBUILD / COORDINATE UI
+-- PHONGDZ HUB — UI FIRST / FARM ON DEMAND
 --=============================================================================
+local Players = game:GetService("Players")
+local UIS = game:GetService("UserInputService")
+local LocalPlayer = Players.LocalPlayer
 
-local Players=game:GetService("Players")
-local UserInputService=game:GetService("UserInputService")
-local TweenService=game:GetService("TweenService")
-local RunService=game:GetService("RunService")
-local ReplicatedStorage=game:GetService("ReplicatedStorage")
-local LocalPlayer=Players.LocalPlayer
+local function getUIParent()
+    local ok, hui = pcall(function()
+        if type(gethui) == "function" then return gethui() end
+    end)
+    if ok and hui then return hui end
+    return LocalPlayer:WaitForChild("PlayerGui")
+end
 
-_G.AutoLevel=false
-_G.Fast_Delay=0.01
-
-local Sea1,Sea2,Sea3=false,false,false
-if game.PlaceId==2753915549 then Sea1=true elseif game.PlaceId==4442272183 then Sea2=true elseif game.PlaceId==7449423635 then Sea3=true end
-
---=============================================================================
--- NEW MENU — ABSOLUTE PIXEL COORDINATES
---=============================================================================
-
-local PlayerGui=LocalPlayer:WaitForChild("PlayerGui",10)
-if not PlayerGui then return end
-local old=PlayerGui:FindFirstChild("PhongdzHub_FarmLevel")
+local UIParent = getUIParent()
+local old = UIParent:FindFirstChild("PhongdzHub_FarmLevel_UI")
 if old then old:Destroy() end
 
-local ScreenGui=Instance.new("ScreenGui")
-ScreenGui.Name="PhongdzHub_FarmLevel"
-ScreenGui.ResetOnSpawn=false
-ScreenGui.IgnoreGuiInset=true
-ScreenGui.DisplayOrder=999999
-ScreenGui.ZIndexBehavior=Enum.ZIndexBehavior.Sibling
-ScreenGui.Parent=PlayerGui
+local Gui = Instance.new("ScreenGui")
+Gui.Name = "PhongdzHub_FarmLevel_UI"
+Gui.ResetOnSpawn = false
+Gui.IgnoreGuiInset = true
+Gui.ZIndexBehavior = Enum.ZIndexBehavior.Global
+Gui.DisplayOrder = 2147483647
+Gui.Parent = UIParent
 
-local W,H=440,250
-local X,Y=0,0
-local function viewport() local c=workspace.CurrentCamera return c and c.ViewportSize or Vector2.new(1920,1080) end
-local MainFrame=Instance.new("Frame")
-MainFrame.Name="MainFrame"
-MainFrame.Size=UDim2.fromOffset(W,H)
-MainFrame.BackgroundColor3=Color3.fromRGB(16,18,24)
-MainFrame.BorderSizePixel=0
-MainFrame.Parent=ScreenGui
-local function forceXY(x,y)
- local v=viewport(); X=math.clamp(math.floor(tonumber(x) or X),0,math.max(0,v.X-W)); Y=math.clamp(math.floor(tonumber(y) or Y),0,math.max(0,v.Y-H)); MainFrame.Position=UDim2.fromOffset(X,Y)
+local W,H = 440,250
+local Main = Instance.new("Frame")
+Main.Size = UDim2.fromOffset(W,H)
+Main.BackgroundColor3 = Color3.fromRGB(16,18,24)
+Main.BorderSizePixel = 0
+Main.Active = true
+Main.Parent = Gui
+Instance.new("UICorner",Main).CornerRadius=UDim.new(0,14)
+local stroke=Instance.new("UIStroke",Main)
+stroke.Color=Color3.fromRGB(255,211,65)
+stroke.Thickness=1.5
+
+local function setXY(x,y)
+    local cam=workspace.CurrentCamera
+    local v=cam and cam.ViewportSize or Vector2.new(1920,1080)
+    x=math.clamp(math.floor(tonumber(x) or 0),0,math.max(0,v.X-W))
+    y=math.clamp(math.floor(tonumber(y) or 0),0,math.max(0,v.Y-H))
+    Main.Position=UDim2.fromOffset(x,y)
+    return x,y
 end
-local function center() local v=viewport(); forceXY((v.X-W)/2,(v.Y-H)/2) end
-local c=Instance.new("UICorner",MainFrame); c.CornerRadius=UDim.new(0,14)
-local st=Instance.new("UIStroke",MainFrame); st.Color=Color3.fromRGB(255,211,65); st.Transparency=.4
-center()
+local cam=workspace.CurrentCamera
+local v=cam and cam.ViewportSize or Vector2.new(1920,1080)
+local X,Y=setXY((v.X-W)/2,(v.Y-H)/2)
 
-local Header=Instance.new("Frame",MainFrame); Header.Size=UDim2.fromOffset(W,62); Header.BackgroundColor3=Color3.fromRGB(23,25,32); Header.BorderSizePixel=0; Header.Active=true
-local hc=Instance.new("UICorner",Header); hc.CornerRadius=UDim.new(0,14)
-local mask=Instance.new("Frame",Header); mask.Position=UDim2.fromOffset(0,48); mask.Size=UDim2.fromOffset(W,14); mask.BackgroundColor3=Header.BackgroundColor3; mask.BorderSizePixel=0
-local title=Instance.new("TextLabel",Header); title.Position=UDim2.fromOffset(18,9); title.Size=UDim2.fromOffset(270,24); title.BackgroundTransparency=1; title.Text="PHONGDZ HUB"; title.Font=Enum.Font.GothamBlack; title.TextSize=18; title.TextColor3=Color3.fromRGB(255,211,65); title.TextXAlignment=Enum.TextXAlignment.Left
-local sub=Instance.new("TextLabel",Header); sub.Position=UDim2.fromOffset(19,35); sub.Size=UDim2.fromOffset(270,16); sub.BackgroundTransparency=1; sub.Text="FARM LEVEL  •  FAST ATTACK"; sub.Font=Enum.Font.GothamMedium; sub.TextSize=9; sub.TextColor3=Color3.fromRGB(145,150,163); sub.TextXAlignment=Enum.TextXAlignment.Left
+local Header=Instance.new("Frame",Main)
+Header.Size=UDim2.fromOffset(W,60)
+Header.BackgroundColor3=Color3.fromRGB(23,25,32)
+Header.BorderSizePixel=0
+Header.Active=true
+Instance.new("UICorner",Header).CornerRadius=UDim.new(0,14)
+local mask=Instance.new("Frame",Header)
+mask.Position=UDim2.fromOffset(0,45)
+mask.Size=UDim2.fromOffset(W,15)
+mask.BackgroundColor3=Header.BackgroundColor3
+mask.BorderSizePixel=0
 
-local Minimize=Instance.new("TextButton",Header); Minimize.Size=UDim2.fromOffset(30,30); Minimize.Position=UDim2.fromOffset(W-72,16); Minimize.Text="—"; Minimize.Font=Enum.Font.GothamBold; Minimize.TextSize=16; Minimize.TextColor3=Color3.fromRGB(235,235,240); Minimize.BackgroundColor3=Color3.fromRGB(42,45,54); Minimize.BorderSizePixel=0; Minimize.AutoButtonColor=false; Instance.new("UICorner",Minimize).CornerRadius=UDim.new(0,9)
-local Close=Instance.new("TextButton",Header); Close.Size=UDim2.fromOffset(30,30); Close.Position=UDim2.fromOffset(W-36,16); Close.Text="×"; Close.Font=Enum.Font.GothamBold; Close.TextSize=19; Close.TextColor3=Color3.fromRGB(255,240,240); Close.BackgroundColor3=Color3.fromRGB(145,53,60); Close.BorderSizePixel=0; Close.AutoButtonColor=false; Instance.new("UICorner",Close).CornerRadius=UDim.new(0,9)
+local title=Instance.new("TextLabel",Header)
+title.Position=UDim2.fromOffset(18,8)
+title.Size=UDim2.fromOffset(300,25)
+title.BackgroundTransparency=1
+title.Text="PHONGDZ HUB"
+title.Font=Enum.Font.GothamBlack
+title.TextSize=19
+title.TextColor3=Color3.fromRGB(255,211,65)
+title.TextXAlignment=Enum.TextXAlignment.Left
 
-local Card=Instance.new("Frame",MainFrame); Card.Position=UDim2.fromOffset(16,77); Card.Size=UDim2.fromOffset(W-32,58); Card.BackgroundColor3=Color3.fromRGB(22,25,33); Card.BorderSizePixel=0; Instance.new("UICorner",Card).CornerRadius=UDim.new(0,10)
-local ct=Instance.new("TextLabel",Card); ct.Position=UDim2.fromOffset(13,7); ct.Size=UDim2.fromOffset(W-60,20); ct.BackgroundTransparency=1; ct.Text="Automatic Level Farming"; ct.Font=Enum.Font.GothamBold; ct.TextSize=12; ct.TextColor3=Color3.fromRGB(241,243,247); ct.TextXAlignment=Enum.TextXAlignment.Left
-local cd=Instance.new("TextLabel",Card); cd.Position=UDim2.fromOffset(13,30); cd.Size=UDim2.fromOffset(W-60,20); cd.BackgroundTransparency=1; cd.Text="Quest → đúng mob → kéo lên → Fast Attack"; cd.Font=Enum.Font.Gotham; cd.TextSize=9; cd.TextColor3=Color3.fromRGB(143,149,162); cd.TextXAlignment=Enum.TextXAlignment.Left
+local sub=Instance.new("TextLabel",Header)
+sub.Position=UDim2.fromOffset(19,34)
+sub.Size=UDim2.fromOffset(300,16)
+sub.BackgroundTransparency=1
+sub.Text="FARM LEVEL  •  FAST ATTACK"
+sub.Font=Enum.Font.GothamMedium
+sub.TextSize=9
+sub.TextColor3=Color3.fromRGB(145,150,163)
+sub.TextXAlignment=Enum.TextXAlignment.Left
 
-local ToggleFrame=Instance.new("Frame",MainFrame); ToggleFrame.Position=UDim2.fromOffset(16,145); ToggleFrame.Size=UDim2.fromOffset(W-32,54); ToggleFrame.BackgroundColor3=Color3.fromRGB(22,25,33); ToggleFrame.BorderSizePixel=0; Instance.new("UICorner",ToggleFrame).CornerRadius=UDim.new(0,10)
-local ToggleText=Instance.new("TextLabel",ToggleFrame); ToggleText.Position=UDim2.fromOffset(13,6); ToggleText.Size=UDim2.fromOffset(280,20); ToggleText.BackgroundTransparency=1; ToggleText.Text="FARM LEVEL + FAST ATTACK"; ToggleText.Font=Enum.Font.GothamBold; ToggleText.TextSize=11; ToggleText.TextColor3=Color3.fromRGB(240,242,247); ToggleText.TextXAlignment=Enum.TextXAlignment.Left
-local Status=Instance.new("TextLabel",ToggleFrame); Status.Position=UDim2.fromOffset(13,29); Status.Size=UDim2.fromOffset(280,17); Status.BackgroundTransparency=1; Status.Text="● OFF"; Status.Font=Enum.Font.GothamMedium; Status.TextSize=9; Status.TextColor3=Color3.fromRGB(130,135,148); Status.TextXAlignment=Enum.TextXAlignment.Left
-local Toggle=Instance.new("TextButton",ToggleFrame); Toggle.Size=UDim2.fromOffset(52,29); Toggle.Position=UDim2.fromOffset(W-84,12); Toggle.Text=""; Toggle.BackgroundColor3=Color3.fromRGB(55,59,70); Toggle.BorderSizePixel=0; Toggle.AutoButtonColor=false; Instance.new("UICorner",Toggle).CornerRadius=UDim.new(1,0)
-local Knob=Instance.new("Frame",Toggle); Knob.Size=UDim2.fromOffset(23,23); Knob.Position=UDim2.fromOffset(3,3); Knob.BackgroundColor3=Color3.fromRGB(225,228,235); Knob.BorderSizePixel=0; Instance.new("UICorner",Knob).CornerRadius=UDim.new(1,0)
-local hint=Instance.new("TextLabel",MainFrame); hint.Position=UDim2.fromOffset(16,212); hint.Size=UDim2.fromOffset(W-32,18); hint.BackgroundTransparency=1; hint.Text="Kéo header để di chuyển  •  — để thu nhỏ"; hint.Font=Enum.Font.GothamMedium; hint.TextSize=8; hint.TextColor3=Color3.fromRGB(86,91,104); hint.TextXAlignment=Enum.TextXAlignment.Center
+local close=Instance.new("TextButton",Header)
+close.Size=UDim2.fromOffset(32,32)
+close.Position=UDim2.fromOffset(W-42,14)
+close.Text="×"
+close.Font=Enum.Font.GothamBold
+close.TextSize=20
+close.TextColor3=Color3.new(1,1,1)
+close.BackgroundColor3=Color3.fromRGB(145,53,60)
+close.BorderSizePixel=0
+Instance.new("UICorner",close).CornerRadius=UDim.new(0,9)
 
-local Launcher=Instance.new("TextButton",ScreenGui); Launcher.Size=UDim2.fromOffset(58,58); Launcher.BackgroundColor3=Color3.fromRGB(255,211,65); Launcher.BorderSizePixel=0; Launcher.Text="P"; Launcher.Font=Enum.Font.GothamBlack; Launcher.TextSize=22; Launcher.TextColor3=Color3.fromRGB(16,18,24); Launcher.Visible=false; Launcher.ZIndex=100; Instance.new("UICorner",Launcher).CornerRadius=UDim.new(1,0)
+local card=Instance.new("Frame",Main)
+card.Position=UDim2.fromOffset(16,76)
+card.Size=UDim2.fromOffset(W-32,65)
+card.BackgroundColor3=Color3.fromRGB(22,25,33)
+card.BorderSizePixel=0
+Instance.new("UICorner",card).CornerRadius=UDim.new(0,10)
+local info=Instance.new("TextLabel",card)
+info.Position=UDim2.fromOffset(13,8)
+info.Size=UDim2.fromOffset(W-58,23)
+info.BackgroundTransparency=1
+info.Text="Automatic Level Farming"
+info.Font=Enum.Font.GothamBold
+info.TextSize=12
+info.TextColor3=Color3.fromRGB(241,243,247)
+info.TextXAlignment=Enum.TextXAlignment.Left
+local desc=Instance.new("TextLabel",card)
+desc.Position=UDim2.fromOffset(13,32)
+desc.Size=UDim2.fromOffset(W-58,22)
+desc.BackgroundTransparency=1
+desc.Text="Quest → đúng mob → di chuyển → Fast Attack"
+desc.Font=Enum.Font.Gotham
+desc.TextSize=9
+desc.TextColor3=Color3.fromRGB(143,149,162)
+desc.TextXAlignment=Enum.TextXAlignment.Left
 
-local dragging=false; local dragStart=Vector2.zero; local dragOrigin=Vector2.zero
-Header.InputBegan:Connect(function(i) if i.UserInputType==Enum.UserInputType.MouseButton1 or i.UserInputType==Enum.UserInputType.Touch then dragging=true; dragStart=i.Position; dragOrigin=Vector2.new(X,Y) end end)
-UserInputService.InputChanged:Connect(function(i) if dragging and (i.UserInputType==Enum.UserInputType.MouseMovement or i.UserInputType==Enum.UserInputType.Touch) then local d=i.Position-dragStart; forceXY(dragOrigin.X+d.X,dragOrigin.Y+d.Y) end end)
-UserInputService.InputEnded:Connect(function(i) if i.UserInputType==Enum.UserInputType.MouseButton1 or i.UserInputType==Enum.UserInputType.Touch then dragging=false end end)
+local toggle=Instance.new("TextButton",Main)
+toggle.Position=UDim2.fromOffset(16,154)
+toggle.Size=UDim2.fromOffset(W-32,52)
+toggle.Text=""
+toggle.BackgroundColor3=Color3.fromRGB(55,59,70)
+toggle.BorderSizePixel=0
+Instance.new("UICorner",toggle).CornerRadius=UDim.new(0,10)
+local label=Instance.new("TextLabel",toggle)
+label.Position=UDim2.fromOffset(13,5)
+label.Size=UDim2.fromOffset(290,20)
+label.BackgroundTransparency=1
+label.Text="FARM LEVEL + FAST ATTACK"
+label.Font=Enum.Font.GothamBold
+label.TextSize=11
+label.TextColor3=Color3.fromRGB(240,242,247)
+label.TextXAlignment=Enum.TextXAlignment.Left
+local status=Instance.new("TextLabel",toggle)
+status.Position=UDim2.fromOffset(13,27)
+status.Size=UDim2.fromOffset(310,17)
+status.BackgroundTransparency=1
+status.Text="● MENU READY — FARM OFF"
+status.Font=Enum.Font.GothamMedium
+status.TextSize=9
+status.TextColor3=Color3.fromRGB(130,135,148)
+status.TextXAlignment=Enum.TextXAlignment.Left
+local pill=Instance.new("Frame",toggle)
+pill.Size=UDim2.fromOffset(52,29)
+pill.Position=UDim2.fromOffset(W-84,11)
+pill.BackgroundColor3=Color3.fromRGB(70,74,85)
+pill.BorderSizePixel=0
+Instance.new("UICorner",pill).CornerRadius=UDim.new(1,0)
+local knob=Instance.new("Frame",pill)
+knob.Size=UDim2.fromOffset(23,23)
+knob.Position=UDim2.fromOffset(3,3)
+knob.BackgroundColor3=Color3.fromRGB(230,232,238)
+knob.BorderSizePixel=0
+Instance.new("UICorner",knob).CornerRadius=UDim.new(1,0)
 
-local minimized=false; local saveX,saveY=X,Y
-local function minimize() if minimized then return end; minimized=true; saveX,saveY=X,Y; local v=viewport(); Launcher.Position=UDim2.fromOffset(math.clamp(X+190,0,math.max(0,v.X-58)),math.clamp(Y+96,0,math.max(0,v.Y-58))); MainFrame.Visible=false; Launcher.Visible=true end
-local function restore() if not minimized then return end; minimized=false; Launcher.Visible=false; MainFrame.Visible=true; forceXY(saveX,saveY) end
-Minimize.Activated:Connect(minimize); Launcher.Activated:Connect(restore); Close.Activated:Connect(function() _G.AutoLevel=false; ScreenGui:Destroy() end)
-local lastV=viewport(); RunService.RenderStepped:Connect(function() local v=viewport(); if v.X~=lastV.X or v.Y~=lastV.Y then lastV=v; forceXY(X,Y); if Launcher.Visible then Launcher.Position=UDim2.fromOffset(math.clamp(X+190,0,math.max(0,v.X-58)),math.clamp(Y+96,0,math.max(0,v.Y-58))) end end end)
+local launcher=Instance.new("TextButton",Gui)
+launcher.Size=UDim2.fromOffset(58,58)
+launcher.BackgroundColor3=Color3.fromRGB(255,211,65)
+launcher.BorderSizePixel=0
+launcher.Text="P"
+launcher.Font=Enum.Font.GothamBlack
+launcher.TextSize=22
+launcher.TextColor3=Color3.fromRGB(16,18,24)
+launcher.Visible=false
+launcher.ZIndex=999
+Instance.new("UICorner",launcher).CornerRadius=UDim.new(1,0)
 
---=============================================================================
+local min=Instance.new("TextButton",Header)
+min.Size=UDim2.fromOffset(32,32)
+min.Position=UDim2.fromOffset(W-80,14)
+min.Text="—"
+min.Font=Enum.Font.GothamBold
+min.TextSize=17
+min.TextColor3=Color3.new(1,1,1)
+min.BackgroundColor3=Color3.fromRGB(42,45,54)
+min.BorderSizePixel=0
+Instance.new("UICorner",min).CornerRadius=UDim.new(0,9)
 
---=============================================================================
--- FARM ISOLATION LAYER
---=============================================================================
--- Menu rendering is completed before the farm source is compiled.
--- If the farm source has a runtime/compile issue, the menu stays alive.
--- The farm code uses _G.AutoLevel so it does not depend on menu locals.
+local dragging=false
+local ds=Vector2.zero
+local origin=Vector2.new(X,Y)
+Header.InputBegan:Connect(function(i)
+    if i.UserInputType==Enum.UserInputType.MouseButton1 or i.UserInputType==Enum.UserInputType.Touch then
+        dragging=true; ds=i.Position; origin=Vector2.new(X,Y)
+    end
+end)
+UIS.InputChanged:Connect(function(i)
+    if not dragging then return end
+    if i.UserInputType==Enum.UserInputType.MouseMovement or i.UserInputType==Enum.UserInputType.Touch then
+        local d=i.Position-ds
+        X,Y=setXY(origin.X+d.X,origin.Y+d.Y)
+    end
+end)
+UIS.InputEnded:Connect(function(i)
+    if i.UserInputType==Enum.UserInputType.MouseButton1 or i.UserInputType==Enum.UserInputType.Touch then dragging=false end
+end)
 
+local minimized=false
+min.Activated:Connect(function()
+    minimized=true
+    launcher.Position=UDim2.fromOffset(X+190,Y+96)
+    Main.Visible=false
+    launcher.Visible=true
+end)
+launcher.Activated:Connect(function()
+    minimized=false
+    launcher.Visible=false
+    Main.Visible=true
+    X,Y=setXY(X,Y)
+end)
+
+local farmEnabled=false
+local farmLoaded=false
+local farmError=nil
+
+close.Activated:Connect(function()
+    _G.AutoLevel=false
+    Gui:Destroy()
+end)
+
+-- IMPORTANT: this source is compiled only after the menu exists and only when toggled.
 local FARM_SOURCE = [=[
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
@@ -777,78 +906,52 @@ end)
 
 ]=]
 
-local FarmLoaded = false
-local FarmError = nil
-
-local function LoadFarmSafely()
-    if FarmLoaded then
-        return true
-    end
-
-    local compiler = loadstring
-    if type(compiler) ~= "function" then
-        FarmError = "loadstring không khả dụng trong môi trường hiện tại"
-        Status.Text = "● FARM SOURCE CHƯA NẠP"
-        Status.TextColor3 = Color3.fromRGB(255, 180, 70)
+local function loadFarm()
+    if farmLoaded then return true end
+    local loader=loadstring
+    if type(loader)~="function" then
+        farmError="loadstring unavailable"
         return false
     end
-
-    local okCompile, chunkOrError = pcall(compiler, FARM_SOURCE)
-    if not okCompile or type(chunkOrError) ~= "function" then
-        FarmError = tostring(chunkOrError)
-        Status.Text = "● FARM SOURCE LỖI"
-        Status.TextColor3 = Color3.fromRGB(255, 95, 95)
-        warn("[PhongdzHub] Farm compile error:", FarmError)
+    local ok,chunk=pcall(loader,FARM_SOURCE)
+    if not ok or type(chunk)~="function" then
+        farmError=tostring(chunk)
+        warn("[PhongdzHub] Farm compile error: ",farmError)
         return false
     end
-
-    local okRun, runError = pcall(chunkOrError)
-    if not okRun then
-        FarmError = tostring(runError)
-        Status.Text = "● FARM ENGINE LỖI"
-        Status.TextColor3 = Color3.fromRGB(255, 95, 95)
-        warn("[PhongdzHub] Farm runtime error:", FarmError)
+    local ok2,err=pcall(chunk)
+    if not ok2 then
+        farmError=tostring(err)
+        warn("[PhongdzHub] Farm runtime error: ",farmError)
         return false
     end
-
-    FarmLoaded = true
+    farmLoaded=true
     return true
 end
 
--- Nạp farm sau khi UI đã tồn tại.
-task.defer(function()
-    LoadFarmSafely()
-end)
-
--- Toggle chỉ bật AutoLevel; farm engine tự xử lý sau khi được nạp.
-Toggle.Activated:Connect(function()
-    _G.AutoLevel = not _G.AutoLevel
-
-    if _G.AutoLevel then
-        if not FarmLoaded then
-            if not LoadFarmSafely() then
-                _G.AutoLevel = false
-            end
+toggle.Activated:Connect(function()
+    if not farmEnabled then
+        if not loadFarm() then
+            status.Text="● FARM SOURCE ERROR — xem console"
+            status.TextColor3=Color3.fromRGB(255,90,90)
+            return
         end
-    end
-
-    if _G.AutoLevel then
-        Toggle.BackgroundColor3 = Color3.fromRGB(255,211,65)
-        Knob.Position = UDim2.fromOffset(26,3)
-        Knob.BackgroundColor3 = Color3.fromRGB(15,16,20)
-        Status.Text = "● FARM LEVEL ĐANG CHẠY"
-        Status.TextColor3 = Color3.fromRGB(88,224,132)
+        farmEnabled=true
+        _G.AutoLevel=true
+        pill.BackgroundColor3=Color3.fromRGB(255,211,65)
+        knob.Position=UDim2.fromOffset(26,3)
+        knob.BackgroundColor3=Color3.fromRGB(16,18,24)
+        status.Text="● FARM LEVEL ĐANG CHẠY"
+        status.TextColor3=Color3.fromRGB(88,224,132)
     else
-        Toggle.BackgroundColor3 = Color3.fromRGB(55,59,70)
-        Knob.Position = UDim2.fromOffset(3,3)
-        Knob.BackgroundColor3 = Color3.fromRGB(225,228,235)
-
-        if FarmError then
-            Status.Text = "● FARM SOURCE LỖI"
-            Status.TextColor3 = Color3.fromRGB(255,95,95)
-        else
-            Status.Text = "● OFF"
-            Status.TextColor3 = Color3.fromRGB(130,135,148)
-        end
+        farmEnabled=false
+        _G.AutoLevel=false
+        pill.BackgroundColor3=Color3.fromRGB(70,74,85)
+        knob.Position=UDim2.fromOffset(3,3)
+        knob.BackgroundColor3=Color3.fromRGB(230,232,238)
+        status.Text="● MENU READY — FARM OFF"
+        status.TextColor3=Color3.fromRGB(130,135,148)
     end
 end)
+
+warn("[PhongdzHub] UI READY — Farm source is isolated and not loaded yet.")
