@@ -216,6 +216,10 @@ tabLayout.Parent = TabContainer
 local tabs = {}
 local activeTab = "Farm"
 
+-- Forward declarations for the content controls.
+local Card
+local Toggle
+
 local function createTab(name, order)
     local button = Instance.new("TextButton")
     button.Name = name .. "Tab"
@@ -252,27 +256,25 @@ local function setActiveTab(name)
     activeTab = name
 
     for tabName, button in pairs(tabs) do
-        if tabName == name then
-            button.BackgroundColor3 = Color3.fromRGB(255, 211, 65)
-            button.TextColor3 = Color3.fromRGB(16, 18, 24)
-        else
-            button.BackgroundColor3 = Color3.fromRGB(35, 38, 47)
-            button.TextColor3 = Color3.fromRGB(190, 194, 204)
-        end
+        local selected = (tabName == name)
+        button.BackgroundColor3 = selected
+            and Color3.fromRGB(255, 211, 65)
+            or Color3.fromRGB(35, 38, 47)
+        button.TextColor3 = selected
+            and Color3.fromRGB(16, 18, 24)
+            or Color3.fromRGB(190, 194, 204)
     end
 
-    -- Farm currently owns the existing Farm Level + Fast Attack controls.
-    local farmVisible = name == "Farm"
+    -- Only the Farm tab displays Farm controls.
+    local farmVisible = (name == "Farm")
+
     if Card then Card.Visible = farmVisible end
     if Toggle then Toggle.Visible = farmVisible end
-    if FixLag then FixLag.Visible = farmVisible end
-    if FixLagStatus then FixLagStatus.Visible = farmVisible end
 
-    -- Other tabs are intentionally empty for now; their buttons are ready
-    -- for future features without changing the existing Farm behavior.
+    -- Future tab-specific frames can be enabled here independently.
 end
 
-local Card = Instance.new("Frame")
+Card = Instance.new("Frame")
 Card.Position = UDim2.fromOffset(156, 76)
 Card.Size = UDim2.fromOffset(W - 172, 65)
 Card.BackgroundColor3 = Color3.fromRGB(22, 25, 33)
@@ -305,7 +307,7 @@ CardDesc.TextColor3 = Color3.fromRGB(143, 149, 162)
 CardDesc.TextXAlignment = Enum.TextXAlignment.Left
 CardDesc.Parent = Card
 
-local Toggle = Instance.new("TextButton")
+Toggle = Instance.new("TextButton")
 Toggle.Position = UDim2.fromOffset(156, 154)
 Toggle.Size = UDim2.fromOffset(W - 172, 52)
 Toggle.Text = ""
@@ -363,80 +365,6 @@ kc.CornerRadius = UDim.new(1, 0)
 kc.Parent = Knob
 
 
---===========================================================================
--- FIX LAG BUTTON — independent from Farm
---===========================================================================
-local FixLag = Instance.new("TextButton")
-FixLag.Position = UDim2.fromOffset(156, 219)
-FixLag.Size = UDim2.fromOffset(W - 172, 42)
-FixLag.Text = "⚡  FIX LAG"
-FixLag.Font = Enum.Font.GothamBold
-FixLag.TextSize = 11
-FixLag.TextColor3 = Color3.fromRGB(240, 242, 247)
-FixLag.BackgroundColor3 = Color3.fromRGB(42, 45, 54)
-FixLag.BorderSizePixel = 0
-FixLag.AutoButtonColor = false
-FixLag.Parent = Main
-
-local flc = Instance.new("UICorner")
-flc.CornerRadius = UDim.new(0, 10)
-flc.Parent = FixLag
-
-local FixLagStatus = Instance.new("TextLabel")
-FixLagStatus.Position = UDim2.fromOffset(156, 265)
-FixLagStatus.Size = UDim2.fromOffset(W - 172, 18)
-FixLagStatus.BackgroundTransparency = 1
-FixLagStatus.Text = "● READY — nhấn để tối ưu tạm thời"
-FixLagStatus.Font = Enum.Font.GothamMedium
-FixLagStatus.TextSize = 8
-FixLagStatus.TextColor3 = Color3.fromRGB(86, 91, 104)
-FixLagStatus.TextXAlignment = Enum.TextXAlignment.Center
-FixLagStatus.Parent = Main
-
-local function FixLagNow()
-    local ok, err = pcall(function()
-        -- Dọn Lua garbage trước, không đụng tới Farm state.
-        collectgarbage("collect")
-
-        -- Hạ chất lượng render ở phía client nếu API hỗ trợ.
-        local settings = UserSettings()
-        local gameSettings = settings and settings:GetService("UserGameSettings")
-        if gameSettings then
-            pcall(function()
-                gameSettings.SavedQualityLevel = Enum.SavedQualitySetting.QualityLevel1
-            end)
-        end
-
-        -- Tạm giảm các hiệu ứng nặng đang được render.
-        for _, obj in ipairs(workspace:GetDescendants()) do
-            if obj:IsA("ParticleEmitter") or obj:IsA("Trail") or obj:IsA("Beam") then
-                pcall(function()
-                    obj.Enabled = false
-                end)
-            end
-        end
-    end)
-
-    if ok then
-        FixLagStatus.Text = "● FIX LAG ĐÃ CHẠY"
-        FixLagStatus.TextColor3 = Color3.fromRGB(88, 224, 132)
-        FixLag.BackgroundColor3 = Color3.fromRGB(35, 75, 52)
-    else
-        FixLagStatus.Text = "● FIX LAG ERROR"
-        FixLagStatus.TextColor3 = Color3.fromRGB(255, 95, 95)
-        warn("[PhongdzHub] FixLag error:", err)
-    end
-
-    task.delay(2.5, function()
-        if FixLag and FixLag.Parent then
-            FixLagStatus.Text = "● READY — nhấn để tối ưu tạm thời"
-            FixLagStatus.TextColor3 = Color3.fromRGB(86, 91, 104)
-            FixLag.BackgroundColor3 = Color3.fromRGB(42, 45, 54)
-        end
-    end)
-end
-
-FixLag.Activated:Connect(FixLagNow)
 
 local Hint = Instance.new("TextLabel")
 Hint.Position = UDim2.fromOffset(16, 286)
@@ -623,6 +551,7 @@ local LocalPlayer = Players.LocalPlayer
 
 _G.AutoLevel = _G.AutoLevel or false
 _G.Fast_Delay = _G.Fast_Delay or 0.01
+_G.FlySpeed = 300
 
 local Sea1, Sea2, Sea3 = false, false, false
 if game.PlaceId == 2753915549 then
