@@ -84,6 +84,33 @@ Minimize.Activated:Connect(minimize); Launcher.Activated:Connect(restore); Close
 local lastV=viewport(); RunService.RenderStepped:Connect(function() local v=viewport(); if v.X~=lastV.X or v.Y~=lastV.Y then lastV=v; forceXY(X,Y); if Launcher.Visible then Launcher.Position=UDim2.fromOffset(math.clamp(X+190,0,math.max(0,v.X-58)),math.clamp(Y+96,0,math.max(0,v.Y-58))) end end end)
 
 --=============================================================================
+
+--=============================================================================
+-- FARM ISOLATION LAYER
+--=============================================================================
+-- Menu rendering is completed before the farm source is compiled.
+-- If the farm source has a runtime/compile issue, the menu stays alive.
+-- The farm code uses _G.AutoLevel so it does not depend on menu locals.
+
+local FARM_SOURCE = [=[
+local Players = game:GetService("Players")
+local TweenService = game:GetService("TweenService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local LocalPlayer = Players.LocalPlayer
+
+_G.AutoLevel = _G.AutoLevel or false
+_G.Fast_Delay = _G.Fast_Delay or 0.01
+
+local Sea1, Sea2, Sea3 = false, false, false
+if game.PlaceId == 2753915549 then
+    Sea1 = true
+elseif game.PlaceId == 4442272183 then
+    Sea2 = true
+elseif game.PlaceId == 7449423635 then
+    Sea3 = true
+end
+
+
 -- FARM LEVEL + FAST ATTACK — SOURCE ROUTINE
 --=============================================================================
 
@@ -97,11 +124,6 @@ local function FastAttack() if not ResolveAttackRemotes() then return end; local
 local function QuestText() local pg=LocalPlayer:FindFirstChild("PlayerGui"); local main=pg and pg:FindFirstChild("Main"); local q=main and main:FindFirstChild("Quest"); local c=q and q:FindFirstChild("Container"); local qt=c and c:FindFirstChild("QuestTitle"); return q,qt and qt:FindFirstChild("Title") end
 local function RunFarm() CheckLevel(); if not NameMon or not NameQuest or not CFrameQ then return end; local q,title=QuestText(); if not q or not title then return end; local correct=q.Visible and string.find(tostring(title.Text or ""),tostring(NameMon),1,true); if not correct then local rem=ReplicatedStorage:FindFirstChild("Remotes"); local comm=rem and rem:FindFirstChild("CommF_"); if comm then pcall(function() comm:InvokeServer("AbandonQuest") end) end; TweenTo(CFrameQ); local root=GetRoot(); if root and (root.Position-CFrameQ.Position).Magnitude<=7 and comm then pcall(function() comm:InvokeServer("StartQuest",NameQuest,QuestLv) end) end; return end; local enemies=workspace:FindFirstChild("Enemies"); if not enemies then return end; local found=false; for _,mob in ipairs(enemies:GetChildren()) do local hum=mob:FindFirstChildOfClass("Humanoid"); local rp=mob:FindFirstChild("HumanoidRootPart"); if hum and rp and hum.Health>0 and mob.Name==Ms then found=true; repeat if not _G.AutoLevel then break end; task.wait(_G.Fast_Delay); AutoHaki(); EquipFarmWeapon(); TweenTo(rp.CFrame*CFrame.new(0,40,0)); FastAttack(); pcall(function() rp.Size=Vector3.new(60,60,60); rp.CanCollide=false end) until not mob.Parent or hum.Health<=0 or not q.Visible or not _G.AutoLevel end end; if not found then local wo=workspace:FindFirstChild("_WorldOrigin"); local sp=wo and wo:FindFirstChild("EnemySpawns"); if sp then for _,part in ipairs(sp:GetChildren()) do if string.find(tostring(part.Name),tostring(NameMon),1,true) then local root=GetRoot(); if root and (root.Position-part.Position).Magnitude>=10 then TweenTo(part.CFrame*CFrame.new(0,40,0)); break end end end end end end
 
-local enabled=false
-local function setFarm(state) enabled=state; _G.AutoLevel=state; if state then Toggle.BackgroundColor3=Color3.fromRGB(255,211,65); Knob.Position=UDim2.fromOffset(26,3); Knob.BackgroundColor3=Color3.fromRGB(15,16,20); Status.Text="● FARM LEVEL ĐANG CHẠY"; Status.TextColor3=Color3.fromRGB(88,224,132) else Toggle.BackgroundColor3=Color3.fromRGB(55,59,70); Knob.Position=UDim2.fromOffset(3,3); Knob.BackgroundColor3=Color3.fromRGB(225,228,235); Status.Text="● OFF"; Status.TextColor3=Color3.fromRGB(130,135,148) end end
-Toggle.Activated:Connect(function() setFarm(not enabled) end)
-
-task.spawn(function() while ScreenGui.Parent do if _G.AutoLevel then pcall(RunFarm) end task.wait() end end)
 
 function CheckLevel()
     local v197 = game:GetService("Players").LocalPlayer.Data.Level.Value;
@@ -744,3 +766,89 @@ function CheckLevel()
         end
     end
 end
+-- Start only after CheckLevel has been declared above.
+task.spawn(function()
+    while task.wait() do
+        if _G.AutoLevel then
+            pcall(RunFarm)
+        end
+    end
+end)
+
+]=]
+
+local FarmLoaded = false
+local FarmError = nil
+
+local function LoadFarmSafely()
+    if FarmLoaded then
+        return true
+    end
+
+    local compiler = loadstring
+    if type(compiler) ~= "function" then
+        FarmError = "loadstring không khả dụng trong môi trường hiện tại"
+        Status.Text = "● FARM SOURCE CHƯA NẠP"
+        Status.TextColor3 = Color3.fromRGB(255, 180, 70)
+        return false
+    end
+
+    local okCompile, chunkOrError = pcall(compiler, FARM_SOURCE)
+    if not okCompile or type(chunkOrError) ~= "function" then
+        FarmError = tostring(chunkOrError)
+        Status.Text = "● FARM SOURCE LỖI"
+        Status.TextColor3 = Color3.fromRGB(255, 95, 95)
+        warn("[PhongdzHub] Farm compile error:", FarmError)
+        return false
+    end
+
+    local okRun, runError = pcall(chunkOrError)
+    if not okRun then
+        FarmError = tostring(runError)
+        Status.Text = "● FARM ENGINE LỖI"
+        Status.TextColor3 = Color3.fromRGB(255, 95, 95)
+        warn("[PhongdzHub] Farm runtime error:", FarmError)
+        return false
+    end
+
+    FarmLoaded = true
+    return true
+end
+
+-- Nạp farm sau khi UI đã tồn tại.
+task.defer(function()
+    LoadFarmSafely()
+end)
+
+-- Toggle chỉ bật AutoLevel; farm engine tự xử lý sau khi được nạp.
+Toggle.Activated:Connect(function()
+    _G.AutoLevel = not _G.AutoLevel
+
+    if _G.AutoLevel then
+        if not FarmLoaded then
+            if not LoadFarmSafely() then
+                _G.AutoLevel = false
+            end
+        end
+    end
+
+    if _G.AutoLevel then
+        Toggle.BackgroundColor3 = Color3.fromRGB(255,211,65)
+        Knob.Position = UDim2.fromOffset(26,3)
+        Knob.BackgroundColor3 = Color3.fromRGB(15,16,20)
+        Status.Text = "● FARM LEVEL ĐANG CHẠY"
+        Status.TextColor3 = Color3.fromRGB(88,224,132)
+    else
+        Toggle.BackgroundColor3 = Color3.fromRGB(55,59,70)
+        Knob.Position = UDim2.fromOffset(3,3)
+        Knob.BackgroundColor3 = Color3.fromRGB(225,228,235)
+
+        if FarmError then
+            Status.Text = "● FARM SOURCE LỖI"
+            Status.TextColor3 = Color3.fromRGB(255,95,95)
+        else
+            Status.Text = "● OFF"
+            Status.TextColor3 = Color3.fromRGB(130,135,148)
+        end
+    end
+end)
