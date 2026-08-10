@@ -49,7 +49,7 @@ Gui.IgnoreGuiInset = true
 Gui.DisplayOrder = 999999
 Gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
-local W, H = 560, 340
+local W, H = 560, 400
 local X, Y = 0, 0
 
 local Main = Instance.new("Frame")
@@ -219,6 +219,9 @@ local activeTab = "Farm"
 -- Forward declarations for the content controls.
 local Card
 local Toggle
+local BoneCard
+local BoneToggle
+local BoneStatus
 
 local function createTab(name, order)
     local button = Instance.new("TextButton")
@@ -270,6 +273,7 @@ local function setActiveTab(name)
 
     if Card then Card.Visible = farmVisible end
     if Toggle then Toggle.Visible = farmVisible end
+    if BoneCard then BoneCard.Visible = farmVisible end
 
     -- Future tab-specific frames can be enabled here independently.
 end
@@ -366,8 +370,89 @@ kc.Parent = Knob
 
 
 
+--===========================================================================
+-- FARM > XƯƠNG
+-- Logic is based on the Xương section from the provided source.
+--===========================================================================
+BoneCard = Instance.new("Frame")
+BoneCard.Name = "BoneCard"
+BoneCard.Position = UDim2.fromOffset(156, 218)
+BoneCard.Size = UDim2.fromOffset(W - 172, 120)
+BoneCard.BackgroundColor3 = Color3.fromRGB(22, 25, 33)
+BoneCard.BorderSizePixel = 0
+BoneCard.Parent = Main
+
+local boneCorner = Instance.new("UICorner")
+boneCorner.CornerRadius = UDim.new(0, 10)
+boneCorner.Parent = BoneCard
+
+local BoneTitle = Instance.new("TextLabel")
+BoneTitle.Position = UDim2.fromOffset(13, 8)
+BoneTitle.Size = UDim2.fromOffset(260, 22)
+BoneTitle.BackgroundTransparency = 1
+BoneTitle.Text = "FARM XƯƠNG"
+BoneTitle.Font = Enum.Font.GothamBold
+BoneTitle.TextSize = 12
+BoneTitle.TextColor3 = Color3.fromRGB(241, 243, 247)
+BoneTitle.TextXAlignment = Enum.TextXAlignment.Left
+BoneTitle.Parent = BoneCard
+
+BoneStatus = Instance.new("TextLabel")
+BoneStatus.Position = UDim2.fromOffset(13, 31)
+BoneStatus.Size = UDim2.fromOffset(260, 18)
+BoneStatus.BackgroundTransparency = 1
+BoneStatus.Text = "● SEA 3  •  ĐANG KIỂM TRA..."
+BoneStatus.Font = Enum.Font.GothamMedium
+BoneStatus.TextSize = 8
+BoneStatus.TextColor3 = Color3.fromRGB(130, 135, 148)
+BoneStatus.TextXAlignment = Enum.TextXAlignment.Left
+BoneStatus.Parent = BoneCard
+
+BoneToggle = Instance.new("TextButton")
+BoneToggle.Position = UDim2.fromOffset(13, 58)
+BoneToggle.Size = UDim2.fromOffset(W - 198, 45)
+BoneToggle.Text = "CÀY XƯƠNG  •  OFF"
+BoneToggle.Font = Enum.Font.GothamBold
+BoneToggle.TextSize = 10
+BoneToggle.TextColor3 = Color3.fromRGB(240, 242, 247)
+BoneToggle.BackgroundColor3 = Color3.fromRGB(55, 59, 70)
+BoneToggle.BorderSizePixel = 0
+BoneToggle.AutoButtonColor = false
+BoneToggle.Parent = BoneCard
+
+local btc = Instance.new("UICorner")
+btc.CornerRadius = UDim.new(0, 9)
+btc.Parent = BoneToggle
+
+local BoneCount = Instance.new("TextLabel")
+BoneCount.Position = UDim2.fromOffset(W - 315, 8)
+BoneCount.Size = UDim2.fromOffset(140, 22)
+BoneCount.BackgroundTransparency = 1
+BoneCount.Text = "Xương: --"
+BoneCount.Font = Enum.Font.GothamBold
+BoneCount.TextSize = 9
+BoneCount.TextColor3 = Color3.fromRGB(255, 211, 65)
+BoneCount.TextXAlignment = Enum.TextXAlignment.Right
+BoneCount.Parent = BoneCard
+
+BoneToggle.Activated:Connect(function()
+    _G.AutoBone = not (_G.AutoBone == true)
+
+    if _G.AutoBone then
+        BoneToggle.Text = "CÀY XƯƠNG  •  ON"
+        BoneToggle.BackgroundColor3 = Color3.fromRGB(67, 92, 53)
+        BoneStatus.Text = "● CÀY XƯƠNG ĐANG CHẠY"
+        BoneStatus.TextColor3 = Color3.fromRGB(112, 224, 142)
+    else
+        BoneToggle.Text = "CÀY XƯƠNG  •  OFF"
+        BoneToggle.BackgroundColor3 = Color3.fromRGB(55, 59, 70)
+        BoneStatus.Text = "● CÀY XƯƠNG ĐÃ TẮT"
+        BoneStatus.TextColor3 = Color3.fromRGB(130, 135, 148)
+    end
+end)
+
 local Hint = Instance.new("TextLabel")
-Hint.Position = UDim2.fromOffset(16, 286)
+Hint.Position = UDim2.fromOffset(16, 366)
 Hint.Size = UDim2.fromOffset(W - 32, 18)
 Hint.BackgroundTransparency = 1
 Hint.Text = "Kéo header để di chuyển  •  — để thu nhỏ"
@@ -515,6 +600,7 @@ end)
 
 Close.Activated:Connect(function()
     _G.AutoLevel = false
+    _G.AutoBone = false
     Gui:Destroy()
 end)
 
@@ -624,6 +710,113 @@ local AttackRemote,HitRemote
 local function ResolveAttackRemotes() if AttackRemote and HitRemote then return true end; local modules=ReplicatedStorage:FindFirstChild("Modules"); local net=modules and modules:FindFirstChild("Net"); if not net then return false end; AttackRemote=net:FindFirstChild("RE/RegisterAttack"); HitRemote=net:FindFirstChild("RE/RegisterHit"); return AttackRemote~=nil and HitRemote~=nil end
 local function FastAttack() if not ResolveAttackRemotes() then return end; local enemies=workspace:FindFirstChild("Enemies"); local root=GetRoot(); if not enemies or not root then return end; local hits={}; local lastHead; for _,mob in ipairs(enemies:GetChildren()) do local hum=mob:FindFirstChildOfClass("Humanoid"); local head=mob:FindFirstChild("Head"); if hum and head and hum.Health>0 and (root.Position-head.Position).Magnitude<=60 then hits[#hits+1]={mob,head}; lastHead=head end end; if lastHead and #hits>0 then pcall(function() AttackRemote:FireServer(1e-9); HitRemote:FireServer(lastHead,hits) end) end end
 local function QuestText() local pg=LocalPlayer:FindFirstChild("PlayerGui"); local main=pg and pg:FindFirstChild("Main"); local q=main and main:FindFirstChild("Quest"); local c=q and q:FindFirstChild("Container"); local qt=c and c:FindFirstChild("QuestTitle"); return q,qt and qt:FindFirstChild("Title") end
+--===========================================================================
+-- FARM XƯƠNG — adapted directly from the provided source's Xương section.
+--===========================================================================
+_G.AutoBone = _G.AutoBone or false
+local BoneQuestCFrame = CFrame.new(-9515.75, 174.8521728515625, 6079.40625)
+local BoneMobs = {
+    ["Reborn Skeleton"] = true,
+    ["Living Zombie"] = true,
+    ["Demonic Soul"] = true,
+    ["Posessed Mummy"] = true,
+}
+
+task.spawn(function()
+    while task.wait(1) do
+        pcall(function()
+            local comm = ReplicatedStorage:FindFirstChild("Remotes")
+                and ReplicatedStorage.Remotes:FindFirstChild("CommF_")
+
+            if comm then
+                local count = comm:InvokeServer("Bones", "Check")
+                if BoneCount and BoneCount.Parent then
+                    BoneCount.Text = "Xương: " .. tostring(count)
+                end
+            end
+
+            if not Sea3 then
+                if BoneStatus and BoneStatus.Parent then
+                    BoneStatus.Text = "● CHỈ HOẠT ĐỘNG Ở SEA 3"
+                    BoneStatus.TextColor3 = Color3.fromRGB(255, 180, 80)
+                end
+            elseif not _G.AutoBone then
+                if BoneStatus and BoneStatus.Parent then
+                    BoneStatus.Text = "● SẴN SÀNG"
+                    BoneStatus.TextColor3 = Color3.fromRGB(130, 135, 148)
+                end
+            end
+        end)
+    end
+end)
+
+task.spawn(function()
+    while task.wait() do
+        if _G.AutoBone and Sea3 then
+            pcall(function()
+                local pg = LocalPlayer:FindFirstChild("PlayerGui")
+                local main = pg and pg:FindFirstChild("Main")
+                local quest = main and main:FindFirstChild("Quest")
+                local container = quest and quest:FindFirstChild("Container")
+                local titleObj = container and container:FindFirstChild("QuestTitle")
+                local title = titleObj and titleObj:FindFirstChild("Title")
+
+                local comm = ReplicatedStorage:FindFirstChild("Remotes")
+                    and ReplicatedStorage.Remotes:FindFirstChild("CommF_")
+                if not comm then return end
+
+                -- Source behavior: abandon a non-Demonic Soul quest.
+                if title and not string.find(tostring(title.Text), "Demonic Soul") then
+                    comm:InvokeServer("AbandonQuest")
+                end
+
+                if not quest or not quest.Visible then
+                    TweenTo(BoneQuestCFrame)
+
+                    local root = GetRoot()
+                    if root and (root.Position - BoneQuestCFrame.Position).Magnitude <= 3 then
+                        comm:InvokeServer("StartQuest", "HauntedQuest2", 1)
+                    end
+                    return
+                end
+
+                local enemies = workspace:FindFirstChild("Enemies")
+                if not enemies then return end
+
+                for _, mob in ipairs(enemies:GetChildren()) do
+                    local hum = mob:FindFirstChildOfClass("Humanoid")
+                    local rp = mob:FindFirstChild("HumanoidRootPart")
+
+                    if hum and rp and hum.Health > 0 and BoneMobs[mob.Name] then
+                        repeat
+                            task.wait(_G.Fast_Delay)
+                            AutoHaki()
+                            EquipFarmWeapon()
+                            TweenTo(rp.CFrame * CFrame.new(0, 40, 0))
+                            FastAttack()
+
+                            pcall(function()
+                                rp.Size = Vector3.new(60, 60, 60)
+                                rp.Transparency = 1
+                                rp.CanCollide = false
+                                hum.JumpPower = 0
+                                hum.WalkSpeed = 0
+                            end)
+                        until not _G.AutoBone
+                            or hum.Health <= 0
+                            or not mob.Parent
+                            or not quest.Visible
+                    end
+
+                    if not _G.AutoBone then
+                        break
+                    end
+                end
+            end)
+        end
+    end
+end)
+
 local function RunFarm() CheckLevel(); if not NameMon or not NameQuest or not CFrameQ then return end; local q,title=QuestText(); if not q or not title then return end; local correct=q.Visible and string.find(tostring(title.Text or ""),tostring(NameMon),1,true); if not correct then local rem=ReplicatedStorage:FindFirstChild("Remotes"); local comm=rem and rem:FindFirstChild("CommF_"); if comm then pcall(function() comm:InvokeServer("AbandonQuest") end) end; TweenTo(CFrameQ); local root=GetRoot(); if root and (root.Position-CFrameQ.Position).Magnitude<=7 and comm then pcall(function() comm:InvokeServer("StartQuest",NameQuest,QuestLv) end) end; return end; local enemies=workspace:FindFirstChild("Enemies"); if not enemies then return end; local found=false; for _,mob in ipairs(enemies:GetChildren()) do local hum=mob:FindFirstChildOfClass("Humanoid"); local rp=mob:FindFirstChild("HumanoidRootPart"); if hum and rp and hum.Health>0 and mob.Name==Ms then found=true; repeat if not _G.AutoLevel then break end; task.wait(_G.Fast_Delay); AutoHaki(); EquipFarmWeapon(); TweenTo(rp.CFrame*CFrame.new(0,40,0)); FastAttack(); pcall(function() rp.Size=Vector3.new(60,60,60); rp.CanCollide=false end) until not mob.Parent or hum.Health<=0 or not q.Visible or not _G.AutoLevel end end; if not found then local wo=workspace:FindFirstChild("_WorldOrigin"); local sp=wo and wo:FindFirstChild("EnemySpawns"); if sp then for _,part in ipairs(sp:GetChildren()) do if string.find(tostring(part.Name),tostring(NameMon),1,true) then local root=GetRoot(); if root and (root.Position-part.Position).Magnitude>=10 then TweenTo(part.CFrame*CFrame.new(0,40,0)); break end end end end end end
 
 
