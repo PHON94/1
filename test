@@ -49,7 +49,7 @@ Gui.IgnoreGuiInset = true
 Gui.DisplayOrder = 999999
 Gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
-local W, H = 440, 310
+local W, H = 560, 340
 local X, Y = 0, 0
 
 local Main = Instance.new("Frame")
@@ -176,9 +176,105 @@ local cc = Instance.new("UICorner")
 cc.CornerRadius = UDim.new(0, 9)
 cc.Parent = Close
 
+--===========================================================================
+-- LEFT NAVIGATION / TABS
+--===========================================================================
+local Sidebar = Instance.new("Frame")
+Sidebar.Name = "Sidebar"
+Sidebar.Position = UDim2.fromOffset(12, 72)
+Sidebar.Size = UDim2.fromOffset(128, H - 84)
+Sidebar.BackgroundColor3 = Color3.fromRGB(21, 24, 31)
+Sidebar.BorderSizePixel = 0
+Sidebar.Parent = Main
+
+local sbc = Instance.new("UICorner")
+sbc.CornerRadius = UDim.new(0, 10)
+sbc.Parent = Sidebar
+
+local SideTitle = Instance.new("TextLabel")
+SideTitle.Position = UDim2.fromOffset(12, 10)
+SideTitle.Size = UDim2.fromOffset(104, 20)
+SideTitle.BackgroundTransparency = 1
+SideTitle.Text = "MENU"
+SideTitle.Font = Enum.Font.GothamBlack
+SideTitle.TextSize = 10
+SideTitle.TextColor3 = Color3.fromRGB(145, 150, 163)
+SideTitle.TextXAlignment = Enum.TextXAlignment.Left
+SideTitle.Parent = Sidebar
+
+local TabContainer = Instance.new("Frame")
+TabContainer.Position = UDim2.fromOffset(8, 38)
+TabContainer.Size = UDim2.fromOffset(112, H - 50)
+TabContainer.BackgroundTransparency = 1
+TabContainer.Parent = Sidebar
+
+local tabLayout = Instance.new("UIListLayout")
+tabLayout.Padding = UDim.new(0, 7)
+tabLayout.SortOrder = Enum.SortOrder.LayoutOrder
+tabLayout.Parent = TabContainer
+
+local tabs = {}
+local activeTab = "Farm"
+
+local function createTab(name, order)
+    local button = Instance.new("TextButton")
+    button.Name = name .. "Tab"
+    button.Size = UDim2.new(1, 0, 0, 38)
+    button.LayoutOrder = order
+    button.Text = name
+    button.Font = Enum.Font.GothamBold
+    button.TextSize = 10
+    button.TextXAlignment = Enum.TextXAlignment.Left
+    button.TextColor3 = Color3.fromRGB(190, 194, 204)
+    button.BackgroundColor3 = Color3.fromRGB(35, 38, 47)
+    button.BorderSizePixel = 0
+    button.AutoButtonColor = false
+    button.Parent = TabContainer
+
+    local c = Instance.new("UICorner")
+    c.CornerRadius = UDim.new(0, 8)
+    c.Parent = button
+
+    local pad = Instance.new("UIPadding")
+    pad.PaddingLeft = UDim.new(0, 12)
+    pad.Parent = button
+
+    tabs[name] = button
+    return button
+end
+
+local FarmTab = createTab("Farm", 1)
+local PlayerTab = createTab("Player", 2)
+local VisualTab = createTab("Visual", 3)
+local MiscTab = createTab("Misc", 4)
+
+local function setActiveTab(name)
+    activeTab = name
+
+    for tabName, button in pairs(tabs) do
+        if tabName == name then
+            button.BackgroundColor3 = Color3.fromRGB(255, 211, 65)
+            button.TextColor3 = Color3.fromRGB(16, 18, 24)
+        else
+            button.BackgroundColor3 = Color3.fromRGB(35, 38, 47)
+            button.TextColor3 = Color3.fromRGB(190, 194, 204)
+        end
+    end
+
+    -- Farm currently owns the existing Farm Level + Fast Attack controls.
+    local farmVisible = name == "Farm"
+    if Card then Card.Visible = farmVisible end
+    if Toggle then Toggle.Visible = farmVisible end
+    if FixLag then FixLag.Visible = farmVisible end
+    if FixLagStatus then FixLagStatus.Visible = farmVisible end
+
+    -- Other tabs are intentionally empty for now; their buttons are ready
+    -- for future features without changing the existing Farm behavior.
+end
+
 local Card = Instance.new("Frame")
-Card.Position = UDim2.fromOffset(16, 76)
-Card.Size = UDim2.fromOffset(W - 32, 65)
+Card.Position = UDim2.fromOffset(156, 76)
+Card.Size = UDim2.fromOffset(W - 172, 65)
 Card.BackgroundColor3 = Color3.fromRGB(22, 25, 33)
 Card.BorderSizePixel = 0
 Card.Parent = Main
@@ -210,8 +306,8 @@ CardDesc.TextXAlignment = Enum.TextXAlignment.Left
 CardDesc.Parent = Card
 
 local Toggle = Instance.new("TextButton")
-Toggle.Position = UDim2.fromOffset(16, 154)
-Toggle.Size = UDim2.fromOffset(W - 32, 52)
+Toggle.Position = UDim2.fromOffset(156, 154)
+Toggle.Size = UDim2.fromOffset(W - 172, 52)
 Toggle.Text = ""
 Toggle.BackgroundColor3 = Color3.fromRGB(55, 59, 70)
 Toggle.BorderSizePixel = 0
@@ -271,8 +367,8 @@ kc.Parent = Knob
 -- FIX LAG BUTTON — independent from Farm
 --===========================================================================
 local FixLag = Instance.new("TextButton")
-FixLag.Position = UDim2.fromOffset(16, 219)
-FixLag.Size = UDim2.fromOffset(W - 32, 42)
+FixLag.Position = UDim2.fromOffset(156, 219)
+FixLag.Size = UDim2.fromOffset(W - 172, 42)
 FixLag.Text = "⚡  FIX LAG"
 FixLag.Font = Enum.Font.GothamBold
 FixLag.TextSize = 11
@@ -287,8 +383,8 @@ flc.CornerRadius = UDim.new(0, 10)
 flc.Parent = FixLag
 
 local FixLagStatus = Instance.new("TextLabel")
-FixLagStatus.Position = UDim2.fromOffset(16, 265)
-FixLagStatus.Size = UDim2.fromOffset(W - 32, 18)
+FixLagStatus.Position = UDim2.fromOffset(156, 265)
+FixLagStatus.Size = UDim2.fromOffset(W - 172, 18)
 FixLagStatus.BackgroundTransparency = 1
 FixLagStatus.Text = "● READY — nhấn để tối ưu tạm thời"
 FixLagStatus.Font = Enum.Font.GothamMedium
@@ -419,7 +515,7 @@ local function minimizeMenu()
 
     local v = viewport()
     Launcher.Position = UDim2.fromOffset(
-        math.clamp(savedX + 190, 0, math.max(0, v.X - 58)),
+        math.clamp(savedX + 250, 0, math.max(0, v.X - 58)),
         math.clamp(savedY + 96, 0, math.max(0, v.Y - 58))
     )
 
@@ -441,10 +537,76 @@ end
 Min.Activated:Connect(minimizeMenu)
 Launcher.Activated:Connect(restoreMenu)
 
+-- Cho phép kéo nút Launcher khi menu đang thu nhỏ.
+local launcherDragging = false
+local launcherDragStart = Vector2.zero
+local launcherOrigin = Vector2.zero
+
+Launcher.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
+        launcherDragging = true
+        launcherDragStart = input.Position
+        local p = Launcher.AbsolutePosition
+        launcherOrigin = Vector2.new(p.X, p.Y)
+    end
+end)
+
+UIS.InputChanged:Connect(function(input)
+    if not launcherDragging or not Launcher.Visible then
+        return
+    end
+
+    if input.UserInputType == Enum.UserInputType.MouseMovement
+        or input.UserInputType == Enum.UserInputType.Touch then
+        local d = input.Position - launcherDragStart
+        local v = viewport()
+
+        local nx = math.clamp(
+            launcherOrigin.X + d.X,
+            0,
+            math.max(0, v.X - Launcher.AbsoluteSize.X)
+        )
+
+        local ny = math.clamp(
+            launcherOrigin.Y + d.Y,
+            0,
+            math.max(0, v.Y - Launcher.AbsoluteSize.Y)
+        )
+
+        Launcher.Position = UDim2.fromOffset(nx, ny)
+    end
+end)
+
+UIS.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
+        launcherDragging = false
+    end
+end)
+
 Close.Activated:Connect(function()
     _G.AutoLevel = false
     Gui:Destroy()
 end)
+
+FarmTab.Activated:Connect(function()
+    setActiveTab("Farm")
+end)
+
+PlayerTab.Activated:Connect(function()
+    setActiveTab("Player")
+end)
+
+VisualTab.Activated:Connect(function()
+    setActiveTab("Visual")
+end)
+
+MiscTab.Activated:Connect(function()
+    setActiveTab("Misc")
+end)
+
+setActiveTab("Farm")
 
 -- IMPORTANT: The UI above is complete before the farm source is loaded.
 print("[PhongdzHub] UI READY")
