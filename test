@@ -49,7 +49,7 @@ Gui.IgnoreGuiInset = true
 Gui.DisplayOrder = 999999
 Gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
-local W, H = 560, 400
+local W, H = 440, 250
 local X, Y = 0, 0
 
 local Main = Instance.new("Frame")
@@ -177,113 +177,351 @@ cc.CornerRadius = UDim.new(0, 9)
 cc.Parent = Close
 
 --===========================================================================
--- LEFT NAVIGATION / TABS
+-- SETTING FARM
 --===========================================================================
-local Sidebar = Instance.new("Frame")
-Sidebar.Name = "Sidebar"
-Sidebar.Position = UDim2.fromOffset(12, 72)
-Sidebar.Size = UDim2.fromOffset(128, H - 84)
-Sidebar.BackgroundColor3 = Color3.fromRGB(21, 24, 31)
-Sidebar.BorderSizePixel = 0
-Sidebar.Parent = Main
+local SettingFarm = Instance.new("Frame")
+SettingFarm.Name = "SettingFarm"
+SettingFarm.Position = UDim2.fromOffset(16, 16)
+SettingFarm.Size = UDim2.fromOffset(W - 32, 118)
+SettingFarm.BackgroundColor3 = Color3.fromRGB(22, 25, 33)
+SettingFarm.BorderSizePixel = 0
+SettingFarm.Parent = FolderScroll
 
-local sbc = Instance.new("UICorner")
-sbc.CornerRadius = UDim.new(0, 10)
-sbc.Parent = Sidebar
+local sfc = Instance.new("UICorner")
+sfc.CornerRadius = UDim.new(0, 10)
+sfc.Parent = SettingFarm
 
-local SideTitle = Instance.new("TextLabel")
-SideTitle.Position = UDim2.fromOffset(12, 10)
-SideTitle.Size = UDim2.fromOffset(104, 20)
-SideTitle.BackgroundTransparency = 1
-SideTitle.Text = "MENU"
-SideTitle.Font = Enum.Font.GothamBlack
-SideTitle.TextSize = 10
-SideTitle.TextColor3 = Color3.fromRGB(145, 150, 163)
-SideTitle.TextXAlignment = Enum.TextXAlignment.Left
-SideTitle.Parent = Sidebar
+local sfTitle = Instance.new("TextLabel")
+sfTitle.Position = UDim2.fromOffset(13, 8)
+sfTitle.Size = UDim2.fromOffset(220, 22)
+sfTitle.BackgroundTransparency = 1
+sfTitle.Text = "SETTING FARM"
+sfTitle.Font = Enum.Font.GothamBlack
+sfTitle.TextSize = 12
+sfTitle.TextColor3 = Color3.fromRGB(255, 211, 65)
+sfTitle.TextXAlignment = Enum.TextXAlignment.Left
+sfTitle.Parent = SettingFarm
 
-local TabContainer = Instance.new("Frame")
-TabContainer.Position = UDim2.fromOffset(8, 38)
-TabContainer.Size = UDim2.fromOffset(112, H - 50)
-TabContainer.BackgroundTransparency = 1
-TabContainer.Parent = Sidebar
+local sfDesc = Instance.new("TextLabel")
+sfDesc.Position = UDim2.fromOffset(13, 29)
+sfDesc.Size = UDim2.fromOffset(330, 18)
+sfDesc.BackgroundTransparency = 1
+sfDesc.Text = "Chọn vũ khí + M1 cho Blox Fruit nếu Fruit hỗ trợ"
+sfDesc.Font = Enum.Font.Gotham
+sfDesc.TextSize = 9
+sfDesc.TextColor3 = Color3.fromRGB(143, 149, 162)
+sfDesc.TextXAlignment = Enum.TextXAlignment.Left
+sfDesc.Parent = SettingFarm
 
-local tabLayout = Instance.new("UIListLayout")
-tabLayout.Padding = UDim.new(0, 7)
-tabLayout.SortOrder = Enum.SortOrder.LayoutOrder
-tabLayout.Parent = TabContainer
+local WeaponButton = Instance.new("TextButton")
+WeaponButton.Name = "WeaponSelector"
+WeaponButton.Position = UDim2.fromOffset(13, 53)
+WeaponButton.Size = UDim2.fromOffset(W - 58, 42)
+WeaponButton.BackgroundColor3 = Color3.fromRGB(31, 34, 43)
+WeaponButton.BorderSizePixel = 0
+WeaponButton.Text = ""
+WeaponButton.AutoButtonColor = false
+WeaponButton.Parent = SettingFarm
 
-local tabs = {}
-local activeTab = "Farm"
+local wbc = Instance.new("UICorner")
+wbc.CornerRadius = UDim.new(0, 9)
+wbc.Parent = WeaponButton
 
--- Forward declarations for the content controls.
-local Card
-local Toggle
-local BoneCard
-local BoneToggle
-local BoneStatus
+local WeaponText = Instance.new("TextLabel")
+WeaponText.Position = UDim2.fromOffset(12, 4)
+WeaponText.Size = UDim2.fromOffset(W - 112, 17)
+WeaponText.BackgroundTransparency = 1
+WeaponText.Text = "Melee"
+WeaponText.Font = Enum.Font.GothamBold
+WeaponText.TextSize = 10
+WeaponText.TextColor3 = Color3.fromRGB(240, 242, 247)
+WeaponText.TextXAlignment = Enum.TextXAlignment.Left
+WeaponText.Parent = WeaponButton
 
-local function createTab(name, order)
-    local button = Instance.new("TextButton")
-    button.Name = name .. "Tab"
-    button.Size = UDim2.new(1, 0, 0, 38)
-    button.LayoutOrder = order
-    button.Text = name
-    button.Font = Enum.Font.GothamBold
-    button.TextSize = 10
-    button.TextXAlignment = Enum.TextXAlignment.Left
-    button.TextColor3 = Color3.fromRGB(190, 194, 204)
-    button.BackgroundColor3 = Color3.fromRGB(35, 38, 47)
-    button.BorderSizePixel = 0
-    button.AutoButtonColor = false
-    button.Parent = TabContainer
+local WeaponResolved = Instance.new("TextLabel")
+WeaponResolved.Position = UDim2.fromOffset(12, 21)
+WeaponResolved.Size = UDim2.fromOffset(W - 112, 14)
+WeaponResolved.BackgroundTransparency = 1
+WeaponResolved.Text = "Auto-detect weapon"
+WeaponResolved.Font = Enum.Font.Gotham
+WeaponResolved.TextSize = 8
+WeaponResolved.TextColor3 = Color3.fromRGB(120, 126, 140)
+WeaponResolved.TextXAlignment = Enum.TextXAlignment.Left
+WeaponResolved.Parent = WeaponButton
 
-    local c = Instance.new("UICorner")
-    c.CornerRadius = UDim.new(0, 8)
-    c.Parent = button
+local Arrow = Instance.new("TextLabel")
+Arrow.Position = UDim2.fromOffset(W - 80, 8)
+Arrow.Size = UDim2.fromOffset(25, 25)
+Arrow.BackgroundTransparency = 1
+Arrow.Text = "▾"
+Arrow.Font = Enum.Font.GothamBold
+Arrow.TextSize = 16
+Arrow.TextColor3 = Color3.fromRGB(255, 211, 65)
+Arrow.Parent = WeaponButton
 
-    local pad = Instance.new("UIPadding")
-    pad.PaddingLeft = UDim.new(0, 12)
-    pad.Parent = button
+local FruitM1Toggle = Instance.new("TextButton")
+FruitM1Toggle.Name = "FruitM1Toggle"
+FruitM1Toggle.Position = UDim2.fromOffset(W - 168, 8)
+FruitM1Toggle.Size = UDim2.fromOffset(135, 30)
+FruitM1Toggle.BackgroundColor3 = Color3.fromRGB(255, 211, 65)
+FruitM1Toggle.BorderSizePixel = 0
+FruitM1Toggle.Text = "Fruit M1  •  ON"
+FruitM1Toggle.Font = Enum.Font.GothamBold
+FruitM1Toggle.TextSize = 9
+FruitM1Toggle.TextColor3 = Color3.fromRGB(16, 18, 24)
+FruitM1Toggle.AutoButtonColor = false
+FruitM1Toggle.Parent = SettingFarm
 
-    tabs[name] = button
-    return button
-end
+local fmtc = Instance.new("UICorner")
+fmtc.CornerRadius = UDim.new(0, 8)
+fmtc.Parent = FruitM1Toggle
 
-local FarmTab = createTab("Farm", 1)
-local PlayerTab = createTab("Player", 2)
-local VisualTab = createTab("Visual", 3)
-local MiscTab = createTab("Misc", 4)
+FruitM1Toggle.Activated:Connect(function()
+    FruitM1Enabled = not FruitM1Enabled
+    _G.FruitM1Enabled = FruitM1Enabled
+    FruitM1Toggle.BackgroundColor3 = FruitM1Enabled
+        and Color3.fromRGB(255, 211, 65)
+        or Color3.fromRGB(55, 59, 70)
+    FruitM1Toggle.Text = FruitM1Enabled
+        and "Fruit M1  •  ON"
+        or "Fruit M1  •  OFF"
+    FruitM1Toggle.TextColor3 = FruitM1Enabled
+        and Color3.fromRGB(16, 18, 24)
+        or Color3.fromRGB(235, 238, 244)
+end)
 
-local function setActiveTab(name)
-    activeTab = name
+local WeaponDrop = Instance.new("Frame")
+WeaponDrop.Name = "WeaponDropdown"
+WeaponDrop.Position = UDim2.fromOffset(13, 98)
+WeaponDrop.Size = UDim2.fromOffset(W - 58, 0)
+WeaponDrop.BackgroundColor3 = Color3.fromRGB(27, 30, 38)
+WeaponDrop.BorderSizePixel = 0
+WeaponDrop.Visible = false
+WeaponDrop.ClipsDescendants = true
+WeaponDrop.ZIndex = 100
+WeaponDrop.Parent = SettingFarm
 
-    for tabName, button in pairs(tabs) do
-        local selected = (tabName == name)
-        button.BackgroundColor3 = selected
-            and Color3.fromRGB(255, 211, 65)
-            or Color3.fromRGB(35, 38, 47)
-        button.TextColor3 = selected
-            and Color3.fromRGB(16, 18, 24)
-            or Color3.fromRGB(190, 194, 204)
+local wdc = Instance.new("UICorner")
+wdc.CornerRadius = UDim.new(0, 9)
+wdc.Parent = WeaponDrop
+
+local WeaponOptions = {"Melee", "Sword", "Blox Fruit"}
+local ChooseWeapon = "Melee"
+local FruitM1Enabled = true
+_G.FruitM1Enabled = true
+local SelectWeapon = nil
+_G.ChooseWeapon = ChooseWeapon
+_G.SelectWeapon = nil
+
+local function resolveSelectedWeapon()
+    local backpack = LocalPlayer:FindFirstChildOfClass("Backpack")
+    local character = LocalPlayer.Character
+
+    local function scan(container)
+        if not container then return nil end
+        for _, tool in ipairs(container:GetChildren()) do
+            if tool:IsA("Tool") and tool.ToolTip == ChooseWeapon then
+                return tool.Name
+            end
+        end
+        return nil
     end
 
-    -- Only the Farm tab displays Farm controls.
-    local farmVisible = (name == "Farm")
+    local selected = scan(backpack) or scan(character)
+    SelectWeapon = selected
+    _G.SelectWeapon = selected
 
-    if Card then Card.Visible = farmVisible end
-    if Toggle then Toggle.Visible = farmVisible end
-    if BoneCard then BoneCard.Visible = farmVisible end
-
-    -- Future tab-specific frames can be enabled here independently.
+    if selected then
+        WeaponResolved.Text = "Đang chọn: " .. selected
+        WeaponResolved.TextColor3 = Color3.fromRGB(88, 224, 132)
+    else
+        WeaponResolved.Text = "Chưa tìm thấy " .. ChooseWeapon
+        WeaponResolved.TextColor3 = Color3.fromRGB(255, 180, 70)
+    end
 end
 
-Card = Instance.new("Frame")
-Card.Position = UDim2.fromOffset(156, 76)
-Card.Size = UDim2.fromOffset(W - 172, 65)
+local function rebuildWeaponOptions()
+    for _, child in ipairs(WeaponDrop:GetChildren()) do
+        if child:IsA("TextButton") then child:Destroy() end
+    end
+
+    for index, weaponType in ipairs(WeaponOptions) do
+        local option = Instance.new("TextButton")
+        option.Position = UDim2.fromOffset(5, (index - 1) * 36 + 5)
+        option.Size = UDim2.new(1, -10, 0, 32)
+        option.BackgroundColor3 =
+            weaponType == ChooseWeapon
+            and Color3.fromRGB(255, 211, 65)
+            or Color3.fromRGB(38, 41, 51)
+        option.BorderSizePixel = 0
+        option.Text = weaponType
+        option.Font = Enum.Font.GothamBold
+        option.TextSize = 9
+        option.TextColor3 =
+            weaponType == ChooseWeapon
+            and Color3.fromRGB(16, 18, 24)
+            or Color3.fromRGB(235, 238, 244)
+        option.AutoButtonColor = false
+        option.ZIndex = 51
+        option.Parent = WeaponDrop
+
+        local oc = Instance.new("UICorner")
+        oc.CornerRadius = UDim.new(0, 7)
+        oc.Parent = option
+
+        option.Activated:Connect(function()
+            ChooseWeapon = weaponType
+            _G.ChooseWeapon = weaponType
+            WeaponText.Text = weaponType
+            WeaponDrop.Visible = false
+            WeaponDrop.Size = UDim2.fromOffset(W - 58, 0)
+            Arrow.Text = "▾"
+            rebuildWeaponOptions()
+            resolveSelectedWeapon()
+        end)
+    end
+end
+
+local dropdownOpen = false
+WeaponButton.Activated:Connect(function()
+    dropdownOpen = not dropdownOpen
+    WeaponDrop.Visible = dropdownOpen
+    Arrow.Text = dropdownOpen and "▴" or "▾"
+    WeaponDrop.Size = dropdownOpen
+        and UDim2.fromOffset(W - 58, #WeaponOptions * 36 + 10)
+        or UDim2.fromOffset(W - 58, 0)
+    if dropdownOpen then rebuildWeaponOptions() end
+end)
+
+rebuildWeaponOptions()
+resolveSelectedWeapon()
+
+task.spawn(function()
+    while Gui.Parent do
+        if _G.AutoLevel then resolveSelectedWeapon() end
+        task.wait(0.5)
+    end
+end)
+
+--===========================================================================
+-- FOLDER SCROLL SYSTEM
+--===========================================================================
+-- "Vuốt lên / vuốt xuống": mouse wheel, touch swipe và kéo thanh scroll.
+-- Nội dung được đặt trong một ScrollingFrame để không cần thay đổi logic
+-- của từng folder/section hiện có.
+
+local FolderScroll = Instance.new("ScrollingFrame")
+FolderScroll.Name = "FolderScroll"
+FolderScroll.Position = UDim2.fromOffset(0, 60)
+FolderScroll.Size = UDim2.fromOffset(W, H - 60)
+FolderScroll.BackgroundTransparency = 1
+FolderScroll.BorderSizePixel = 0
+FolderScroll.CanvasSize = UDim2.fromOffset(0, 380)
+FolderScroll.ScrollBarThickness = 5
+FolderScroll.ScrollBarImageColor3 = Color3.fromRGB(255, 211, 65)
+FolderScroll.ScrollingDirection = Enum.ScrollingDirection.Y
+FolderScroll.ElasticBehavior = Enum.ElasticBehavior.WhenScrollable
+FolderScroll.Active = true
+FolderScroll.ClipsDescendants = true
+FolderScroll.ZIndex = 10
+FolderScroll.Parent = Main
+
+local FolderPadding = Instance.new("UIPadding")
+FolderPadding.PaddingBottom = UDim.new(0, 18)
+FolderPadding.Parent = FolderScroll
+
+-- The sections below are positioned relative to this scroll canvas.
+local function putFolder(guiObject, x, y)
+    guiObject.Parent = FolderScroll
+    guiObject.Position = UDim2.fromOffset(x, y)
+end
+
+-- Mouse-wheel scrolling.
+UIS.InputChanged:Connect(function(input)
+    if not Main.Visible or not FolderScroll.Visible then
+        return
+    end
+
+    if input.UserInputType == Enum.UserInputType.MouseWheel then
+        local delta = input.Position.Z
+        local target = FolderScroll.CanvasPosition.Y - delta * 42
+        local maxY = math.max(0, FolderScroll.AbsoluteCanvasSize.Y - FolderScroll.AbsoluteWindowSize.Y)
+        FolderScroll.CanvasPosition = Vector2.new(
+            0,
+            math.clamp(target, 0, maxY)
+        )
+    end
+end)
+
+-- Touch swipe with a little momentum.
+local swipeActive = false
+local swipeStartY = 0
+local swipeStartScroll = 0
+local lastTouchY = 0
+local lastTouchTime = 0
+
+FolderScroll.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.Touch then
+        swipeActive = true
+        swipeStartY = input.Position.Y
+        swipeStartScroll = FolderScroll.CanvasPosition.Y
+        lastTouchY = input.Position.Y
+        lastTouchTime = os.clock()
+    end
+end)
+
+FolderScroll.InputChanged:Connect(function(input)
+    if not swipeActive or input.UserInputType ~= Enum.UserInputType.Touch then
+        return
+    end
+
+    local y = input.Position.Y
+    local dy = y - swipeStartY
+    FolderScroll.CanvasPosition = Vector2.new(0, swipeStartScroll - dy)
+
+    lastTouchY = y
+    lastTouchTime = os.clock()
+end)
+
+UIS.InputEnded:Connect(function(input)
+    if input.UserInputType ~= Enum.UserInputType.Touch then
+        return
+    end
+
+    if not swipeActive then
+        return
+    end
+
+    swipeActive = false
+
+    -- Clamp after the swipe.
+    local maxY = math.max(0, FolderScroll.AbsoluteCanvasSize.Y - FolderScroll.AbsoluteWindowSize.Y)
+    FolderScroll.CanvasPosition = Vector2.new(
+        0,
+        math.clamp(FolderScroll.CanvasPosition.Y, 0, maxY)
+    )
+end)
+
+-- Convenience controls for scripts/folders.
+local function scrollFoldersToTop()
+    FolderScroll.CanvasPosition = Vector2.new(0, 0)
+end
+
+local function scrollFoldersToBottom()
+    local maxY = math.max(0, FolderScroll.AbsoluteCanvasSize.Y - FolderScroll.AbsoluteWindowSize.Y)
+    FolderScroll.CanvasPosition = Vector2.new(0, maxY)
+end
+
+-- Expose safe controls to the rest of the UI.
+_G.PhongdzFolderScrollTop = scrollFoldersToTop
+_G.PhongdzFolderScrollBottom = scrollFoldersToBottom
+
+local Card = Instance.new("Frame")
+Card.Position = UDim2.fromOffset(16, 144)
+Card.Size = UDim2.fromOffset(W - 32, 65)
 Card.BackgroundColor3 = Color3.fromRGB(22, 25, 33)
 Card.BorderSizePixel = 0
-Card.Parent = Main
+Card.Parent = FolderScroll
 
 local cardCorner = Instance.new("UICorner")
 cardCorner.CornerRadius = UDim.new(0, 10)
@@ -311,14 +549,14 @@ CardDesc.TextColor3 = Color3.fromRGB(143, 149, 162)
 CardDesc.TextXAlignment = Enum.TextXAlignment.Left
 CardDesc.Parent = Card
 
-Toggle = Instance.new("TextButton")
-Toggle.Position = UDim2.fromOffset(156, 154)
-Toggle.Size = UDim2.fromOffset(W - 172, 52)
+local Toggle = Instance.new("TextButton")
+Toggle.Position = UDim2.fromOffset(16, 222)
+Toggle.Size = UDim2.fromOffset(W - 32, 52)
 Toggle.Text = ""
 Toggle.BackgroundColor3 = Color3.fromRGB(55, 59, 70)
 Toggle.BorderSizePixel = 0
 Toggle.AutoButtonColor = false
-Toggle.Parent = Main
+Toggle.Parent = FolderScroll
 
 local tc = Instance.new("UICorner")
 tc.CornerRadius = UDim.new(0, 10)
@@ -368,91 +606,8 @@ local kc = Instance.new("UICorner")
 kc.CornerRadius = UDim.new(1, 0)
 kc.Parent = Knob
 
-
-
---===========================================================================
--- FARM > XƯƠNG
--- Logic is based on the Xương section from the provided source.
---===========================================================================
-BoneCard = Instance.new("Frame")
-BoneCard.Name = "BoneCard"
-BoneCard.Position = UDim2.fromOffset(156, 218)
-BoneCard.Size = UDim2.fromOffset(W - 172, 120)
-BoneCard.BackgroundColor3 = Color3.fromRGB(22, 25, 33)
-BoneCard.BorderSizePixel = 0
-BoneCard.Parent = Main
-
-local boneCorner = Instance.new("UICorner")
-boneCorner.CornerRadius = UDim.new(0, 10)
-boneCorner.Parent = BoneCard
-
-local BoneTitle = Instance.new("TextLabel")
-BoneTitle.Position = UDim2.fromOffset(13, 8)
-BoneTitle.Size = UDim2.fromOffset(260, 22)
-BoneTitle.BackgroundTransparency = 1
-BoneTitle.Text = "FARM XƯƠNG"
-BoneTitle.Font = Enum.Font.GothamBold
-BoneTitle.TextSize = 12
-BoneTitle.TextColor3 = Color3.fromRGB(241, 243, 247)
-BoneTitle.TextXAlignment = Enum.TextXAlignment.Left
-BoneTitle.Parent = BoneCard
-
-BoneStatus = Instance.new("TextLabel")
-BoneStatus.Position = UDim2.fromOffset(13, 31)
-BoneStatus.Size = UDim2.fromOffset(260, 18)
-BoneStatus.BackgroundTransparency = 1
-BoneStatus.Text = "● SEA 3  •  ĐANG KIỂM TRA..."
-BoneStatus.Font = Enum.Font.GothamMedium
-BoneStatus.TextSize = 8
-BoneStatus.TextColor3 = Color3.fromRGB(130, 135, 148)
-BoneStatus.TextXAlignment = Enum.TextXAlignment.Left
-BoneStatus.Parent = BoneCard
-
-BoneToggle = Instance.new("TextButton")
-BoneToggle.Position = UDim2.fromOffset(13, 58)
-BoneToggle.Size = UDim2.fromOffset(W - 198, 45)
-BoneToggle.Text = "CÀY XƯƠNG  •  OFF"
-BoneToggle.Font = Enum.Font.GothamBold
-BoneToggle.TextSize = 10
-BoneToggle.TextColor3 = Color3.fromRGB(240, 242, 247)
-BoneToggle.BackgroundColor3 = Color3.fromRGB(55, 59, 70)
-BoneToggle.BorderSizePixel = 0
-BoneToggle.AutoButtonColor = false
-BoneToggle.Parent = BoneCard
-
-local btc = Instance.new("UICorner")
-btc.CornerRadius = UDim.new(0, 9)
-btc.Parent = BoneToggle
-
-local BoneCount = Instance.new("TextLabel")
-BoneCount.Position = UDim2.fromOffset(W - 315, 8)
-BoneCount.Size = UDim2.fromOffset(140, 22)
-BoneCount.BackgroundTransparency = 1
-BoneCount.Text = "Xương: --"
-BoneCount.Font = Enum.Font.GothamBold
-BoneCount.TextSize = 9
-BoneCount.TextColor3 = Color3.fromRGB(255, 211, 65)
-BoneCount.TextXAlignment = Enum.TextXAlignment.Right
-BoneCount.Parent = BoneCard
-
-BoneToggle.Activated:Connect(function()
-    _G.AutoBone = not (_G.AutoBone == true)
-
-    if _G.AutoBone then
-        BoneToggle.Text = "CÀY XƯƠNG  •  ON"
-        BoneToggle.BackgroundColor3 = Color3.fromRGB(67, 92, 53)
-        BoneStatus.Text = "● CÀY XƯƠNG ĐANG CHẠY"
-        BoneStatus.TextColor3 = Color3.fromRGB(112, 224, 142)
-    else
-        BoneToggle.Text = "CÀY XƯƠNG  •  OFF"
-        BoneToggle.BackgroundColor3 = Color3.fromRGB(55, 59, 70)
-        BoneStatus.Text = "● CÀY XƯƠNG ĐÃ TẮT"
-        BoneStatus.TextColor3 = Color3.fromRGB(130, 135, 148)
-    end
-end)
-
 local Hint = Instance.new("TextLabel")
-Hint.Position = UDim2.fromOffset(16, 366)
+Hint.Position = UDim2.fromOffset(16, 287)
 Hint.Size = UDim2.fromOffset(W - 32, 18)
 Hint.BackgroundTransparency = 1
 Hint.Text = "Kéo header để di chuyển  •  — để thu nhỏ"
@@ -460,7 +615,7 @@ Hint.Font = Enum.Font.GothamMedium
 Hint.TextSize = 8
 Hint.TextColor3 = Color3.fromRGB(86, 91, 104)
 Hint.TextXAlignment = Enum.TextXAlignment.Center
-Hint.Parent = Main
+Hint.Parent = FolderScroll
 
 -- Circular launcher.
 local Launcher = Instance.new("TextButton")
@@ -528,7 +683,7 @@ local function minimizeMenu()
 
     local v = viewport()
     Launcher.Position = UDim2.fromOffset(
-        math.clamp(savedX + 250, 0, math.max(0, v.X - 58)),
+        math.clamp(savedX + 190, 0, math.max(0, v.X - 58)),
         math.clamp(savedY + 96, 0, math.max(0, v.Y - 58))
     )
 
@@ -550,77 +705,10 @@ end
 Min.Activated:Connect(minimizeMenu)
 Launcher.Activated:Connect(restoreMenu)
 
--- Cho phép kéo nút Launcher khi menu đang thu nhỏ.
-local launcherDragging = false
-local launcherDragStart = Vector2.zero
-local launcherOrigin = Vector2.zero
-
-Launcher.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1
-        or input.UserInputType == Enum.UserInputType.Touch then
-        launcherDragging = true
-        launcherDragStart = input.Position
-        local p = Launcher.AbsolutePosition
-        launcherOrigin = Vector2.new(p.X, p.Y)
-    end
-end)
-
-UIS.InputChanged:Connect(function(input)
-    if not launcherDragging or not Launcher.Visible then
-        return
-    end
-
-    if input.UserInputType == Enum.UserInputType.MouseMovement
-        or input.UserInputType == Enum.UserInputType.Touch then
-        local d = input.Position - launcherDragStart
-        local v = viewport()
-
-        local nx = math.clamp(
-            launcherOrigin.X + d.X,
-            0,
-            math.max(0, v.X - Launcher.AbsoluteSize.X)
-        )
-
-        local ny = math.clamp(
-            launcherOrigin.Y + d.Y,
-            0,
-            math.max(0, v.Y - Launcher.AbsoluteSize.Y)
-        )
-
-        Launcher.Position = UDim2.fromOffset(nx, ny)
-    end
-end)
-
-UIS.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1
-        or input.UserInputType == Enum.UserInputType.Touch then
-        launcherDragging = false
-    end
-end)
-
 Close.Activated:Connect(function()
     _G.AutoLevel = false
-    _G.AutoBone = false
     Gui:Destroy()
 end)
-
-FarmTab.Activated:Connect(function()
-    setActiveTab("Farm")
-end)
-
-PlayerTab.Activated:Connect(function()
-    setActiveTab("Player")
-end)
-
-VisualTab.Activated:Connect(function()
-    setActiveTab("Visual")
-end)
-
-MiscTab.Activated:Connect(function()
-    setActiveTab("Misc")
-end)
-
-setActiveTab("Farm")
 
 -- IMPORTANT: The UI above is complete before the farm source is loaded.
 print("[PhongdzHub] UI READY")
@@ -630,6 +718,9 @@ print("[PhongdzHub] UI READY")
 --===========================================================================
 
 local FARM_SOURCE = [=[
+ChooseWeapon = _G.ChooseWeapon or "Melee"
+SelectWeapon = _G.SelectWeapon
+FruitM1Enabled = _G.FruitM1Enabled ~= false
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -637,7 +728,6 @@ local LocalPlayer = Players.LocalPlayer
 
 _G.AutoLevel = _G.AutoLevel or false
 _G.Fast_Delay = _G.Fast_Delay or 0.01
-_G.FlySpeed = 300
 
 local Sea1, Sea2, Sea3 = false, false, false
 if game.PlaceId == 2753915549 then
@@ -653,56 +743,6 @@ end
 --=============================================================================
 
 local function GetRoot() local c=LocalPlayer.Character return c and c:FindFirstChild("HumanoidRootPart") end
-local NoGravityAttachment
-local NoGravityForce
-
-local function SetNoGravity(enabled)
-    local c = LocalPlayer.Character
-    local root = c and c:FindFirstChild("HumanoidRootPart")
-
-    if enabled and root then
-        if not NoGravityAttachment or NoGravityAttachment.Parent ~= root then
-            if NoGravityAttachment then
-                pcall(function() NoGravityAttachment:Destroy() end)
-            end
-            NoGravityAttachment = Instance.new("Attachment")
-            NoGravityAttachment.Name = "Phongdz_NoGravity"
-            NoGravityAttachment.Parent = root
-        end
-
-        if not NoGravityForce or NoGravityForce.Parent ~= root then
-            if NoGravityForce then
-                pcall(function() NoGravityForce:Destroy() end)
-            end
-            NoGravityForce = Instance.new("VectorForce")
-            NoGravityForce.Name = "Phongdz_NoGravityForce"
-            NoGravityForce.Attachment0 = NoGravityAttachment
-            NoGravityForce.RelativeTo = Enum.ActuatorRelativeTo.World
-            NoGravityForce.ApplyAtCenterOfMass = true
-            NoGravityForce.Parent = root
-        end
-
-        NoGravityForce.Force = Vector3.new(0, root.AssemblyMass * workspace.Gravity, 0)
-    else
-        if NoGravityForce then
-            pcall(function() NoGravityForce:Destroy() end)
-            NoGravityForce = nil
-        end
-        if NoGravityAttachment then
-            pcall(function() NoGravityAttachment:Destroy() end)
-            NoGravityAttachment = nil
-        end
-    end
-end
-
-task.spawn(function()
-    while task.wait() do
-        pcall(function()
-            SetNoGravity(_G.AutoLevel == true)
-        end)
-    end
-end)
-
 local function TweenTo(cf) local r=GetRoot(); if not r or typeof(cf)~="CFrame" then return end; local d=(cf.Position-r.Position).Magnitude; local t=TweenService:Create(r,TweenInfo.new(math.max(d/350,.05),Enum.EasingStyle.Linear),{CFrame=cf}); t:Play() end
 local function EquipFarmWeapon() local c=LocalPlayer.Character; local h=c and c:FindFirstChildOfClass("Humanoid"); if not h then return end; for _,tool in ipairs(c:GetChildren()) do if tool:IsA("Tool") then return tool end end; local b=LocalPlayer:FindFirstChildOfClass("Backpack"); if b then for _,tool in ipairs(b:GetChildren()) do if tool:IsA("Tool") then pcall(function() h:EquipTool(tool) end); return tool end end end end
 local function AutoHaki() local c=LocalPlayer.Character; local rem=ReplicatedStorage:FindFirstChild("Remotes"); local comm=rem and rem:FindFirstChild("CommF_"); if c and not c:FindFirstChild("HasBuso") and comm then pcall(function() comm:InvokeServer("Buso") end) end end
@@ -710,113 +750,6 @@ local AttackRemote,HitRemote
 local function ResolveAttackRemotes() if AttackRemote and HitRemote then return true end; local modules=ReplicatedStorage:FindFirstChild("Modules"); local net=modules and modules:FindFirstChild("Net"); if not net then return false end; AttackRemote=net:FindFirstChild("RE/RegisterAttack"); HitRemote=net:FindFirstChild("RE/RegisterHit"); return AttackRemote~=nil and HitRemote~=nil end
 local function FastAttack() if not ResolveAttackRemotes() then return end; local enemies=workspace:FindFirstChild("Enemies"); local root=GetRoot(); if not enemies or not root then return end; local hits={}; local lastHead; for _,mob in ipairs(enemies:GetChildren()) do local hum=mob:FindFirstChildOfClass("Humanoid"); local head=mob:FindFirstChild("Head"); if hum and head and hum.Health>0 and (root.Position-head.Position).Magnitude<=60 then hits[#hits+1]={mob,head}; lastHead=head end end; if lastHead and #hits>0 then pcall(function() AttackRemote:FireServer(1e-9); HitRemote:FireServer(lastHead,hits) end) end end
 local function QuestText() local pg=LocalPlayer:FindFirstChild("PlayerGui"); local main=pg and pg:FindFirstChild("Main"); local q=main and main:FindFirstChild("Quest"); local c=q and q:FindFirstChild("Container"); local qt=c and c:FindFirstChild("QuestTitle"); return q,qt and qt:FindFirstChild("Title") end
---===========================================================================
--- FARM XƯƠNG — adapted directly from the provided source's Xương section.
---===========================================================================
-_G.AutoBone = _G.AutoBone or false
-local BoneQuestCFrame = CFrame.new(-9515.75, 174.8521728515625, 6079.40625)
-local BoneMobs = {
-    ["Reborn Skeleton"] = true,
-    ["Living Zombie"] = true,
-    ["Demonic Soul"] = true,
-    ["Posessed Mummy"] = true,
-}
-
-task.spawn(function()
-    while task.wait(1) do
-        pcall(function()
-            local comm = ReplicatedStorage:FindFirstChild("Remotes")
-                and ReplicatedStorage.Remotes:FindFirstChild("CommF_")
-
-            if comm then
-                local count = comm:InvokeServer("Bones", "Check")
-                if BoneCount and BoneCount.Parent then
-                    BoneCount.Text = "Xương: " .. tostring(count)
-                end
-            end
-
-            if not Sea3 then
-                if BoneStatus and BoneStatus.Parent then
-                    BoneStatus.Text = "● CHỈ HOẠT ĐỘNG Ở SEA 3"
-                    BoneStatus.TextColor3 = Color3.fromRGB(255, 180, 80)
-                end
-            elseif not _G.AutoBone then
-                if BoneStatus and BoneStatus.Parent then
-                    BoneStatus.Text = "● SẴN SÀNG"
-                    BoneStatus.TextColor3 = Color3.fromRGB(130, 135, 148)
-                end
-            end
-        end)
-    end
-end)
-
-task.spawn(function()
-    while task.wait() do
-        if _G.AutoBone and Sea3 then
-            pcall(function()
-                local pg = LocalPlayer:FindFirstChild("PlayerGui")
-                local main = pg and pg:FindFirstChild("Main")
-                local quest = main and main:FindFirstChild("Quest")
-                local container = quest and quest:FindFirstChild("Container")
-                local titleObj = container and container:FindFirstChild("QuestTitle")
-                local title = titleObj and titleObj:FindFirstChild("Title")
-
-                local comm = ReplicatedStorage:FindFirstChild("Remotes")
-                    and ReplicatedStorage.Remotes:FindFirstChild("CommF_")
-                if not comm then return end
-
-                -- Source behavior: abandon a non-Demonic Soul quest.
-                if title and not string.find(tostring(title.Text), "Demonic Soul") then
-                    comm:InvokeServer("AbandonQuest")
-                end
-
-                if not quest or not quest.Visible then
-                    TweenTo(BoneQuestCFrame)
-
-                    local root = GetRoot()
-                    if root and (root.Position - BoneQuestCFrame.Position).Magnitude <= 3 then
-                        comm:InvokeServer("StartQuest", "HauntedQuest2", 1)
-                    end
-                    return
-                end
-
-                local enemies = workspace:FindFirstChild("Enemies")
-                if not enemies then return end
-
-                for _, mob in ipairs(enemies:GetChildren()) do
-                    local hum = mob:FindFirstChildOfClass("Humanoid")
-                    local rp = mob:FindFirstChild("HumanoidRootPart")
-
-                    if hum and rp and hum.Health > 0 and BoneMobs[mob.Name] then
-                        repeat
-                            task.wait(_G.Fast_Delay)
-                            AutoHaki()
-                            EquipFarmWeapon()
-                            TweenTo(rp.CFrame * CFrame.new(0, 40, 0))
-                            FastAttack()
-
-                            pcall(function()
-                                rp.Size = Vector3.new(60, 60, 60)
-                                rp.Transparency = 1
-                                rp.CanCollide = false
-                                hum.JumpPower = 0
-                                hum.WalkSpeed = 0
-                            end)
-                        until not _G.AutoBone
-                            or hum.Health <= 0
-                            or not mob.Parent
-                            or not quest.Visible
-                    end
-
-                    if not _G.AutoBone then
-                        break
-                    end
-                end
-            end)
-        end
-    end
-end)
-
 local function RunFarm() CheckLevel(); if not NameMon or not NameQuest or not CFrameQ then return end; local q,title=QuestText(); if not q or not title then return end; local correct=q.Visible and string.find(tostring(title.Text or ""),tostring(NameMon),1,true); if not correct then local rem=ReplicatedStorage:FindFirstChild("Remotes"); local comm=rem and rem:FindFirstChild("CommF_"); if comm then pcall(function() comm:InvokeServer("AbandonQuest") end) end; TweenTo(CFrameQ); local root=GetRoot(); if root and (root.Position-CFrameQ.Position).Magnitude<=7 and comm then pcall(function() comm:InvokeServer("StartQuest",NameQuest,QuestLv) end) end; return end; local enemies=workspace:FindFirstChild("Enemies"); if not enemies then return end; local found=false; for _,mob in ipairs(enemies:GetChildren()) do local hum=mob:FindFirstChildOfClass("Humanoid"); local rp=mob:FindFirstChild("HumanoidRootPart"); if hum and rp and hum.Health>0 and mob.Name==Ms then found=true; repeat if not _G.AutoLevel then break end; task.wait(_G.Fast_Delay); AutoHaki(); EquipFarmWeapon(); TweenTo(rp.CFrame*CFrame.new(0,40,0)); FastAttack(); pcall(function() rp.Size=Vector3.new(60,60,60); rp.CanCollide=false end) until not mob.Parent or hum.Health<=0 or not q.Visible or not _G.AutoLevel end end; if not found then local wo=workspace:FindFirstChild("_WorldOrigin"); local sp=wo and wo:FindFirstChild("EnemySpawns"); if sp then for _,part in ipairs(sp:GetChildren()) do if string.find(tostring(part.Name),tostring(NameMon),1,true) then local root=GetRoot(); if root and (root.Position-part.Position).Magnitude>=10 then TweenTo(part.CFrame*CFrame.new(0,40,0)); break end end end end end end
 
 
