@@ -648,7 +648,22 @@ end
 local FlightAttachment
 local FlightVelocity
 
+local function StopFlight()
+    if FlightVelocity then
+        pcall(function()
+            FlightVelocity.VectorVelocity = Vector3.zero
+            FlightVelocity:Destroy()
+        end)
+        FlightVelocity = nil
+    end
 
+    if FlightAttachment then
+        pcall(function()
+            FlightAttachment:Destroy()
+        end)
+        FlightAttachment = nil
+    end
+end
 
 local function EnsureFlightController(root)
     if not root then return false end
