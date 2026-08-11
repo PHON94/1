@@ -53,6 +53,298 @@ local W, H = 440, 250
 local X, Y = 0, 0
 
 local Main = Instance.new("Frame")
+
+--===========================================================================
+-- PHONGDZ HUB :: CATEGORY MENU
+--===========================================================================
+local CategoryLayer = Instance.new("Frame")
+CategoryLayer.Name = "CategoryLayer"
+CategoryLayer.BackgroundTransparency = 1
+CategoryLayer.Size = UDim2.fromScale(1, 1)
+CategoryLayer.ZIndex = 100
+CategoryLayer.Parent = Main
+
+local CategoryBar = Instance.new("Frame")
+CategoryBar.Name = "CategoryBar"
+CategoryBar.Position = UDim2.fromOffset(10, 66)
+CategoryBar.Size = UDim2.fromOffset(104, H - 76)
+CategoryBar.BackgroundColor3 = Color3.fromRGB(18, 21, 28)
+CategoryBar.BorderSizePixel = 0
+CategoryBar.ZIndex = 101
+CategoryBar.Parent = CategoryLayer
+
+local cbCorner = Instance.new("UICorner")
+cbCorner.CornerRadius = UDim.new(0, 11)
+cbCorner.Parent = CategoryBar
+
+local cbLayout = Instance.new("UIListLayout")
+cbLayout.Padding = UDim.new(0, 7)
+cbLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+cbLayout.VerticalAlignment = Enum.VerticalAlignment.Top
+cbLayout.Parent = CategoryBar
+
+local cbPadding = Instance.new("UIPadding")
+cbPadding.PaddingTop = UDim.new(0, 9)
+cbPadding.Parent = CategoryBar
+
+local CategoryContent = Instance.new("Frame")
+CategoryContent.Name = "CategoryContent"
+CategoryContent.Position = UDim2.fromOffset(122, 66)
+CategoryContent.Size = UDim2.new(1, -132, 1, -76)
+CategoryContent.BackgroundTransparency = 1
+CategoryContent.ZIndex = 102
+CategoryContent.Parent = CategoryLayer
+
+local CategoryPages = {}
+local CategoryButtons = {}
+
+local function makeCategory(name, icon)
+    local button = Instance.new("TextButton")
+    button.Name = name .. "Button"
+    button.Size = UDim2.fromOffset(90, 40)
+    button.BackgroundColor3 = Color3.fromRGB(30, 34, 43)
+    button.BorderSizePixel = 0
+    button.Text = icon .. "  " .. name
+    button.Font = Enum.Font.GothamBold
+    button.TextSize = 9
+    button.TextColor3 = Color3.fromRGB(170, 176, 188)
+    button.AutoButtonColor = false
+    button.ZIndex = 103
+    button.Parent = CategoryBar
+
+    local bc = Instance.new("UICorner")
+    bc.CornerRadius = UDim.new(0, 8)
+    bc.Parent = button
+
+    local page = Instance.new("ScrollingFrame")
+    page.Name = name .. "Page"
+    page.Size = UDim2.fromScale(1, 1)
+    page.BackgroundTransparency = 1
+    page.BorderSizePixel = 0
+    page.ScrollBarThickness = 4
+    page.ScrollBarImageColor3 = Color3.fromRGB(255, 211, 65)
+    page.ScrollingDirection = Enum.ScrollingDirection.Y
+    page.CanvasSize = UDim2.fromOffset(0, 0)
+    page.Visible = false
+    page.ZIndex = 104
+    page.Parent = CategoryContent
+
+    local pp = Instance.new("UIPadding")
+    pp.PaddingBottom = UDim.new(0, 15)
+    pp.Parent = page
+
+    CategoryButtons[name] = button
+    CategoryPages[name] = page
+
+    return button, page
+end
+
+local farmButton, farmPage = makeCategory("FARM", "⚔")
+local espButton, espPage = makeCategory("ESP", "◉")
+local settingButton, settingPage = makeCategory("SETTING", "⚙")
+local miscButton, miscPage = makeCategory("MISC", "✦")
+
+local function activateCategory(name)
+    for pageName, page in pairs(CategoryPages) do
+        page.Visible = pageName == name
+    end
+
+    for buttonName, button in pairs(CategoryButtons) do
+        local selected = buttonName == name
+        button.BackgroundColor3 = selected
+            and Color3.fromRGB(255, 211, 65)
+            or Color3.fromRGB(30, 34, 43)
+        button.TextColor3 = selected
+            and Color3.fromRGB(15, 17, 22)
+            or Color3.fromRGB(170, 176, 188)
+    end
+end
+
+farmButton.Activated:Connect(function() activateCategory("FARM") end)
+espButton.Activated:Connect(function() activateCategory("ESP") end)
+settingButton.Activated:Connect(function() activateCategory("SETTING") end)
+miscButton.Activated:Connect(function() activateCategory("MISC") end)
+
+local function sectionCard(parent, title, subtitle)
+    local card = Instance.new("Frame")
+    card.Size = UDim2.new(1, -12, 0, 68)
+    card.Position = UDim2.fromOffset(6, 6)
+    card.BackgroundColor3 = Color3.fromRGB(22, 25, 33)
+    card.BorderSizePixel = 0
+    card.ZIndex = 105
+    card.Parent = parent
+
+    local cc = Instance.new("UICorner")
+    cc.CornerRadius = UDim.new(0, 10)
+    cc.Parent = card
+
+    local titleLabel = Instance.new("TextLabel")
+    titleLabel.Position = UDim2.fromOffset(12, 10)
+    titleLabel.Size = UDim2.new(1, -24, 0, 20)
+    titleLabel.BackgroundTransparency = 1
+    titleLabel.Text = title
+    titleLabel.Font = Enum.Font.GothamBlack
+    titleLabel.TextSize = 11
+    titleLabel.TextColor3 = Color3.fromRGB(255, 211, 65)
+    titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+    titleLabel.ZIndex = 106
+    titleLabel.Parent = card
+
+    local sub = Instance.new("TextLabel")
+    sub.Position = UDim2.fromOffset(12, 34)
+    sub.Size = UDim2.new(1, -24, 0, 18)
+    sub.BackgroundTransparency = 1
+    sub.Text = subtitle
+    sub.Font = Enum.Font.Gotham
+    sub.TextSize = 8
+    sub.TextColor3 = Color3.fromRGB(140, 146, 160)
+    sub.TextXAlignment = Enum.TextXAlignment.Left
+    sub.ZIndex = 106
+    sub.Parent = card
+end
+
+sectionCard(espPage, "ESP", "ESP controls can be placed here.")
+sectionCard(miscPage, "MISC", "Miscellaneous controls can be placed here.")
+
+-- Move the existing feature panels into the correct category pages.
+if SettingFarm then
+    SettingFarm.Parent = settingPage
+    SettingFarm.Position = UDim2.fromOffset(6, 6)
+    SettingFarm.Size = UDim2.new(1, -12, 0, 152)
+end
+
+if Card then
+    Card.Parent = farmPage
+    Card.Position = UDim2.fromOffset(6, 6)
+    Card.Size = UDim2.new(1, -12, 0, 68)
+end
+
+if Toggle then
+    Toggle.Parent = farmPage
+    Toggle.Position = UDim2.fromOffset(6, 82)
+end
+
+if Hint then
+    Hint.Parent = farmPage
+    Hint.Position = UDim2.fromOffset(6, 142)
+end
+
+activateCategory("FARM")
+
+--===========================================================================
+-- MOVABLE MINIMIZED CIRCLE
+--===========================================================================
+local MiniLauncher = Instance.new("TextButton")
+MiniLauncher.Name = "MiniLauncher"
+MiniLauncher.Size = UDim2.fromOffset(56, 56)
+MiniLauncher.Position = UDim2.new(0, 20, 0.5, -28)
+MiniLauncher.BackgroundColor3 = Color3.fromRGB(255, 211, 65)
+MiniLauncher.BorderSizePixel = 0
+MiniLauncher.Text = "P"
+MiniLauncher.Font = Enum.Font.GothamBlack
+MiniLauncher.TextSize = 22
+MiniLauncher.TextColor3 = Color3.fromRGB(15, 17, 22)
+MiniLauncher.AutoButtonColor = false
+MiniLauncher.Visible = false
+MiniLauncher.ZIndex = 1000
+MiniLauncher.Parent = ScreenGui
+
+local mlCorner = Instance.new("UICorner")
+mlCorner.CornerRadius = UDim.new(1, 0)
+mlCorner.Parent = MiniLauncher
+
+local mlStroke = Instance.new("UIStroke")
+mlStroke.Color = Color3.fromRGB(255, 235, 150)
+mlStroke.Thickness = 2
+mlStroke.Parent = MiniLauncher
+
+local miniDragging = false
+local miniMoved = false
+local miniDragStart
+local miniStartPos
+
+local function clampMiniPosition(x, y)
+    local camera = workspace.CurrentCamera
+    local viewport = camera and camera.ViewportSize
+    if not viewport then return x, y end
+
+    local w = MiniLauncher.AbsoluteSize.X
+    local h = MiniLauncher.AbsoluteSize.Y
+
+    return math.clamp(x, 4, math.max(4, viewport.X - w - 4)),
+           math.clamp(y, 4, math.max(4, viewport.Y - h - 4))
+end
+
+MiniLauncher.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
+
+        miniDragging = true
+        miniMoved = false
+        miniDragStart = input.Position
+        miniStartPos = MiniLauncher.Position
+    end
+end)
+
+MiniLauncher.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement
+        or input.UserInputType == Enum.UserInputType.Touch then
+
+        if not miniDragging then return end
+
+        local delta = input.Position - miniDragStart
+
+        if math.abs(delta.X) > 3 or math.abs(delta.Y) > 3 then
+            miniMoved = true
+        end
+
+        local x, y = clampMiniPosition(
+            miniStartPos.X.Offset + delta.X,
+            miniStartPos.Y.Offset + delta.Y
+        )
+
+        MiniLauncher.Position = UDim2.fromOffset(x, y)
+    end
+end)
+
+UIS.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
+        miniDragging = false
+    end
+end)
+
+local function showHub()
+    MiniLauncher.Visible = false
+    Main.Visible = true
+end
+
+local function hideHub()
+    Main.Visible = false
+    MiniLauncher.Visible = true
+end
+
+MiniLauncher.Activated:Connect(function()
+    if not miniMoved then
+        showHub()
+    end
+end)
+
+-- Detect the existing minimize button without replacing its original callback.
+for _, descendant in ipairs(Main:GetDescendants()) do
+    if descendant:IsA("TextButton") or descendant:IsA("ImageButton") then
+        local n = string.lower(descendant.Name)
+        if n == "minimize" or n == "minbutton" or n == "collapse" then
+            descendant.Activated:Connect(hideHub)
+            break
+        end
+    end
+end
+
+_G.PhongdzShowHub = showHub
+_G.PhongdzHideHub = hideHub
+_G.PhongdzMiniLauncher = MiniLauncher
+
 Main.Name = "Main"
 Main.Size = UDim2.fromOffset(W, H)
 Main.BackgroundColor3 = Color3.fromRGB(16, 18, 24)
@@ -743,14 +1035,238 @@ end
 --=============================================================================
 
 local function GetRoot() local c=LocalPlayer.Character return c and c:FindFirstChild("HumanoidRootPart") end
-local function TweenTo(cf) local r=GetRoot(); if not r or typeof(cf)~="CFrame" then return end; local d=(cf.Position-r.Position).Magnitude; local t=TweenService:Create(r,TweenInfo.new(math.max(d/350,.05),Enum.EasingStyle.Linear),{CFrame=cf}); t:Play() end
-local function EquipFarmWeapon() local c=LocalPlayer.Character; local h=c and c:FindFirstChildOfClass("Humanoid"); if not h then return end; for _,tool in ipairs(c:GetChildren()) do if tool:IsA("Tool") then return tool end end; local b=LocalPlayer:FindFirstChildOfClass("Backpack"); if b then for _,tool in ipairs(b:GetChildren()) do if tool:IsA("Tool") then pcall(function() h:EquipTool(tool) end); return tool end end end end
+local ActiveTween
+local ActiveTarget
+local LastEquipName
+
+local function TweenTo(cf)
+    local r = GetRoot()
+    if not r or typeof(cf) ~= "CFrame" then return end
+
+    local distance = (cf.Position - r.Position).Magnitude
+
+    -- Don't recreate tweens every tick; that was wasting a shitload of work.
+    if distance <= 85 then
+        if ActiveTween then
+            pcall(function() ActiveTween:Cancel() end)
+            ActiveTween = nil
+        end
+        r.CFrame = cf
+        return
+    end
+
+    if ActiveTween then
+        return
+    end
+
+    local duration = math.clamp(distance / 900, 0.035, 0.45)
+    ActiveTween = TweenService:Create(
+        r,
+        TweenInfo.new(duration, Enum.EasingStyle.Linear),
+        {CFrame = cf}
+    )
+    ActiveTween.Completed:Connect(function()
+        ActiveTween = nil
+    end)
+    ActiveTween:Play()
+end
+local function EquipFarmWeapon()
+    local c = LocalPlayer.Character
+    local h = c and c:FindFirstChildOfClass("Humanoid")
+    if not h then return end
+
+    local wanted = SelectWeapon
+    if not wanted then return end
+
+    local equipped = c:FindFirstChild(wanted)
+    if equipped and equipped:IsA("Tool") then
+        LastEquipName = wanted
+        return equipped
+    end
+
+    if LastEquipName == wanted then
+        return c:FindFirstChild(wanted)
+    end
+
+    local b = LocalPlayer:FindFirstChildOfClass("Backpack")
+    local tool = b and b:FindFirstChild(wanted)
+    if tool and tool:IsA("Tool") then
+        pcall(function()
+            h:EquipTool(tool)
+        end)
+        LastEquipName = wanted
+        return tool
+    end
+end
 local function AutoHaki() local c=LocalPlayer.Character; local rem=ReplicatedStorage:FindFirstChild("Remotes"); local comm=rem and rem:FindFirstChild("CommF_"); if c and not c:FindFirstChild("HasBuso") and comm then pcall(function() comm:InvokeServer("Buso") end) end end
 local AttackRemote,HitRemote
 local function ResolveAttackRemotes() if AttackRemote and HitRemote then return true end; local modules=ReplicatedStorage:FindFirstChild("Modules"); local net=modules and modules:FindFirstChild("Net"); if not net then return false end; AttackRemote=net:FindFirstChild("RE/RegisterAttack"); HitRemote=net:FindFirstChild("RE/RegisterHit"); return AttackRemote~=nil and HitRemote~=nil end
-local function FastAttack() if not ResolveAttackRemotes() then return end; local enemies=workspace:FindFirstChild("Enemies"); local root=GetRoot(); if not enemies or not root then return end; local hits={}; local lastHead; for _,mob in ipairs(enemies:GetChildren()) do local hum=mob:FindFirstChildOfClass("Humanoid"); local head=mob:FindFirstChild("Head"); if hum and head and hum.Health>0 and (root.Position-head.Position).Magnitude<=60 then hits[#hits+1]={mob,head}; lastHead=head end end; if lastHead and #hits>0 then pcall(function() AttackRemote:FireServer(1e-9); HitRemote:FireServer(lastHead,hits) end) end end
+local function FastAttack()
+    if not ResolveAttackRemotes() then return end
+
+    local enemies = workspace:FindFirstChild("Enemies")
+    local root = GetRoot()
+    if not enemies or not root then return end
+
+    local bestMob, bestHead, bestDistance
+    local hits = {}
+
+    for _, mob in ipairs(enemies:GetChildren()) do
+        local hum = mob:FindFirstChildOfClass("Humanoid")
+        local head = mob:FindFirstChild("Head")
+
+        if hum and head and hum.Health > 0 then
+            local d = (root.Position - head.Position).Magnitude
+
+            if d <= 60 then
+                hits[#hits + 1] = {mob, head}
+
+                if not bestDistance or d < bestDistance then
+                    bestMob = mob
+                    bestHead = head
+                    bestDistance = d
+                end
+            end
+        end
+    end
+
+    if not bestMob or #hits == 0 then
+        ActiveTarget = nil
+        return
+    end
+
+    -- Keep one stable target until it dies or leaves range.
+    ActiveTarget = bestMob
+
+    pcall(function()
+        AttackRemote:FireServer(1e-9)
+        HitRemote:FireServer(bestHead, hits)
+    end)
+end
 local function QuestText() local pg=LocalPlayer:FindFirstChild("PlayerGui"); local main=pg and pg:FindFirstChild("Main"); local q=main and main:FindFirstChild("Quest"); local c=q and q:FindFirstChild("Container"); local qt=c and c:FindFirstChild("QuestTitle"); return q,qt and qt:FindFirstChild("Title") end
-local function RunFarm() CheckLevel(); if not NameMon or not NameQuest or not CFrameQ then return end; local q,title=QuestText(); if not q or not title then return end; local correct=q.Visible and string.find(tostring(title.Text or ""),tostring(NameMon),1,true); if not correct then local rem=ReplicatedStorage:FindFirstChild("Remotes"); local comm=rem and rem:FindFirstChild("CommF_"); if comm then pcall(function() comm:InvokeServer("AbandonQuest") end) end; TweenTo(CFrameQ); local root=GetRoot(); if root and (root.Position-CFrameQ.Position).Magnitude<=7 and comm then pcall(function() comm:InvokeServer("StartQuest",NameQuest,QuestLv) end) end; return end; local enemies=workspace:FindFirstChild("Enemies"); if not enemies then return end; local found=false; for _,mob in ipairs(enemies:GetChildren()) do local hum=mob:FindFirstChildOfClass("Humanoid"); local rp=mob:FindFirstChild("HumanoidRootPart"); if hum and rp and hum.Health>0 and mob.Name==Ms then found=true; repeat if not _G.AutoLevel then break end; task.wait(_G.Fast_Delay); AutoHaki(); EquipFarmWeapon(); TweenTo(rp.CFrame*CFrame.new(0,40,0)); FastAttack(); pcall(function() rp.Size=Vector3.new(60,60,60); rp.CanCollide=false end) until not mob.Parent or hum.Health<=0 or not q.Visible or not _G.AutoLevel end end; if not found then local wo=workspace:FindFirstChild("_WorldOrigin"); local sp=wo and wo:FindFirstChild("EnemySpawns"); if sp then for _,part in ipairs(sp:GetChildren()) do if string.find(tostring(part.Name),tostring(NameMon),1,true) then local root=GetRoot(); if root and (root.Position-part.Position).Magnitude>=10 then TweenTo(part.CFrame*CFrame.new(0,40,0)); break end end end end end end
+local function RunFarm()
+    CheckLevel()
+    if not NameMon or not NameQuest or not CFrameQ then return end
+
+    local q, title = QuestText()
+    if not q or not title then return end
+
+    local correct = q.Visible and string.find(
+        tostring(title.Text or ""),
+        tostring(NameMon),
+        1,
+        true
+    )
+
+    if not correct then
+        local rem = ReplicatedStorage:FindFirstChild("Remotes")
+        local comm = rem and rem:FindFirstChild("CommF_")
+
+        if comm then
+            pcall(function()
+                comm:InvokeServer("AbandonQuest")
+            end)
+        end
+
+        TweenTo(CFrameQ)
+
+        local root = GetRoot()
+        if root and (root.Position - CFrameQ.Position).Magnitude <= 7 and comm then
+            pcall(function()
+                comm:InvokeServer("StartQuest", NameQuest, QuestLv)
+            end)
+        end
+        return
+    end
+
+    local enemies = workspace:FindFirstChild("Enemies")
+    local root = GetRoot()
+    if not enemies or not root then return end
+
+    -- Reuse the current target when possible; otherwise acquire nearest mob.
+    local target = ActiveTarget
+    local targetHum = target and target:FindFirstChildOfClass("Humanoid")
+    local targetRoot = target and target:FindFirstChild("HumanoidRootPart")
+
+    if not target
+        or not target.Parent
+        or not targetHum
+        or targetHum.Health <= 0
+        or not targetRoot
+        or target.Name ~= Ms
+        or (root.Position - targetRoot.Position).Magnitude > 180 then
+
+        target = nil
+        local bestDistance
+
+        for _, mob in ipairs(enemies:GetChildren()) do
+            if mob.Name == Ms then
+                local hum = mob:FindFirstChildOfClass("Humanoid")
+                local rp = mob:FindFirstChild("HumanoidRootPart")
+
+                if hum and rp and hum.Health > 0 then
+                    local d = (root.Position - rp.Position).Magnitude
+                    if not bestDistance or d < bestDistance then
+                        target = mob
+                        bestDistance = d
+                    end
+                end
+            end
+        end
+
+        ActiveTarget = target
+    end
+
+    if target then
+        local hum = target:FindFirstChildOfClass("Humanoid")
+        local rp = target:FindFirstChild("HumanoidRootPart")
+
+        if hum and rp and hum.Health > 0 then
+            AutoHaki()
+            EquipFarmWeapon()
+
+            -- Close-range positioning is instant; long travel uses one cached tween.
+            TweenTo(rp.CFrame * CFrame.new(0, 40, 0))
+
+            if not _G.AutoLevel then return end
+
+            -- Attack immediately instead of sleeping before the first hit.
+            if ChooseWeapon ~= "Blox Fruit" or FruitM1Enabled then
+                FastAttack()
+            end
+
+            pcall(function()
+                rp.Size = Vector3.new(60, 60, 60)
+                rp.CanCollide = false
+            end)
+        else
+            ActiveTarget = nil
+        end
+        return
+    end
+
+    -- No mob alive: move to the nearest known spawn instead of scanning
+    -- and waiting through the whole enemy folder again.
+    local wo = workspace:FindFirstChild("_WorldOrigin")
+    local sp = wo and wo:FindFirstChild("EnemySpawns")
+    if sp then
+        local bestSpawn, bestDistance
+
+        for _, part in ipairs(sp:GetChildren()) do
+            if string.find(tostring(part.Name), tostring(NameMon), 1, true) then
+                local d = (root.Position - part.Position).Magnitude
+                if not bestDistance or d < bestDistance then
+                    bestSpawn = part
+                    bestDistance = d
+                end
+            end
+        end
+
+        if bestSpawn then
+            TweenTo(bestSpawn.CFrame * CFrame.new(0, 40, 0))
+        end
+    end
+end
 
 
 function CheckLevel()
