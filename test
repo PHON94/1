@@ -49,17 +49,307 @@ Gui.IgnoreGuiInset = true
 Gui.DisplayOrder = 999999
 Gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
-local W, H = 700, 430
+local W, H = 440, 250
 local X, Y = 0, 0
 
 local Main = Instance.new("Frame")
+
+--===========================================================================
+-- PHONGDZ HUB :: CATEGORY MENU
+--===========================================================================
+local CategoryLayer = Instance.new("Frame")
+CategoryLayer.Name = "CategoryLayer"
+CategoryLayer.BackgroundTransparency = 1
+CategoryLayer.Size = UDim2.fromScale(1, 1)
+CategoryLayer.ZIndex = 100
+CategoryLayer.Parent = Main
+
+local CategoryBar = Instance.new("Frame")
+CategoryBar.Name = "CategoryBar"
+CategoryBar.Position = UDim2.fromOffset(10, 66)
+CategoryBar.Size = UDim2.fromOffset(104, H - 76)
+CategoryBar.BackgroundColor3 = Color3.fromRGB(18, 21, 28)
+CategoryBar.BorderSizePixel = 0
+CategoryBar.ZIndex = 101
+CategoryBar.Parent = CategoryLayer
+
+local cbCorner = Instance.new("UICorner")
+cbCorner.CornerRadius = UDim.new(0, 11)
+cbCorner.Parent = CategoryBar
+
+local cbLayout = Instance.new("UIListLayout")
+cbLayout.Padding = UDim.new(0, 7)
+cbLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+cbLayout.VerticalAlignment = Enum.VerticalAlignment.Top
+cbLayout.Parent = CategoryBar
+
+local cbPadding = Instance.new("UIPadding")
+cbPadding.PaddingTop = UDim.new(0, 9)
+cbPadding.Parent = CategoryBar
+
+local CategoryContent = Instance.new("Frame")
+CategoryContent.Name = "CategoryContent"
+CategoryContent.Position = UDim2.fromOffset(122, 66)
+CategoryContent.Size = UDim2.new(1, -132, 1, -76)
+CategoryContent.BackgroundTransparency = 1
+CategoryContent.ZIndex = 102
+CategoryContent.Parent = CategoryLayer
+
+local CategoryPages = {}
+local CategoryButtons = {}
+
+local function makeCategory(name, icon)
+    local button = Instance.new("TextButton")
+    button.Name = name .. "Button"
+    button.Size = UDim2.fromOffset(90, 40)
+    button.BackgroundColor3 = Color3.fromRGB(30, 34, 43)
+    button.BorderSizePixel = 0
+    button.Text = icon .. "  " .. name
+    button.Font = Enum.Font.GothamBold
+    button.TextSize = 9
+    button.TextColor3 = Color3.fromRGB(170, 176, 188)
+    button.AutoButtonColor = false
+    button.ZIndex = 103
+    button.Parent = CategoryBar
+
+    local bc = Instance.new("UICorner")
+    bc.CornerRadius = UDim.new(0, 8)
+    bc.Parent = button
+
+    local page = Instance.new("ScrollingFrame")
+    page.Name = name .. "Page"
+    page.Size = UDim2.fromScale(1, 1)
+    page.BackgroundTransparency = 1
+    page.BorderSizePixel = 0
+    page.ScrollBarThickness = 4
+    page.ScrollBarImageColor3 = Color3.fromRGB(255, 211, 65)
+    page.ScrollingDirection = Enum.ScrollingDirection.Y
+    page.CanvasSize = UDim2.fromOffset(0, 0)
+    page.Visible = false
+    page.ZIndex = 104
+    page.Parent = CategoryContent
+
+    local pp = Instance.new("UIPadding")
+    pp.PaddingBottom = UDim.new(0, 15)
+    pp.Parent = page
+
+    CategoryButtons[name] = button
+    CategoryPages[name] = page
+
+    return button, page
+end
+
+local farmButton, farmPage = makeCategory("FARM", "⚔")
+local espButton, espPage = makeCategory("ESP", "◉")
+local settingButton, settingPage = makeCategory("SETTING", "⚙")
+local miscButton, miscPage = makeCategory("MISC", "✦")
+
+local function activateCategory(name)
+    for pageName, page in pairs(CategoryPages) do
+        page.Visible = pageName == name
+    end
+
+    for buttonName, button in pairs(CategoryButtons) do
+        local selected = buttonName == name
+        button.BackgroundColor3 = selected
+            and Color3.fromRGB(255, 211, 65)
+            or Color3.fromRGB(30, 34, 43)
+        button.TextColor3 = selected
+            and Color3.fromRGB(15, 17, 22)
+            or Color3.fromRGB(170, 176, 188)
+    end
+end
+
+farmButton.Activated:Connect(function() activateCategory("FARM") end)
+espButton.Activated:Connect(function() activateCategory("ESP") end)
+settingButton.Activated:Connect(function() activateCategory("SETTING") end)
+miscButton.Activated:Connect(function() activateCategory("MISC") end)
+
+local function sectionCard(parent, title, subtitle)
+    local card = Instance.new("Frame")
+    card.Size = UDim2.new(1, -12, 0, 68)
+    card.Position = UDim2.fromOffset(6, 6)
+    card.BackgroundColor3 = Color3.fromRGB(22, 25, 33)
+    card.BorderSizePixel = 0
+    card.ZIndex = 105
+    card.Parent = parent
+
+    local cc = Instance.new("UICorner")
+    cc.CornerRadius = UDim.new(0, 10)
+    cc.Parent = card
+
+    local titleLabel = Instance.new("TextLabel")
+    titleLabel.Position = UDim2.fromOffset(12, 10)
+    titleLabel.Size = UDim2.new(1, -24, 0, 20)
+    titleLabel.BackgroundTransparency = 1
+    titleLabel.Text = title
+    titleLabel.Font = Enum.Font.GothamBlack
+    titleLabel.TextSize = 11
+    titleLabel.TextColor3 = Color3.fromRGB(255, 211, 65)
+    titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+    titleLabel.ZIndex = 106
+    titleLabel.Parent = card
+
+    local sub = Instance.new("TextLabel")
+    sub.Position = UDim2.fromOffset(12, 34)
+    sub.Size = UDim2.new(1, -24, 0, 18)
+    sub.BackgroundTransparency = 1
+    sub.Text = subtitle
+    sub.Font = Enum.Font.Gotham
+    sub.TextSize = 8
+    sub.TextColor3 = Color3.fromRGB(140, 146, 160)
+    sub.TextXAlignment = Enum.TextXAlignment.Left
+    sub.ZIndex = 106
+    sub.Parent = card
+end
+
+sectionCard(espPage, "ESP", "ESP controls can be placed here.")
+sectionCard(miscPage, "MISC", "Miscellaneous controls can be placed here.")
+
+-- Move the existing feature panels into the correct category pages.
+if SettingFarm then
+    SettingFarm.Parent = settingPage
+    SettingFarm.Position = UDim2.fromOffset(6, 6)
+    SettingFarm.Size = UDim2.new(1, -12, 0, 152)
+end
+
+if Card then
+    Card.Parent = farmPage
+    Card.Position = UDim2.fromOffset(6, 6)
+    Card.Size = UDim2.new(1, -12, 0, 68)
+end
+
+if Toggle then
+    Toggle.Parent = farmPage
+    Toggle.Position = UDim2.fromOffset(6, 82)
+end
+
+if Hint then
+    Hint.Parent = farmPage
+    Hint.Position = UDim2.fromOffset(6, 142)
+end
+
+activateCategory("FARM")
+
+--===========================================================================
+-- MOVABLE MINIMIZED CIRCLE
+--===========================================================================
+local MiniLauncher = Instance.new("TextButton")
+MiniLauncher.Name = "MiniLauncher"
+MiniLauncher.Size = UDim2.fromOffset(56, 56)
+MiniLauncher.Position = UDim2.new(0, 20, 0.5, -28)
+MiniLauncher.BackgroundColor3 = Color3.fromRGB(255, 211, 65)
+MiniLauncher.BorderSizePixel = 0
+MiniLauncher.Text = "P"
+MiniLauncher.Font = Enum.Font.GothamBlack
+MiniLauncher.TextSize = 22
+MiniLauncher.TextColor3 = Color3.fromRGB(15, 17, 22)
+MiniLauncher.AutoButtonColor = false
+MiniLauncher.Visible = false
+MiniLauncher.ZIndex = 1000
+MiniLauncher.Parent = ScreenGui
+
+local mlCorner = Instance.new("UICorner")
+mlCorner.CornerRadius = UDim.new(1, 0)
+mlCorner.Parent = MiniLauncher
+
+local mlStroke = Instance.new("UIStroke")
+mlStroke.Color = Color3.fromRGB(255, 235, 150)
+mlStroke.Thickness = 2
+mlStroke.Parent = MiniLauncher
+
+local miniDragging = false
+local miniMoved = false
+local miniDragStart
+local miniStartPos
+
+local function clampMiniPosition(x, y)
+    local camera = workspace.CurrentCamera
+    local viewport = camera and camera.ViewportSize
+    if not viewport then return x, y end
+
+    local w = MiniLauncher.AbsoluteSize.X
+    local h = MiniLauncher.AbsoluteSize.Y
+
+    return math.clamp(x, 4, math.max(4, viewport.X - w - 4)),
+           math.clamp(y, 4, math.max(4, viewport.Y - h - 4))
+end
+
+MiniLauncher.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
+
+        miniDragging = true
+        miniMoved = false
+        miniDragStart = input.Position
+        miniStartPos = MiniLauncher.Position
+    end
+end)
+
+MiniLauncher.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement
+        or input.UserInputType == Enum.UserInputType.Touch then
+
+        if not miniDragging then return end
+
+        local delta = input.Position - miniDragStart
+
+        if math.abs(delta.X) > 3 or math.abs(delta.Y) > 3 then
+            miniMoved = true
+        end
+
+        local x, y = clampMiniPosition(
+            miniStartPos.X.Offset + delta.X,
+            miniStartPos.Y.Offset + delta.Y
+        )
+
+        MiniLauncher.Position = UDim2.fromOffset(x, y)
+    end
+end)
+
+UIS.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
+        miniDragging = false
+    end
+end)
+
+local function showHub()
+    MiniLauncher.Visible = false
+    Main.Visible = true
+end
+
+local function hideHub()
+    Main.Visible = false
+    MiniLauncher.Visible = true
+end
+
+MiniLauncher.Activated:Connect(function()
+    if not miniMoved then
+        showHub()
+    end
+end)
+
+-- Detect the existing minimize button without replacing its original callback.
+for _, descendant in ipairs(Main:GetDescendants()) do
+    if descendant:IsA("TextButton") or descendant:IsA("ImageButton") then
+        local n = string.lower(descendant.Name)
+        if n == "minimize" or n == "minbutton" or n == "collapse" then
+            descendant.Activated:Connect(hideHub)
+            break
+        end
+    end
+end
+
+_G.PhongdzShowHub = showHub
+_G.PhongdzHideHub = hideHub
+_G.PhongdzMiniLauncher = MiniLauncher
 
 Main.Name = "Main"
 Main.Size = UDim2.fromOffset(W, H)
 Main.BackgroundColor3 = Color3.fromRGB(16, 18, 24)
 Main.BorderSizePixel = 0
 Main.Visible = true
-Main.Active = true
 Main.Parent = Gui
 
 local corner = Instance.new("UICorner")
@@ -85,24 +375,6 @@ if not parentOK then
         return
     end
 end
-
-local BootStatus = Instance.new("TextLabel")
-BootStatus.Name = "BootStatus"
-BootStatus.AnchorPoint = Vector2.new(0.5, 0.5)
-BootStatus.Position = UDim2.fromScale(0.5, 0.5)
-BootStatus.Size = UDim2.fromOffset(320, 40)
-BootStatus.BackgroundColor3 = Color3.fromRGB(24, 27, 34)
-BootStatus.Text = "PHONGDZ HUB • LOADING..."
-BootStatus.TextColor3 = Color3.fromRGB(255, 211, 65)
-BootStatus.Font = Enum.Font.GothamBold
-BootStatus.TextSize = 13
-BootStatus.Visible = false
-BootStatus.ZIndex = 9999
-BootStatus.Parent = Main
-
-local bootCorner = Instance.new("UICorner")
-bootCorner.CornerRadius = UDim.new(0, 10)
-bootCorner.Parent = BootStatus
 
 local function viewport()
     local camera = workspace.CurrentCamera
@@ -146,7 +418,7 @@ local Title = Instance.new("TextLabel")
 Title.Position = UDim2.fromOffset(18, 7)
 Title.Size = UDim2.fromOffset(300, 25)
 Title.BackgroundTransparency = 1
-Title.Text = "PHONGDZ HUB  •  BLOX FRUIT"
+Title.Text = "PHONGDZ HUB"
 Title.Font = Enum.Font.GothamBlack
 Title.TextSize = 19
 Title.TextColor3 = Color3.fromRGB(255, 211, 65)
@@ -157,7 +429,7 @@ local Sub = Instance.new("TextLabel")
 Sub.Position = UDim2.fromOffset(19, 34)
 Sub.Size = UDim2.fromOffset(300, 16)
 Sub.BackgroundTransparency = 1
-Sub.Text = "FARMING  •  FAST ATTACK  •  SETTING"
+Sub.Text = "FARM LEVEL  •  FAST ATTACK"
 Sub.Font = Enum.Font.GothamMedium
 Sub.TextSize = 9
 Sub.TextColor3 = Color3.fromRGB(145, 150, 163)
@@ -197,125 +469,8 @@ cc.CornerRadius = UDim.new(0, 9)
 cc.Parent = Close
 
 --===========================================================================
--- FOLDER SCROLL SYSTEM
---===========================================================================
--- "Vuốt lên / vuốt xuống": mouse wheel, touch swipe và kéo thanh scroll.
--- Nội dung được đặt trong một ScrollingFrame để không cần thay đổi logic
--- của từng folder/section hiện có.
-
-local FolderScroll = Instance.new("ScrollingFrame")
-FolderScroll.Name = "FolderScroll"
-FolderScroll.Position = UDim2.fromOffset(0, 60)
-FolderScroll.Size = UDim2.fromOffset(W, H - 60)
-FolderScroll.BackgroundTransparency = 1
-FolderScroll.BorderSizePixel = 0
-FolderScroll.CanvasSize = UDim2.fromOffset(0, 380)
-FolderScroll.ScrollBarThickness = 5
-FolderScroll.ScrollBarImageColor3 = Color3.fromRGB(255, 211, 65)
-FolderScroll.ScrollingDirection = Enum.ScrollingDirection.Y
-FolderScroll.ElasticBehavior = Enum.ElasticBehavior.WhenScrollable
-FolderScroll.Active = true
-FolderScroll.ClipsDescendants = true
-FolderScroll.ZIndex = 10
-FolderScroll.Parent = Main
-
-local FolderPadding = Instance.new("UIPadding")
-FolderPadding.PaddingBottom = UDim.new(0, 18)
-FolderPadding.Parent = FolderScroll
-
--- The sections below are positioned relative to this scroll canvas.
-local function putFolder(guiObject, x, y)
-    guiObject.Parent = FolderScroll
-    guiObject.Position = UDim2.fromOffset(x, y)
-end
-
--- Mouse-wheel scrolling.
-UIS.InputChanged:Connect(function(input)
-    if not Main.Visible or not FolderScroll.Visible then
-        return
-    end
-
-    if input.UserInputType == Enum.UserInputType.MouseWheel then
-        local delta = input.Position.Z
-        local target = FolderScroll.CanvasPosition.Y - delta * 42
-        local maxY = math.max(0, FolderScroll.AbsoluteCanvasSize.Y - FolderScroll.AbsoluteWindowSize.Y)
-        FolderScroll.CanvasPosition = Vector2.new(
-            0,
-            math.clamp(target, 0, maxY)
-        )
-    end
-end)
-
--- Touch swipe with a little momentum.
-local swipeActive = false
-local swipeStartY = 0
-local swipeStartScroll = 0
-local lastTouchY = 0
-local lastTouchTime = 0
-
-FolderScroll.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.Touch then
-        swipeActive = true
-        swipeStartY = input.Position.Y
-        swipeStartScroll = FolderScroll.CanvasPosition.Y
-        lastTouchY = input.Position.Y
-        lastTouchTime = os.clock()
-    end
-end)
-
-FolderScroll.InputChanged:Connect(function(input)
-    if not swipeActive or input.UserInputType ~= Enum.UserInputType.Touch then
-        return
-    end
-
-    local y = input.Position.Y
-    local dy = y - swipeStartY
-    FolderScroll.CanvasPosition = Vector2.new(0, swipeStartScroll - dy)
-
-    lastTouchY = y
-    lastTouchTime = os.clock()
-end)
-
-UIS.InputEnded:Connect(function(input)
-    if input.UserInputType ~= Enum.UserInputType.Touch then
-        return
-    end
-
-    if not swipeActive then
-        return
-    end
-
-    swipeActive = false
-
-    -- Clamp after the swipe.
-    local maxY = math.max(0, FolderScroll.AbsoluteCanvasSize.Y - FolderScroll.AbsoluteWindowSize.Y)
-    FolderScroll.CanvasPosition = Vector2.new(
-        0,
-        math.clamp(FolderScroll.CanvasPosition.Y, 0, maxY)
-    )
-end)
-
--- Convenience controls for scripts/folders.
-local function scrollFoldersToTop()
-    FolderScroll.CanvasPosition = Vector2.new(0, 0)
-end
-
-local function scrollFoldersToBottom()
-    local maxY = math.max(0, FolderScroll.AbsoluteCanvasSize.Y - FolderScroll.AbsoluteWindowSize.Y)
-    FolderScroll.CanvasPosition = Vector2.new(0, maxY)
-end
-
--- Expose safe controls to the rest of the UI.
-_G.PhongdzFolderScrollTop = scrollFoldersToTop
-_G.PhongdzFolderScrollBottom = scrollFoldersToBottom
-
-
---===========================================================================
 -- SETTING FARM
 --===========================================================================
-local FruitM1Enabled = true
-_G.FruitM1Enabled = true
-
 local SettingFarm = Instance.new("Frame")
 SettingFarm.Name = "SettingFarm"
 SettingFarm.Position = UDim2.fromOffset(16, 16)
@@ -444,7 +599,8 @@ wdc.Parent = WeaponDrop
 
 local WeaponOptions = {"Melee", "Sword", "Blox Fruit"}
 local ChooseWeapon = "Melee"
-
+local FruitM1Enabled = true
+_G.FruitM1Enabled = true
 local SelectWeapon = nil
 _G.ChooseWeapon = ChooseWeapon
 _G.SelectWeapon = nil
@@ -538,6 +694,119 @@ task.spawn(function()
         task.wait(0.5)
     end
 end)
+
+--===========================================================================
+-- FOLDER SCROLL SYSTEM
+--===========================================================================
+-- "Vuốt lên / vuốt xuống": mouse wheel, touch swipe và kéo thanh scroll.
+-- Nội dung được đặt trong một ScrollingFrame để không cần thay đổi logic
+-- của từng folder/section hiện có.
+
+local FolderScroll = Instance.new("ScrollingFrame")
+FolderScroll.Name = "FolderScroll"
+FolderScroll.Position = UDim2.fromOffset(0, 60)
+FolderScroll.Size = UDim2.fromOffset(W, H - 60)
+FolderScroll.BackgroundTransparency = 1
+FolderScroll.BorderSizePixel = 0
+FolderScroll.CanvasSize = UDim2.fromOffset(0, 380)
+FolderScroll.ScrollBarThickness = 5
+FolderScroll.ScrollBarImageColor3 = Color3.fromRGB(255, 211, 65)
+FolderScroll.ScrollingDirection = Enum.ScrollingDirection.Y
+FolderScroll.ElasticBehavior = Enum.ElasticBehavior.WhenScrollable
+FolderScroll.Active = true
+FolderScroll.ClipsDescendants = true
+FolderScroll.ZIndex = 10
+FolderScroll.Parent = Main
+
+local FolderPadding = Instance.new("UIPadding")
+FolderPadding.PaddingBottom = UDim.new(0, 18)
+FolderPadding.Parent = FolderScroll
+
+-- The sections below are positioned relative to this scroll canvas.
+local function putFolder(guiObject, x, y)
+    guiObject.Parent = FolderScroll
+    guiObject.Position = UDim2.fromOffset(x, y)
+end
+
+-- Mouse-wheel scrolling.
+UIS.InputChanged:Connect(function(input)
+    if not Main.Visible or not FolderScroll.Visible then
+        return
+    end
+
+    if input.UserInputType == Enum.UserInputType.MouseWheel then
+        local delta = input.Position.Z
+        local target = FolderScroll.CanvasPosition.Y - delta * 42
+        local maxY = math.max(0, FolderScroll.AbsoluteCanvasSize.Y - FolderScroll.AbsoluteWindowSize.Y)
+        FolderScroll.CanvasPosition = Vector2.new(
+            0,
+            math.clamp(target, 0, maxY)
+        )
+    end
+end)
+
+-- Touch swipe with a little momentum.
+local swipeActive = false
+local swipeStartY = 0
+local swipeStartScroll = 0
+local lastTouchY = 0
+local lastTouchTime = 0
+
+FolderScroll.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.Touch then
+        swipeActive = true
+        swipeStartY = input.Position.Y
+        swipeStartScroll = FolderScroll.CanvasPosition.Y
+        lastTouchY = input.Position.Y
+        lastTouchTime = os.clock()
+    end
+end)
+
+FolderScroll.InputChanged:Connect(function(input)
+    if not swipeActive or input.UserInputType ~= Enum.UserInputType.Touch then
+        return
+    end
+
+    local y = input.Position.Y
+    local dy = y - swipeStartY
+    FolderScroll.CanvasPosition = Vector2.new(0, swipeStartScroll - dy)
+
+    lastTouchY = y
+    lastTouchTime = os.clock()
+end)
+
+UIS.InputEnded:Connect(function(input)
+    if input.UserInputType ~= Enum.UserInputType.Touch then
+        return
+    end
+
+    if not swipeActive then
+        return
+    end
+
+    swipeActive = false
+
+    -- Clamp after the swipe.
+    local maxY = math.max(0, FolderScroll.AbsoluteCanvasSize.Y - FolderScroll.AbsoluteWindowSize.Y)
+    FolderScroll.CanvasPosition = Vector2.new(
+        0,
+        math.clamp(FolderScroll.CanvasPosition.Y, 0, maxY)
+    )
+end)
+
+-- Convenience controls for scripts/folders.
+local function scrollFoldersToTop()
+    FolderScroll.CanvasPosition = Vector2.new(0, 0)
+end
+
+local function scrollFoldersToBottom()
+    local maxY = math.max(0, FolderScroll.AbsoluteCanvasSize.Y - FolderScroll.AbsoluteWindowSize.Y)
+    FolderScroll.CanvasPosition = Vector2.new(0, maxY)
+end
+
+-- Expose safe controls to the rest of the UI.
+_G.PhongdzFolderScrollTop = scrollFoldersToTop
+_G.PhongdzFolderScrollBottom = scrollFoldersToBottom
 
 local Card = Instance.new("Frame")
 Card.Position = UDim2.fromOffset(16, 144)
@@ -640,291 +909,6 @@ Hint.TextColor3 = Color3.fromRGB(86, 91, 104)
 Hint.TextXAlignment = Enum.TextXAlignment.Center
 Hint.Parent = FolderScroll
 
-
---===========================================================================
--- PHONGDZ HUB :: DASHBOARD UI
--- Sidebar + search + category pages, styled after the requested reference.
---===========================================================================
-
--- The old single-column folder is no longer the visible surface.
-FolderScroll.Visible = false
-
-local Dashboard = Instance.new("Frame")
-Dashboard.Name = "Dashboard"
-Dashboard.Position = UDim2.fromOffset(10, 70)
-Dashboard.Size = UDim2.new(1, -20, 1, -80)
-Dashboard.BackgroundTransparency = 1
-Dashboard.ZIndex = 500
-Dashboard.Parent = Main
-
-local Sidebar = Instance.new("Frame")
-Sidebar.Name = "Sidebar"
-Sidebar.Size = UDim2.fromOffset(184, H - 82)
-Sidebar.BackgroundColor3 = Color3.fromRGB(13, 16, 22)
-Sidebar.BackgroundTransparency = 0.04
-Sidebar.BorderSizePixel = 0
-Sidebar.ZIndex = 51
-Sidebar.Parent = Dashboard
-
-local sideCorner = Instance.new("UICorner")
-sideCorner.CornerRadius = UDim.new(0, 10)
-sideCorner.Parent = Sidebar
-
-local Search = Instance.new("TextBox")
-Search.Name = "Search"
-Search.Position = UDim2.fromOffset(10, 10)
-Search.Size = UDim2.fromOffset(164, 38)
-Search.BackgroundColor3 = Color3.fromRGB(29, 32, 41)
-Search.BorderSizePixel = 0
-Search.ClearTextOnFocus = false
-Search.PlaceholderText = "⌕  Search section..."
-Search.PlaceholderColor3 = Color3.fromRGB(150, 154, 165)
-Search.Text = ""
-Search.TextColor3 = Color3.fromRGB(235, 238, 244)
-Search.Font = Enum.Font.GothamMedium
-Search.TextSize = 10
-Search.TextXAlignment = Enum.TextXAlignment.Left
-Search.ZIndex = 53
-Search.Parent = Sidebar
-
-local searchCorner = Instance.new("UICorner")
-searchCorner.CornerRadius = UDim.new(0, 8)
-searchCorner.Parent = Search
-
-local searchPad = Instance.new("UIPadding")
-searchPad.PaddingLeft = UDim.new(0, 10)
-searchPad.Parent = Search
-
-local SidebarList = Instance.new("ScrollingFrame")
-SidebarList.Name = "SidebarList"
-SidebarList.Position = UDim2.fromOffset(8, 58)
-SidebarList.Size = UDim2.new(1, -16, 1, -66)
-SidebarList.BackgroundTransparency = 1
-SidebarList.BorderSizePixel = 0
-SidebarList.ScrollBarThickness = 2
-SidebarList.ScrollBarImageColor3 = Color3.fromRGB(255, 211, 65)
-SidebarList.CanvasSize = UDim2.fromOffset(0, 0)
-SidebarList.ZIndex = 52
-SidebarList.Parent = Sidebar
-
-local sideLayout = Instance.new("UIListLayout")
-sideLayout.Padding = UDim.new(0, 3)
-sideLayout.SortOrder = Enum.SortOrder.LayoutOrder
-sideLayout.Parent = SidebarList
-
-local sidePad = Instance.new("UIPadding")
-sidePad.PaddingBottom = UDim.new(0, 10)
-sidePad.Parent = SidebarList
-
-local Content = Instance.new("Frame")
-Content.Name = "Content"
-Content.Position = UDim2.fromOffset(194, 0)
-Content.Size = UDim2.new(1, -194, 1, 0)
-Content.BackgroundColor3 = Color3.fromRGB(18, 20, 27)
-Content.BackgroundTransparency = 0.05
-Content.BorderSizePixel = 0
-Content.ZIndex = 51
-Content.Parent = Dashboard
-
-local contentCorner = Instance.new("UICorner")
-contentCorner.CornerRadius = UDim.new(0, 10)
-contentCorner.Parent = Content
-
-local ContentTitle = Instance.new("TextLabel")
-ContentTitle.Name = "ContentTitle"
-ContentTitle.Position = UDim2.fromOffset(16, 11)
-ContentTitle.Size = UDim2.new(1, -68, 0, 28)
-ContentTitle.BackgroundTransparency = 1
-ContentTitle.Text = "Farming"
-ContentTitle.Font = Enum.Font.GothamBlack
-ContentTitle.TextSize = 17
-ContentTitle.TextColor3 = Color3.fromRGB(241, 243, 247)
-ContentTitle.TextXAlignment = Enum.TextXAlignment.Left
-ContentTitle.ZIndex = 55
-ContentTitle.Parent = Content
-
-local ContentSearch = Instance.new("TextButton")
-ContentSearch.Name = "ContentSearch"
-ContentSearch.Size = UDim2.fromOffset(38, 38)
-ContentSearch.Position = UDim2.new(1, -50, 0, 9)
-ContentSearch.BackgroundColor3 = Color3.fromRGB(29, 32, 41)
-ContentSearch.BorderSizePixel = 0
-ContentSearch.Text = "⌕"
-ContentSearch.Font = Enum.Font.GothamBold
-ContentSearch.TextSize = 20
-ContentSearch.TextColor3 = Color3.fromRGB(235, 238, 244)
-ContentSearch.AutoButtonColor = false
-ContentSearch.ZIndex = 55
-ContentSearch.Parent = Content
-
-local csr = Instance.new("UICorner")
-csr.CornerRadius = UDim.new(0, 8)
-csr.Parent = ContentSearch
-
-local Pages = {}
-local Buttons = {}
-
-local function makePage(name)
-    local page = Instance.new("ScrollingFrame")
-    page.Name = name .. "Page"
-    page.Position = UDim2.fromOffset(10, 52)
-    page.Size = UDim2.new(1, -20, 1, -62)
-    page.BackgroundTransparency = 1
-    page.BorderSizePixel = 0
-    page.ScrollBarThickness = 4
-    page.ScrollBarImageColor3 = Color3.fromRGB(255, 211, 65)
-    page.ScrollingDirection = Enum.ScrollingDirection.Y
-    page.CanvasSize = UDim2.fromOffset(0, 0)
-    page.ZIndex = 54
-    page.Visible = false
-    page.Parent = Content
-    Pages[name] = page
-    return page
-end
-
-local function makeSidebarButton(name, icon, order)
-    local b = Instance.new("TextButton")
-    b.Name = name .. "Button"
-    b.Size = UDim2.new(1, -2, 0, 42)
-    b.LayoutOrder = order
-    b.BackgroundColor3 = Color3.fromRGB(18, 21, 28)
-    b.BorderSizePixel = 0
-    b.Text = "   " .. icon .. "   " .. name
-    b.Font = Enum.Font.GothamBold
-    b.TextSize = 10
-    b.TextColor3 = Color3.fromRGB(214, 217, 224)
-    b.TextXAlignment = Enum.TextXAlignment.Left
-    b.AutoButtonColor = false
-    b.ZIndex = 53
-    b.Parent = SidebarList
-
-    local bc = Instance.new("UICorner")
-    bc.CornerRadius = UDim.new(0, 8)
-    bc.Parent = b
-
-    Buttons[name] = b
-    return b
-end
-
-local FarmPage = makePage("Farm")
-local ESPPage = makePage("ESP")
-local SettingPage = makePage("Setting Farm")
-local MiscPage = makePage("Misc")
-
-local farmBtn = makeSidebarButton("Farming", "⚔", 1)
-local espBtn = makeSidebarButton("ESP", "◉", 2)
-local settingBtn = makeSidebarButton("Setting Farm", "⚙", 3)
-local miscBtn = makeSidebarButton("Misc", "✦", 4)
-
-local function emptyCard(page, title, subtitle)
-    local card = Instance.new("Frame")
-    card.Size = UDim2.new(1, -6, 0, 78)
-    card.Position = UDim2.fromOffset(3, 3)
-    card.BackgroundColor3 = Color3.fromRGB(25, 28, 36)
-    card.BorderSizePixel = 0
-    card.ZIndex = 55
-    card.Parent = page
-
-    local c = Instance.new("UICorner")
-    c.CornerRadius = UDim.new(0, 9)
-    c.Parent = card
-
-    local t = Instance.new("TextLabel")
-    t.Position = UDim2.fromOffset(14, 11)
-    t.Size = UDim2.new(1, -28, 0, 22)
-    t.BackgroundTransparency = 1
-    t.Text = title
-    t.Font = Enum.Font.GothamBold
-    t.TextSize = 11
-    t.TextColor3 = Color3.fromRGB(242, 244, 248)
-    t.TextXAlignment = Enum.TextXAlignment.Left
-    t.Parent = card
-
-    local s = Instance.new("TextLabel")
-    s.Position = UDim2.fromOffset(14, 37)
-    s.Size = UDim2.new(1, -28, 0, 20)
-    s.BackgroundTransparency = 1
-    s.Text = subtitle
-    s.Font = Enum.Font.Gotham
-    s.TextSize = 9
-    s.TextColor3 = Color3.fromRGB(145, 150, 163)
-    s.TextXAlignment = Enum.TextXAlignment.Left
-    s.Parent = card
-end
-
-emptyCard(ESPPage, "ESP", "ESP settings can be added here.")
-emptyCard(MiscPage, "Miscellaneous", "Extra utility settings can be added here.")
-
--- Move the existing real controls into their matching pages.
-SettingFarm.Parent = SettingPage
-SettingFarm.Position = UDim2.fromOffset(3, 3)
-SettingFarm.Size = UDim2.new(1, -6, 0, 152)
-
-Card.Parent = FarmPage
-Card.Position = UDim2.fromOffset(3, 3)
-Card.Size = UDim2.new(1, -6, 0, 65)
-
-Toggle.Parent = FarmPage
-Toggle.Position = UDim2.fromOffset(3, 77)
-Toggle.Size = UDim2.new(1, -6, 0, 52)
-
-Hint.Parent = FarmPage
-Hint.Position = UDim2.fromOffset(3, 137)
-Hint.Size = UDim2.new(1, -6, 0, 20)
-
--- Add a small header inside the Setting Farm page to make the section look
--- like the reference dashboard.
-local sfHeader = Instance.new("TextLabel")
-sfHeader.Name = "SectionHeader"
-sfHeader.Position = UDim2.fromOffset(3, 0)
-sfHeader.Size = UDim2.new(1, -6, 0, 0)
-sfHeader.BackgroundTransparency = 1
-sfHeader.Text = ""
-sfHeader.Parent = SettingPage
-
-local function selectPage(name, title)
-    for n, p in pairs(Pages) do
-        p.Visible = (n == name)
-    end
-
-    for n, b in pairs(Buttons) do
-        local selected = (n == title)
-        b.BackgroundColor3 = selected
-            and Color3.fromRGB(255, 211, 65)
-            or Color3.fromRGB(18, 21, 28)
-        b.TextColor3 = selected
-            and Color3.fromRGB(15, 17, 22)
-            or Color3.fromRGB(214, 217, 224)
-    end
-
-    ContentTitle.Text = title
-end
-
-farmBtn.Activated:Connect(function() selectPage("Farm", "Farming") end)
-espBtn.Activated:Connect(function() selectPage("ESP", "ESP") end)
-settingBtn.Activated:Connect(function() selectPage("Setting Farm", "Setting Farm") end)
-miscBtn.Activated:Connect(function() selectPage("Misc", "Misc") end)
-
-selectPage("Farm", "Farming")
-BootStatus.Visible = false
-
--- Search filters sidebar categories.
-Search:GetPropertyChangedSignal("Text"):Connect(function()
-    local q = string.lower(Search.Text or "")
-    for name, button in pairs(Buttons) do
-        local haystack = string.lower(name)
-        button.Visible = (q == "" or string.find(haystack, q, 1, true) ~= nil)
-    end
-    task.defer(function()
-        SidebarList.CanvasSize = UDim2.fromOffset(0, sideLayout.AbsoluteContentSize.Y + 10)
-    end)
-end)
-
-sideLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-    SidebarList.CanvasSize = UDim2.fromOffset(0, sideLayout.AbsoluteContentSize.Y + 10)
-end)
-
---===========================================================================
 -- Circular launcher.
 local Launcher = Instance.new("TextButton")
 Launcher.Size = UDim2.fromOffset(58, 58)
@@ -935,7 +919,6 @@ Launcher.Font = Enum.Font.GothamBlack
 Launcher.TextSize = 22
 Launcher.TextColor3 = Color3.fromRGB(16, 18, 24)
 Launcher.Visible = false
-Launcher.Active = true
 Launcher.AutoButtonColor = false
 Launcher.ZIndex = 1000
 Launcher.Parent = Gui
@@ -944,81 +927,40 @@ local lc = Instance.new("UICorner")
 lc.CornerRadius = UDim.new(1, 0)
 lc.Parent = Launcher
 
--- FIX: MOVABLE MINIMIZED BUTTON
---===========================================================================
+-- Dragging by pixel coordinates.
+local dragging = false
+local dragStart = Vector2.zero
+local dragOrigin = Vector2.zero
 
-local launcherDragging = false
-local launcherMoved = false
-local launcherStart
-local launcherOrigin
-local launcherInput
+Header.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
 
-local function clampLauncher(x, y)
-    local v = viewport()
-    local w = Launcher.AbsoluteSize.X > 0 and Launcher.AbsoluteSize.X or 58
-    local h = Launcher.AbsoluteSize.Y > 0 and Launcher.AbsoluteSize.Y or 58
-
-    return math.clamp(x, 4, math.max(4, v.X - w - 4)),
-           math.clamp(y, 4, math.max(4, v.Y - h - 4))
-end
-
-Launcher.Active = true
-Launcher.Selectable = false
-
-Launcher.InputBegan:Connect(function(input)
-    local typ = input.UserInputType
-    if typ ~= Enum.UserInputType.MouseButton1 and typ ~= Enum.UserInputType.Touch then
-        return
-    end
-
-    launcherDragging = true
-    launcherMoved = false
-    launcherInput = input
-    launcherStart = input.Position
-    launcherOrigin = Launcher.Position
-end)
-
-Launcher.InputChanged:Connect(function(input)
-    local typ = input.UserInputType
-    if typ == Enum.UserInputType.MouseMovement or typ == Enum.UserInputType.Touch then
-        launcherInput = input
+        dragging = true
+        dragStart = input.Position
+        dragOrigin = Vector2.new(X, Y)
     end
 end)
 
 UIS.InputChanged:Connect(function(input)
-    if not launcherDragging then
+    if not dragging then
         return
     end
 
-    if input ~= launcherInput
-        and input.UserInputType ~= Enum.UserInputType.MouseMovement
-        and input.UserInputType ~= Enum.UserInputType.Touch then
-        return
+    if input.UserInputType == Enum.UserInputType.MouseMovement
+        or input.UserInputType == Enum.UserInputType.Touch then
+
+        local d = input.Position - dragStart
+        forceXY(dragOrigin.X + d.X, dragOrigin.Y + d.Y)
     end
-
-    local delta = input.Position - launcherStart
-
-    if math.abs(delta.X) > 4 or math.abs(delta.Y) > 4 then
-        launcherMoved = true
-    end
-
-    local nx, ny = clampLauncher(
-        launcherOrigin.X.Offset + delta.X,
-        launcherOrigin.Y.Offset + delta.Y
-    )
-
-    Launcher.Position = UDim2.fromOffset(nx, ny)
 end)
 
 UIS.InputEnded:Connect(function(input)
-    if input == launcherInput
-        or input.UserInputType == Enum.UserInputType.MouseButton1
+    if input.UserInputType == Enum.UserInputType.MouseButton1
         or input.UserInputType == Enum.UserInputType.Touch then
-        launcherDragging = false
+        dragging = false
     end
 end)
-
-
 
 local minimized = false
 local savedX, savedY = X, Y
@@ -1053,13 +995,7 @@ local function restoreMenu()
 end
 
 Min.Activated:Connect(minimizeMenu)
-Launcher.Activated:Connect(function()
-    if launcherMoved then
-        launcherMoved = false
-        return
-    end
-    restoreMenu()
-end)
+Launcher.Activated:Connect(restoreMenu)
 
 Close.Activated:Connect(function()
     _G.AutoLevel = false
@@ -1165,9 +1101,37 @@ end
 local function AutoHaki() local c=LocalPlayer.Character; local rem=ReplicatedStorage:FindFirstChild("Remotes"); local comm=rem and rem:FindFirstChild("CommF_"); if c and not c:FindFirstChild("HasBuso") and comm then pcall(function() comm:InvokeServer("Buso") end) end end
 local AttackRemote,HitRemote
 local function ResolveAttackRemotes() if AttackRemote and HitRemote then return true end; local modules=ReplicatedStorage:FindFirstChild("Modules"); local net=modules and modules:FindFirstChild("Net"); if not net then return false end; AttackRemote=net:FindFirstChild("RE/RegisterAttack"); HitRemote=net:FindFirstChild("RE/RegisterHit"); return AttackRemote~=nil and HitRemote~=nil end
+local function GetFarmPoint(targetRoot)
+    if not targetRoot then return nil end
+    return targetRoot.CFrame * CFrame.new(0, 38, 0)
+end
+
+local function BringMobs(targetName, centerRoot)
+    if not centerRoot then return end
+    local enemies = workspace:FindFirstChild("Enemies")
+    if not enemies then return end
+    local center = centerRoot.Position
+
+    for _, mob in ipairs(enemies:GetChildren()) do
+        if mob.Name == targetName then
+            local hum = mob:FindFirstChildOfClass("Humanoid")
+            local rp = mob:FindFirstChild("HumanoidRootPart")
+            if hum and rp and hum.Health > 0 then
+                if (rp.Position - center).Magnitude <= 220 then
+                    pcall(function()
+                        rp.CanCollide = false
+                        rp.AssemblyLinearVelocity = Vector3.zero
+                        rp.AssemblyAngularVelocity = Vector3.zero
+                        rp.CFrame = CFrame.new(center)
+                    end)
+                end
+            end
+        end
+    end
+end
+
 local function FastAttack()
     if not ResolveAttackRemotes() then return end
-
     local enemies = workspace:FindFirstChild("Enemies")
     local root = GetRoot()
     if not enemies or not root then return end
@@ -1175,32 +1139,54 @@ local function FastAttack()
     local bestMob, bestHead, bestDistance
     local hits = {}
 
-    for _, mob in ipairs(enemies:GetChildren()) do
-        local hum = mob:FindFirstChildOfClass("Humanoid")
-        local head = mob:FindFirstChild("Head")
+    local preferred = ActiveTarget
+    local preferredHum = preferred and preferred:FindFirstChildOfClass("Humanoid")
+    local preferredHead = preferred and preferred:FindFirstChild("Head")
+    local preferredRoot = preferred and preferred:FindFirstChild("HumanoidRootPart")
 
-        if hum and head and hum.Health > 0 then
-            local d = (root.Position - head.Position).Magnitude
+    if preferred and preferred.Parent and preferredHum and preferredHead and preferredRoot
+        and preferredHum.Health > 0 and preferred.Name == Ms
+        and (root.Position - preferredRoot.Position).Magnitude <= 90 then
+        bestMob = preferred
+        bestHead = preferredHead
+        bestDistance = (root.Position - preferredHead.Position).Magnitude
+    end
 
-            if d <= 60 then
-                hits[#hits + 1] = {mob, head}
-
-                if not bestDistance or d < bestDistance then
-                    bestMob = mob
-                    bestHead = head
-                    bestDistance = d
+    if not bestMob then
+        for _, mob in ipairs(enemies:GetChildren()) do
+            if mob.Name == Ms then
+                local hum = mob:FindFirstChildOfClass("Humanoid")
+                local head = mob:FindFirstChild("Head")
+                local rp = mob:FindFirstChild("HumanoidRootPart")
+                if hum and head and rp and hum.Health > 0 then
+                    local d = (root.Position - head.Position).Magnitude
+                    if d <= 70 and (not bestDistance or d < bestDistance) then
+                        bestMob, bestHead, bestDistance = mob, head, d
+                    end
                 end
             end
         end
     end
 
-    if not bestMob or #hits == 0 then
-        ActiveTarget = nil
-        return
+    if not bestMob or not bestHead then return end
+    ActiveTarget = bestMob
+
+    local centerRoot = bestMob:FindFirstChild("HumanoidRootPart")
+    if centerRoot then
+        for _, mob in ipairs(enemies:GetChildren()) do
+            if mob.Name == Ms then
+                local hum = mob:FindFirstChildOfClass("Humanoid")
+                local head = mob:FindFirstChild("Head")
+                local rp = mob:FindFirstChild("HumanoidRootPart")
+                if hum and head and rp and hum.Health > 0
+                    and (rp.Position - centerRoot.Position).Magnitude <= 55 then
+                    hits[#hits + 1] = {mob, head}
+                end
+            end
+        end
     end
 
-    -- Keep one stable target until it dies or leaves range.
-    ActiveTarget = bestMob
+    if #hits == 0 then hits[1] = {bestMob, bestHead} end
 
     pcall(function()
         AttackRemote:FireServer(1e-9)
@@ -1289,12 +1275,13 @@ local function RunFarm()
             AutoHaki()
             EquipFarmWeapon()
 
-            -- Close-range positioning is instant; long travel uses one cached tween.
-            TweenTo(rp.CFrame * CFrame.new(0, 40, 0))
+            local farmPoint = GetFarmPoint(rp)
+            if farmPoint then TweenTo(farmPoint) end
 
             if not _G.AutoLevel then return end
 
-            -- Attack immediately instead of sleeping before the first hit.
+            BringMobs(NameMon, rp)
+
             if ChooseWeapon ~= "Blox Fruit" or FruitM1Enabled then
                 FastAttack()
             end
@@ -1302,6 +1289,8 @@ local function RunFarm()
             pcall(function()
                 rp.Size = Vector3.new(60, 60, 60)
                 rp.CanCollide = false
+                rp.AssemblyLinearVelocity = Vector3.zero
+                rp.AssemblyAngularVelocity = Vector3.zero
             end)
         else
             ActiveTarget = nil
@@ -1976,9 +1965,13 @@ function CheckLevel()
 end
 -- Start only after CheckLevel has been declared above.
 task.spawn(function()
-    while task.wait() do
+    while Gui.Parent do
         if _G.AutoLevel then
-            pcall(RunFarm)
+            local ok, err = pcall(RunFarm)
+            if not ok then warn("[PhongdzHub] Farm tick:", err) end
+            task.wait(0.045)
+        else
+            task.wait(0.12)
         end
     end
 end)
