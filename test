@@ -1,4 +1,4 @@
--=============================================================================
+--=============================================================================
 -- PHONGDZ HUB — CLEAN / ROBUST UI + FARM LEVEL + FAST ATTACK
 -- UI được khởi tạo độc lập; Farm chỉ chạy sau khi UI đã hiện.
 --=============================================================================
@@ -59,6 +59,7 @@ Main.Size = UDim2.fromOffset(W, H)
 Main.BackgroundColor3 = Color3.fromRGB(16, 18, 24)
 Main.BorderSizePixel = 0
 Main.Visible = true
+Main.Active = true
 Main.Parent = Gui
 
 local corner = Instance.new("UICorner")
@@ -84,6 +85,24 @@ if not parentOK then
         return
     end
 end
+
+local BootStatus = Instance.new("TextLabel")
+BootStatus.Name = "BootStatus"
+BootStatus.AnchorPoint = Vector2.new(0.5, 0.5)
+BootStatus.Position = UDim2.fromScale(0.5, 0.5)
+BootStatus.Size = UDim2.fromOffset(320, 40)
+BootStatus.BackgroundColor3 = Color3.fromRGB(24, 27, 34)
+BootStatus.Text = "PHONGDZ HUB • LOADING..."
+BootStatus.TextColor3 = Color3.fromRGB(255, 211, 65)
+BootStatus.Font = Enum.Font.GothamBold
+BootStatus.TextSize = 13
+BootStatus.Visible = false
+BootStatus.ZIndex = 9999
+BootStatus.Parent = Main
+
+local bootCorner = Instance.new("UICorner")
+bootCorner.CornerRadius = UDim.new(0, 10)
+bootCorner.Parent = BootStatus
 
 local function viewport()
     local camera = workspace.CurrentCamera
@@ -178,8 +197,125 @@ cc.CornerRadius = UDim.new(0, 9)
 cc.Parent = Close
 
 --===========================================================================
+-- FOLDER SCROLL SYSTEM
+--===========================================================================
+-- "Vuốt lên / vuốt xuống": mouse wheel, touch swipe và kéo thanh scroll.
+-- Nội dung được đặt trong một ScrollingFrame để không cần thay đổi logic
+-- của từng folder/section hiện có.
+
+local FolderScroll = Instance.new("ScrollingFrame")
+FolderScroll.Name = "FolderScroll"
+FolderScroll.Position = UDim2.fromOffset(0, 60)
+FolderScroll.Size = UDim2.fromOffset(W, H - 60)
+FolderScroll.BackgroundTransparency = 1
+FolderScroll.BorderSizePixel = 0
+FolderScroll.CanvasSize = UDim2.fromOffset(0, 380)
+FolderScroll.ScrollBarThickness = 5
+FolderScroll.ScrollBarImageColor3 = Color3.fromRGB(255, 211, 65)
+FolderScroll.ScrollingDirection = Enum.ScrollingDirection.Y
+FolderScroll.ElasticBehavior = Enum.ElasticBehavior.WhenScrollable
+FolderScroll.Active = true
+FolderScroll.ClipsDescendants = true
+FolderScroll.ZIndex = 10
+FolderScroll.Parent = Main
+
+local FolderPadding = Instance.new("UIPadding")
+FolderPadding.PaddingBottom = UDim.new(0, 18)
+FolderPadding.Parent = FolderScroll
+
+-- The sections below are positioned relative to this scroll canvas.
+local function putFolder(guiObject, x, y)
+    guiObject.Parent = FolderScroll
+    guiObject.Position = UDim2.fromOffset(x, y)
+end
+
+-- Mouse-wheel scrolling.
+UIS.InputChanged:Connect(function(input)
+    if not Main.Visible or not FolderScroll.Visible then
+        return
+    end
+
+    if input.UserInputType == Enum.UserInputType.MouseWheel then
+        local delta = input.Position.Z
+        local target = FolderScroll.CanvasPosition.Y - delta * 42
+        local maxY = math.max(0, FolderScroll.AbsoluteCanvasSize.Y - FolderScroll.AbsoluteWindowSize.Y)
+        FolderScroll.CanvasPosition = Vector2.new(
+            0,
+            math.clamp(target, 0, maxY)
+        )
+    end
+end)
+
+-- Touch swipe with a little momentum.
+local swipeActive = false
+local swipeStartY = 0
+local swipeStartScroll = 0
+local lastTouchY = 0
+local lastTouchTime = 0
+
+FolderScroll.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.Touch then
+        swipeActive = true
+        swipeStartY = input.Position.Y
+        swipeStartScroll = FolderScroll.CanvasPosition.Y
+        lastTouchY = input.Position.Y
+        lastTouchTime = os.clock()
+    end
+end)
+
+FolderScroll.InputChanged:Connect(function(input)
+    if not swipeActive or input.UserInputType ~= Enum.UserInputType.Touch then
+        return
+    end
+
+    local y = input.Position.Y
+    local dy = y - swipeStartY
+    FolderScroll.CanvasPosition = Vector2.new(0, swipeStartScroll - dy)
+
+    lastTouchY = y
+    lastTouchTime = os.clock()
+end)
+
+UIS.InputEnded:Connect(function(input)
+    if input.UserInputType ~= Enum.UserInputType.Touch then
+        return
+    end
+
+    if not swipeActive then
+        return
+    end
+
+    swipeActive = false
+
+    -- Clamp after the swipe.
+    local maxY = math.max(0, FolderScroll.AbsoluteCanvasSize.Y - FolderScroll.AbsoluteWindowSize.Y)
+    FolderScroll.CanvasPosition = Vector2.new(
+        0,
+        math.clamp(FolderScroll.CanvasPosition.Y, 0, maxY)
+    )
+end)
+
+-- Convenience controls for scripts/folders.
+local function scrollFoldersToTop()
+    FolderScroll.CanvasPosition = Vector2.new(0, 0)
+end
+
+local function scrollFoldersToBottom()
+    local maxY = math.max(0, FolderScroll.AbsoluteCanvasSize.Y - FolderScroll.AbsoluteWindowSize.Y)
+    FolderScroll.CanvasPosition = Vector2.new(0, maxY)
+end
+
+-- Expose safe controls to the rest of the UI.
+_G.PhongdzFolderScrollTop = scrollFoldersToTop
+_G.PhongdzFolderScrollBottom = scrollFoldersToBottom
+
+
+--===========================================================================
 -- SETTING FARM
 --===========================================================================
+local FruitM1Enabled = true
+_G.FruitM1Enabled = true
+
 local SettingFarm = Instance.new("Frame")
 SettingFarm.Name = "SettingFarm"
 SettingFarm.Position = UDim2.fromOffset(16, 16)
@@ -308,8 +444,7 @@ wdc.Parent = WeaponDrop
 
 local WeaponOptions = {"Melee", "Sword", "Blox Fruit"}
 local ChooseWeapon = "Melee"
-local FruitM1Enabled = true
-_G.FruitM1Enabled = true
+
 local SelectWeapon = nil
 _G.ChooseWeapon = ChooseWeapon
 _G.SelectWeapon = nil
@@ -403,119 +538,6 @@ task.spawn(function()
         task.wait(0.5)
     end
 end)
-
---===========================================================================
--- FOLDER SCROLL SYSTEM
---===========================================================================
--- "Vuốt lên / vuốt xuống": mouse wheel, touch swipe và kéo thanh scroll.
--- Nội dung được đặt trong một ScrollingFrame để không cần thay đổi logic
--- của từng folder/section hiện có.
-
-local FolderScroll = Instance.new("ScrollingFrame")
-FolderScroll.Name = "FolderScroll"
-FolderScroll.Position = UDim2.fromOffset(0, 60)
-FolderScroll.Size = UDim2.fromOffset(W, H - 60)
-FolderScroll.BackgroundTransparency = 1
-FolderScroll.BorderSizePixel = 0
-FolderScroll.CanvasSize = UDim2.fromOffset(0, 380)
-FolderScroll.ScrollBarThickness = 5
-FolderScroll.ScrollBarImageColor3 = Color3.fromRGB(255, 211, 65)
-FolderScroll.ScrollingDirection = Enum.ScrollingDirection.Y
-FolderScroll.ElasticBehavior = Enum.ElasticBehavior.WhenScrollable
-FolderScroll.Active = true
-FolderScroll.ClipsDescendants = true
-FolderScroll.ZIndex = 10
-FolderScroll.Parent = Main
-
-local FolderPadding = Instance.new("UIPadding")
-FolderPadding.PaddingBottom = UDim.new(0, 18)
-FolderPadding.Parent = FolderScroll
-
--- The sections below are positioned relative to this scroll canvas.
-local function putFolder(guiObject, x, y)
-    guiObject.Parent = FolderScroll
-    guiObject.Position = UDim2.fromOffset(x, y)
-end
-
--- Mouse-wheel scrolling.
-UIS.InputChanged:Connect(function(input)
-    if not Main.Visible or not FolderScroll.Visible then
-        return
-    end
-
-    if input.UserInputType == Enum.UserInputType.MouseWheel then
-        local delta = input.Position.Z
-        local target = FolderScroll.CanvasPosition.Y - delta * 42
-        local maxY = math.max(0, FolderScroll.AbsoluteCanvasSize.Y - FolderScroll.AbsoluteWindowSize.Y)
-        FolderScroll.CanvasPosition = Vector2.new(
-            0,
-            math.clamp(target, 0, maxY)
-        )
-    end
-end)
-
--- Touch swipe with a little momentum.
-local swipeActive = false
-local swipeStartY = 0
-local swipeStartScroll = 0
-local lastTouchY = 0
-local lastTouchTime = 0
-
-FolderScroll.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.Touch then
-        swipeActive = true
-        swipeStartY = input.Position.Y
-        swipeStartScroll = FolderScroll.CanvasPosition.Y
-        lastTouchY = input.Position.Y
-        lastTouchTime = os.clock()
-    end
-end)
-
-FolderScroll.InputChanged:Connect(function(input)
-    if not swipeActive or input.UserInputType ~= Enum.UserInputType.Touch then
-        return
-    end
-
-    local y = input.Position.Y
-    local dy = y - swipeStartY
-    FolderScroll.CanvasPosition = Vector2.new(0, swipeStartScroll - dy)
-
-    lastTouchY = y
-    lastTouchTime = os.clock()
-end)
-
-UIS.InputEnded:Connect(function(input)
-    if input.UserInputType ~= Enum.UserInputType.Touch then
-        return
-    end
-
-    if not swipeActive then
-        return
-    end
-
-    swipeActive = false
-
-    -- Clamp after the swipe.
-    local maxY = math.max(0, FolderScroll.AbsoluteCanvasSize.Y - FolderScroll.AbsoluteWindowSize.Y)
-    FolderScroll.CanvasPosition = Vector2.new(
-        0,
-        math.clamp(FolderScroll.CanvasPosition.Y, 0, maxY)
-    )
-end)
-
--- Convenience controls for scripts/folders.
-local function scrollFoldersToTop()
-    FolderScroll.CanvasPosition = Vector2.new(0, 0)
-end
-
-local function scrollFoldersToBottom()
-    local maxY = math.max(0, FolderScroll.AbsoluteCanvasSize.Y - FolderScroll.AbsoluteWindowSize.Y)
-    FolderScroll.CanvasPosition = Vector2.new(0, maxY)
-end
-
--- Expose safe controls to the rest of the UI.
-_G.PhongdzFolderScrollTop = scrollFoldersToTop
-_G.PhongdzFolderScrollBottom = scrollFoldersToBottom
 
 local Card = Instance.new("Frame")
 Card.Position = UDim2.fromOffset(16, 144)
@@ -632,7 +654,7 @@ Dashboard.Name = "Dashboard"
 Dashboard.Position = UDim2.fromOffset(10, 70)
 Dashboard.Size = UDim2.new(1, -20, 1, -80)
 Dashboard.BackgroundTransparency = 1
-Dashboard.ZIndex = 50
+Dashboard.ZIndex = 500
 Dashboard.Parent = Main
 
 local Sidebar = Instance.new("Frame")
@@ -884,6 +906,7 @@ settingBtn.Activated:Connect(function() selectPage("Setting Farm", "Setting Farm
 miscBtn.Activated:Connect(function() selectPage("Misc", "Misc") end)
 
 selectPage("Farm", "Farming")
+BootStatus.Visible = false
 
 -- Search filters sidebar categories.
 Search:GetPropertyChangedSignal("Text"):Connect(function()
