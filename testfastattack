@@ -211,7 +211,22 @@ TabContainer.ScrollBarThickness = 3
 TabContainer.ScrollingDirection = Enum.ScrollingDirection.Y
 TabContainer.CanvasSize = UDim2.fromOffset(0, 0)
 TabContainer.AutomaticCanvasSize = Enum.AutomaticSize.Y
+TabContainer.Active = true
 TabContainer.Parent = Sidebar
+
+TabContainer.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseWheel then
+        local delta = -input.Position.Z * 38
+        local maxY = math.max(
+            0,
+            TabContainer.AbsoluteCanvasSize.Y - TabContainer.AbsoluteSize.Y
+        )
+        TabContainer.CanvasPosition = Vector2.new(
+            0,
+            math.clamp(TabContainer.CanvasPosition.Y + delta, 0, maxY)
+        )
+    end
+end)
 
 local tabLayout = Instance.new("UIListLayout")
 tabLayout.Padding = UDim.new(0, 7)
@@ -284,12 +299,38 @@ local function setActiveTab(name)
     if Card then Card.Visible = farmVisible end
     if Toggle then Toggle.Visible = farmVisible end
     if BoneCard then BoneCard.Visible = farmVisible end
-    if SettingsFrame then SettingsFrame.Visible = settingsVisible end
+    if SettingsFrame then
+        SettingsFrame.Visible = settingsVisible
+        if settingsVisible then
+            SettingsFrame.CanvasPosition = Vector2.zero
+        end
+    end
+
+    if FarmContent then
+        FarmContent.Visible = farmVisible
+        if farmVisible then
+            FarmContent.CanvasPosition = Vector2.zero
+        end
+    end
 end
 
+local FarmContent = Instance.new("ScrollingFrame")
+FarmContent.Name = "FarmContent"
+FarmContent.Position = UDim2.fromOffset(148, 68)
+FarmContent.Size = UDim2.fromOffset(W - 156, H - 76)
+FarmContent.BackgroundTransparency = 1
+FarmContent.BorderSizePixel = 0
+FarmContent.ScrollBarThickness = 4
+FarmContent.ScrollingDirection = Enum.ScrollingDirection.Y
+FarmContent.CanvasSize = UDim2.fromOffset(0, 390)
+FarmContent.AutomaticCanvasSize = Enum.AutomaticSize.Y
+FarmContent.Active = true
+FarmContent.Visible = true
+FarmContent.Parent = Main
+
 Card = Instance.new("Frame")
-Card.Position = UDim2.fromOffset(156, 76)
-Card.Size = UDim2.fromOffset(W - 172, 65)
+Card.Position = UDim2.fromOffset(8, 8)
+Card.Size = UDim2.new(1, -16, 0, 65)
 Card.BackgroundColor3 = Color3.fromRGB(22, 25, 33)
 Card.BorderSizePixel = 0
 Card.Parent = Main
@@ -321,8 +362,8 @@ CardDesc.TextXAlignment = Enum.TextXAlignment.Left
 CardDesc.Parent = Card
 
 Toggle = Instance.new("TextButton")
-Toggle.Position = UDim2.fromOffset(156, 154)
-Toggle.Size = UDim2.fromOffset(W - 172, 52)
+Toggle.Position = UDim2.fromOffset(8, 86)
+Toggle.Size = UDim2.new(1, -16, 0, 52)
 Toggle.Text = ""
 Toggle.BackgroundColor3 = Color3.fromRGB(55, 59, 70)
 Toggle.BorderSizePixel = 0
@@ -357,7 +398,7 @@ Status.Parent = Toggle
 
 local Pill = Instance.new("Frame")
 Pill.Size = UDim2.fromOffset(52, 29)
-Pill.Position = UDim2.fromOffset(W - 84, 11)
+Pill.Position = UDim2.new(1, -65, 0, 11)
 Pill.BackgroundColor3 = Color3.fromRGB(70, 74, 85)
 Pill.BorderSizePixel = 0
 Pill.Parent = Toggle
@@ -385,8 +426,8 @@ kc.Parent = Knob
 --===========================================================================
 BoneCard = Instance.new("Frame")
 BoneCard.Name = "BoneCard"
-BoneCard.Position = UDim2.fromOffset(156, 218)
-BoneCard.Size = UDim2.fromOffset(W - 172, 120)
+BoneCard.Position = UDim2.fromOffset(8, 148)
+BoneCard.Size = UDim2.new(1, -16, 0, 120)
 BoneCard.BackgroundColor3 = Color3.fromRGB(22, 25, 33)
 BoneCard.BorderSizePixel = 0
 BoneCard.Parent = Main
@@ -419,7 +460,7 @@ BoneStatus.Parent = BoneCard
 
 BoneToggle = Instance.new("TextButton")
 BoneToggle.Position = UDim2.fromOffset(13, 58)
-BoneToggle.Size = UDim2.fromOffset(W - 198, 45)
+BoneToggle.Size = UDim2.new(1, -26, 0, 45)
 BoneToggle.Text = "CÀY XƯƠNG  •  OFF"
 BoneToggle.Font = Enum.Font.GothamBold
 BoneToggle.TextSize = 10
@@ -448,6 +489,16 @@ BoneToggle.Activated:Connect(function()
     _G.AutoBone = not (_G.AutoBone == true)
 
     if _G.AutoBone then
+        if not CharacterState then
+            CaptureCharacterState()
+        end
+    else
+        if not _G.AutoLevel then
+            RestoreAfterFarm()
+        end
+    end
+
+    if _G.AutoBone then
         BoneToggle.Text = "CÀY XƯƠNG  •  ON"
         BoneToggle.BackgroundColor3 = Color3.fromRGB(67, 92, 53)
         BoneStatus.Text = "● CÀY XƯƠNG ĐANG CHẠY"
@@ -459,12 +510,32 @@ BoneToggle.Activated:Connect(function()
         BoneStatus.TextColor3 = Color3.fromRGB(130, 135, 148)
     end
 end)
+-- All Farm controls live inside one vertical scrolling viewport.
+Card.Parent = FarmContent
+Toggle.Parent = FarmContent
+BoneCard.Parent = FarmContent
 
+
+
+
+FarmContent.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseWheel then
+        local delta = -input.Position.Z * 38
+        local maxY = math.max(
+            0,
+            FarmContent.AbsoluteCanvasSize.Y - FarmContent.AbsoluteSize.Y
+        )
+        FarmContent.CanvasPosition = Vector2.new(
+            0,
+            math.clamp(FarmContent.CanvasPosition.Y + delta, 0, maxY)
+        )
+    end
+end)
 
 --===========================================================================
 -- SETTINGS FARM
 --===========================================================================
-SettingsFrame = Instance.new("Frame")
+SettingsFrame = Instance.new("ScrollingFrame")
 SettingsFrame.Name = "SettingsFarm"
 SettingsFrame.Position = UDim2.fromOffset(156, 76)
 SettingsFrame.Size = UDim2.fromOffset(W - 172, H - 88)
@@ -472,6 +543,11 @@ SettingsFrame.BackgroundColor3 = Color3.fromRGB(22, 25, 33)
 SettingsFrame.ClipsDescendants = true
 SettingsFrame.BorderSizePixel = 0
 SettingsFrame.Visible = false
+SettingsFrame.ScrollingDirection = Enum.ScrollingDirection.Y
+SettingsFrame.ScrollBarThickness = 4
+SettingsFrame.CanvasSize = UDim2.fromOffset(0, 430)
+SettingsFrame.AutomaticCanvasSize = Enum.AutomaticSize.Y
+SettingsFrame.Active = true
 SettingsFrame.Parent = Main
 
 local sfc = Instance.new("UICorner")
@@ -616,37 +692,40 @@ SettingsFrame.InputChanged:Connect(function(input)
     end
 end)
 
-local GatherLabel = Instance.new("TextLabel")
-GatherLabel.Position = UDim2.fromOffset(14, 270)
-GatherLabel.Size = UDim2.fromOffset(300, 20)
-GatherLabel.BackgroundTransparency = 1
-GatherLabel.Text = "Gom quái"
-GatherLabel.Font = Enum.Font.GothamSemibold
-GatherLabel.TextSize = 10
-GatherLabel.TextColor3 = Color3.fromRGB(190, 194, 204)
-GatherLabel.TextXAlignment = Enum.TextXAlignment.Left
-GatherLabel.Parent = SettingsFrame
 
-MobGatherToggle = Instance.new("TextButton")
-MobGatherToggle.Position = UDim2.fromOffset(14, 297)
-MobGatherToggle.Size = UDim2.fromOffset(W - 200, 44)
-MobGatherToggle.Text = "GOM QUÁI  •  OFF"
-MobGatherToggle.Font = Enum.Font.GothamBold
-MobGatherToggle.TextSize = 10
-MobGatherToggle.TextColor3 = Color3.fromRGB(240, 242, 247)
-MobGatherToggle.BackgroundColor3 = Color3.fromRGB(55, 59, 70)
-MobGatherToggle.BorderSizePixel = 0
-MobGatherToggle.AutoButtonColor = false
-MobGatherToggle.Parent = SettingsFrame
+-- Smooth mouse-wheel/touch scrolling for Settings Farm.
+SettingsFrame.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseWheel then
+        local delta = -input.Position.Z * 38
+        local maxY = math.max(
+            0,
+            SettingsFrame.AbsoluteCanvasSize.Y - SettingsFrame.AbsoluteSize.Y
+        )
+        SettingsFrame.CanvasPosition = Vector2.new(
+            0,
+            math.clamp(SettingsFrame.CanvasPosition.Y + delta, 0, maxY)
+        )
+    end
+end)
 
 local gtc = Instance.new("UICorner")
 gtc.CornerRadius = UDim.new(0, 9)
 gtc.Parent = MobGatherToggle
 
-_G.GatherMobs = _G.GatherMobs or false
+_G.GatherMobs = false
 
 MobGatherToggle.Activated:Connect(function()
-    _G.GatherMobs = not _G.GatherMobs
+    _G.GatherMobs = false
+
+    if _G.GatherMobs then
+        if not CharacterState then
+            CaptureCharacterState()
+        end
+    else
+        if not _G.AutoLevel and not _G.AutoBone then
+            RestoreAfterFarm()
+        end
+    end
 
     if _G.GatherMobs then
         MobGatherToggle.Text = "GOM QUÁI  •  ON"
@@ -823,10 +902,10 @@ Close.Activated:Connect(function()
         end)
         _G.__PhongdzFlightTween = nil
     end
-    bringmob = false
-    FarmPos = nil
-    MonFarm = nil
+    StopGather()
     StopFlight()
+    SetNoGravity(false)
+    RestoreCharacterState()
     Gui:Destroy()
 end)
 
@@ -883,6 +962,60 @@ end
 --=============================================================================
 
 local function GetRoot() local c=LocalPlayer.Character return c and c:FindFirstChild("HumanoidRootPart") end
+
+--===========================================================================
+-- CHARACTER STATE BACKUP / RESTORE
+--===========================================================================
+local CharacterState
+
+local function CaptureCharacterState()
+    local c = LocalPlayer.Character
+    local hum = c and c:FindFirstChildOfClass("Humanoid")
+    local root = c and c:FindFirstChild("HumanoidRootPart")
+    if not c or not hum or not root then return end
+
+    CharacterState = {
+        humanoid = hum,
+        root = root,
+        WalkSpeed = hum.WalkSpeed,
+        JumpPower = hum.JumpPower,
+        AutoRotate = hum.AutoRotate,
+        UseJumpPower = hum.UseJumpPower,
+        RootCanCollide = root.CanCollide,
+        RootAnchored = root.Anchored,
+        RootAssemblyLinearVelocity = root.AssemblyLinearVelocity,
+        RootAssemblyAngularVelocity = root.AssemblyAngularVelocity,
+    }
+end
+
+local function RestoreCharacterState()
+    local state = CharacterState
+    CharacterState = nil
+
+    if not state then return end
+
+    local c = LocalPlayer.Character
+    local hum = c and c:FindFirstChildOfClass("Humanoid")
+    local root = c and c:FindFirstChild("HumanoidRootPart")
+
+    -- Restore only if this is still the same character/root that was captured.
+    if hum and state.humanoid == hum then
+        pcall(function() hum.WalkSpeed = state.WalkSpeed end)
+        pcall(function() hum.JumpPower = state.JumpPower end)
+        pcall(function() hum.AutoRotate = state.AutoRotate end)
+        pcall(function() hum.UseJumpPower = state.UseJumpPower end)
+    end
+
+    if root and state.root == root then
+        pcall(function() root.CanCollide = state.RootCanCollide end)
+        pcall(function() root.Anchored = state.RootAnchored end)
+        pcall(function()
+            root.AssemblyLinearVelocity = Vector3.zero
+            root.AssemblyAngularVelocity = Vector3.zero
+        end)
+    end
+end
+
 local NoGravityAttachment
 local NoGravityForce
 
@@ -954,6 +1087,13 @@ local function StopFlight()
         end)
         FlightAttachment = nil
     end
+end
+
+local function RestoreAfterFarm()
+    StopGather()
+    StopFlight()
+    SetNoGravity(false)
+    RestoreCharacterState()
 end
 
 local function EnsureFlightController(root)
@@ -1064,9 +1204,7 @@ local function FastAttack()
     local root = GetRoot()
     if not enemies or not root then return end
 
-    local hits = {}
-    local nearestHead
-    local nearestDistance = math.huge
+    local candidates = {}
 
     for _, mob in ipairs(enemies:GetChildren()) do
         local hum = mob:FindFirstChildOfClass("Humanoid")
@@ -1075,13 +1213,29 @@ local function FastAttack()
         if hum and head and hum.Health > 0 then
             local distance = (root.Position - head.Position).Magnitude
             if distance <= 60 then
-                hits[#hits + 1] = {mob, head}
-
-                if distance < nearestDistance then
-                    nearestDistance = distance
-                    nearestHead = head
-                end
+                candidates[#candidates + 1] = {
+                    mob = mob,
+                    head = head,
+                    distance = distance
+                }
             end
+        end
+    end
+
+    -- Nearest two mobs are grouped into the same hit packet.
+    table.sort(candidates, function(a, b)
+        return a.distance < b.distance
+    end)
+
+    local hits = {}
+    local nearestHead
+
+    for i = 1, math.min(2, #candidates) do
+        local target = candidates[i]
+        hits[#hits + 1] = {target.mob, target.head}
+
+        if i == 1 then
+            nearestHead = target.head
         end
     end
 
@@ -1095,158 +1249,70 @@ end
 
 local function QuestText() local pg=LocalPlayer:FindFirstChild("PlayerGui"); local main=pg and pg:FindFirstChild("Main"); local q=main and main:FindFirstChild("Quest"); local c=q and q:FindFirstChild("Container"); local qt=c and c:FindFirstChild("QuestTitle"); return q,qt and qt:FindFirstChild("Title") end
 
--- Source uses bringmob/FarmPos/MonFarm as the farm-state for mob gathering.
+-- Stable 2-mob gather controller.
 local bringmob = false
 local FarmPos
 local MonFarm
+local GatherPosition
 
 local function SetFarmTarget(root, mobName)
     if root then
-        FarmPos = root.CFrame
         MonFarm = mobName
+        GatherPosition = root.Position + Vector3.new(0, 8, 0)
+        FarmPos = CFrame.new(GatherPosition)
     end
 end
 
+local function StopGather()
+    bringmob = false
+    FarmPos = nil
+    MonFarm = nil
+    GatherPosition = nil
+end
+
 task.spawn(function()
-    while task.wait(0.08) do
-        if _G.GatherMobs and bringmob and FarmPos and MonFarm then
+    while task.wait(0.06) do
+        if _G.GatherMobs and bringmob and GatherPosition and MonFarm then
             pcall(function()
                 local enemies = workspace:FindFirstChild("Enemies")
                 if not enemies then return end
 
-                for _, mob in ipairs(enemies:GetChildren()) do
-                    if mob.Name == MonFarm and mob:FindFirstChild("Humanoid")
-                        and mob:FindFirstChild("HumanoidRootPart")
-                        and mob.Humanoid.Health > 0 then
-                        mob.HumanoidRootPart.CFrame = FarmPos
-                        mob.HumanoidRootPart.AssemblyLinearVelocity = Vector3.zero
-                        mob.HumanoidRootPart.AssemblyAngularVelocity = Vector3.zero
-                        mob.HumanoidRootPart.CanCollide = false
-                        mob.Humanoid.WalkSpeed = 0
-                        mob.Humanoid.JumpPower = 0
-                    end
-                end
-            end)
-        end
-    end
-end)
---===========================================================================
--- FARM XƯƠNG — adapted directly from the provided source's Xương section.
---===========================================================================
-_G.AutoBone = _G.AutoBone or false
-local BoneQuestCFrame = CFrame.new(-9515.75, 174.8521728515625, 6079.40625)
-local BoneMobs = {
-    ["Reborn Skeleton"] = true,
-    ["Living Zombie"] = true,
-    ["Demonic Soul"] = true,
-    ["Posessed Mummy"] = true,
-}
-
-task.spawn(function()
-    while task.wait(1) do
-        pcall(function()
-            local comm = ReplicatedStorage:FindFirstChild("Remotes")
-                and ReplicatedStorage.Remotes:FindFirstChild("CommF_")
-
-            if comm then
-                local count = comm:InvokeServer("Bones", "Check")
-                if BoneCount and BoneCount.Parent then
-                    BoneCount.Text = "Xương: " .. tostring(count)
-                end
-            end
-
-            if not Sea3 then
-                if BoneStatus and BoneStatus.Parent then
-                    BoneStatus.Text = "● CHỈ HOẠT ĐỘNG Ở SEA 3"
-                    BoneStatus.TextColor3 = Color3.fromRGB(255, 180, 80)
-                end
-            elseif not _G.AutoBone then
-                if BoneStatus and BoneStatus.Parent then
-                    BoneStatus.Text = "● SẴN SÀNG"
-                    BoneStatus.TextColor3 = Color3.fromRGB(130, 135, 148)
-                end
-            end
-        end)
-    end
-end)
-
-task.spawn(function()
-    while task.wait() do
-        if _G.AutoBone and Sea3 then
-            pcall(function()
-                local pg = LocalPlayer:FindFirstChild("PlayerGui")
-                local main = pg and pg:FindFirstChild("Main")
-                local quest = main and main:FindFirstChild("Quest")
-                local container = quest and quest:FindFirstChild("Container")
-                local titleObj = container and container:FindFirstChild("QuestTitle")
-                local title = titleObj and titleObj:FindFirstChild("Title")
-
-                local comm = ReplicatedStorage:FindFirstChild("Remotes")
-                    and ReplicatedStorage.Remotes:FindFirstChild("CommF_")
-                if not comm then return end
-
-                -- Source behavior: abandon a non-Demonic Soul quest.
-                if title and not string.find(tostring(title.Text), "Demonic Soul") then
-                    comm:InvokeServer("AbandonQuest")
-                end
-
-                if not quest or not quest.Visible then
-                    TweenTo(BoneQuestCFrame)
-
-                    local root = GetRoot()
-                    if root and (root.Position - BoneQuestCFrame.Position).Magnitude <= 3 then
-                        comm:InvokeServer("StartQuest", "HauntedQuest2", 1)
-                    end
-                    return
-                end
-
-                local enemies = workspace:FindFirstChild("Enemies")
-                if not enemies then return end
+                local candidates = {}
 
                 for _, mob in ipairs(enemies:GetChildren()) do
+                    if mob.Name == MonFarm then
+                        local hum = mob:FindFirstChildOfClass("Humanoid")
+                        local mobRoot = mob:FindFirstChild("HumanoidRootPart")
+
+                        if hum and mobRoot and hum.Health > 0 then
+                            candidates[#candidates + 1] = {
+                                mob = mob,
+                                distance = (mobRoot.Position - GatherPosition).Magnitude
+                            }
+                        end
+                    end
+                end
+
+                table.sort(candidates, function(a, b)
+                    return a.distance < b.distance
+                end)
+
+                local gatherCF = CFrame.new(GatherPosition)
+
+                for i = 1, math.min(2, #candidates) do
+                    local mob = candidates[i].mob
                     local hum = mob:FindFirstChildOfClass("Humanoid")
-                    local rp = mob:FindFirstChild("HumanoidRootPart")
+                    local mobRoot = mob:FindFirstChild("HumanoidRootPart")
 
-                    if hum and rp and hum.Health > 0 and BoneMobs[mob.Name] then
-                        repeat
-                            task.wait(_G.Fast_Delay)
-                            AutoHaki()
-                            local equippedTool = EquipFarmWeapon()
-                            bringmob = true
-                            SetFarmTarget(rp, mob.Name)
-                            TweenTo(rp.CFrame * CFrame.new(0, 40, 0))
-
-                            local currentRoot = GetRoot()
-                            if equippedTool and currentRoot
-                                and (currentRoot.Position - rp.Position).Magnitude <= 60 then
-                                FastAttack()
-                            end
-
-                            pcall(function()
-                                rp.Size = Vector3.new(60, 60, 60)
-                                rp.Transparency = 1
-                                rp.CanCollide = false
-                                hum.JumpPower = 0
-                                hum.WalkSpeed = 0
-                            end)
-                        until not _G.AutoBone
-                            or hum.Health <= 0
-                            or not mob.Parent
-                            or not quest.Visible
+                    if hum and mobRoot and hum.Health > 0 then
+                        mob:PivotTo(gatherCF)
+                        mobRoot.AssemblyLinearVelocity = Vector3.zero
+                        mobRoot.AssemblyAngularVelocity = Vector3.zero
+                        mobRoot.CanCollide = false
+                        hum.WalkSpeed = 0
+                        hum.JumpPower = 0
+                        hum.AutoRotate = false
                     end
-
-                    if not _G.AutoBone then
-                        bringmob = false
-                        FarmPos = nil
-                        MonFarm = nil
-                        break
-                    end
-                end
-
-                if not _G.AutoBone then
-                    bringmob = false
-                    FarmPos = nil
-                    MonFarm = nil
                 end
             end)
         end
@@ -1255,10 +1321,7 @@ end)
 
 local function RunFarm()
     if not _G.AutoLevel then
-        bringmob = false
-        FarmPos = nil
-        MonFarm = nil
-        StopFlight()
+        RestoreAfterFarm()
         return
     end
 
@@ -1313,9 +1376,12 @@ local function RunFarm()
                 local equippedTool = EquipFarmWeapon()
 
                 bringmob = true
-                SetFarmTarget(rp, mob.Name)
+                if not GatherPosition
+                    or (GatherPosition - rp.Position).Magnitude > 6 then
+                    SetFarmTarget(rp, mob.Name)
+                end
 
-                local targetCF = rp.CFrame * CFrame.new(0, 40, 0)
+                local targetCF = CFrame.new(rp.Position) * CFrame.new(0, 40, 0)
                 TweenTo(targetCF)
 
                 local currentRoot = GetRoot()
@@ -2067,12 +2133,20 @@ end
 
 Toggle.Activated:Connect(function()
     farmEnabled = not farmEnabled
+
+    if farmEnabled then
+        CaptureCharacterState()
+    else
+        RestoreAfterFarm()
+    end
+
     _G.AutoLevel = farmEnabled
 
     if farmEnabled and not farmLoaded then
         if not loadFarm() then
             farmEnabled = false
             _G.AutoLevel = false
+            RestoreAfterFarm()
         end
     end
 
