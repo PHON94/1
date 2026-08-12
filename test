@@ -1283,33 +1283,77 @@ local function TweenTo(cf)
     end)
     tween:Play()
 end
+local function FindFarmTool()
+    local c = LocalPlayer.Character
+    local b = LocalPlayer:FindFirstChildOfClass("Backpack")
+
+    local function scan(container)
+        if not container then return nil end
+
+        -- Prefer an explicit selection resolved by the UI.
+        if SelectWeapon then
+            local selected = container:FindFirstChild(SelectWeapon)
+            if selected and selected:IsA("Tool") then
+                return selected
+            end
+        end
+
+        local fallback = nil
+
+        for _, tool in ipairs(container:GetChildren()) do
+            if tool:IsA("Tool") then
+                local tip = string.lower(tostring(tool.ToolTip or ""))
+                local name = string.lower(tool.Name)
+
+                if ChooseWeapon == "Melee" then
+                    if tip == "melee" or name:find("combat", 1, true)
+                        or name:find("step", 1, true)
+                        or name:find("claw", 1, true)
+                        or name:find("kung fu", 1, true)
+                        or name:find("talon", 1, true)
+                        or name:find("godhuman", 1, true)
+                        or name:find("sanguine", 1, true) then
+                        return tool
+                    end
+                elseif ChooseWeapon == "Sword" then
+                    if tip == "sword" then
+                        return tool
+                    end
+                elseif ChooseWeapon == "Blox Fruit" then
+                    if tip == "blox fruit" or name:find("fruit", 1, true) then
+                        return tool
+                    end
+                end
+
+                fallback = fallback or tool
+            end
+        end
+
+        return fallback
+    end
+
+    return scan(c) or scan(b)
+end
+
 local function EquipFarmWeapon()
     local c = LocalPlayer.Character
     local h = c and c:FindFirstChildOfClass("Humanoid")
-    if not h then return end
+    if not h then return nil end
 
-    local wanted = SelectWeapon
-    if not wanted then return end
+    local tool = FindFarmTool()
+    if not tool then return nil end
 
-    local equipped = c:FindFirstChild(wanted)
-    if equipped and equipped:IsA("Tool") then
-        LastEquipName = wanted
-        return equipped
-    end
-
-    if LastEquipName == wanted then
-        return c:FindFirstChild(wanted)
-    end
-
-    local b = LocalPlayer:FindFirstChildOfClass("Backpack")
-    local tool = b and b:FindFirstChild(wanted)
-    if tool and tool:IsA("Tool") then
+    if tool.Parent ~= c then
         pcall(function()
             h:EquipTool(tool)
         end)
-        LastEquipName = wanted
-        return tool
     end
+
+    LastEquipName = tool.Name
+    SelectWeapon = tool.Name
+    _G.SelectWeapon = tool.Name
+
+    return tool
 end
 local function AutoHaki() local c=LocalPlayer.Character; local rem=ReplicatedStorage:FindFirstChild("Remotes"); local comm=rem and rem:FindFirstChild("CommF_"); if c and not c:FindFirstChild("HasBuso") and comm then pcall(function() comm:InvokeServer("Buso") end) end end
 local AttackRemote,HitRemote
@@ -1376,7 +1420,7 @@ local function FastAttack()
                 local rp = mob:FindFirstChild("HumanoidRootPart")
                 if hum and head and rp and hum.Health > 0 then
                     local d = (root.Position - head.Position).Magnitude
-                    if d <= 90 and (not bestDistance or d < bestDistance) then
+                    if d <= 260 and (not bestDistance or d < bestDistance) then
                         bestMob, bestHead, bestDistance = mob, head, d
                     end
                 end
@@ -1463,28 +1507,36 @@ local function RunFarm()
             true
         )
     else
-        -- Without a visible Quest UI, let the farm proceed using the level map.
-        correct = true
+        -- Without a Quest GUI, use the direct quest-start cooldown.
+        correct = (
+            _G.__PhongdzLastQuestStart
+            and os.clock() - _G.__PhongdzLastQuestStart < 2.5
+        )
     end
 
     if not correct then
         local rem = ReplicatedStorage:FindFirstChild("Remotes")
         local comm = rem and rem:FindFirstChild("CommF_")
-
-        if comm then
-            pcall(function()
-                comm:InvokeServer("AbandonQuest")
-            end)
-        end
-
-        TweenTo(CFrameQ)
-
         local root = GetRoot()
-        if root and (root.Position - CFrameQ.Position).Magnitude <= 7 and comm then
-            pcall(function()
-                comm:InvokeServer("StartQuest", NameQuest, QuestLv)
-            end)
+
+        -- If the quest UI is not reliable, avoid repeatedly abandoning it.
+        -- Move to the quest NPC and request the quest at a controlled rate.
+        if comm and root then
+            local nearQuest = (root.Position - CFrameQ.Position).Magnitude <= 10
+
+            if not nearQuest then
+                TweenTo(CFrameQ)
+            elseif not _G.__PhongdzLastQuestStart
+                or os.clock() - _G.__PhongdzLastQuestStart > 1.25 then
+
+                pcall(function()
+                    comm:InvokeServer("StartQuest", NameQuest, QuestLv)
+                end)
+
+                _G.__PhongdzLastQuestStart = os.clock()
+            end
         end
+
         return
     end
 
@@ -1540,13 +1592,25 @@ local function RunFarm()
             EquipFarmWeapon()
 
             local farmPoint = GetFarmPoint(rp)
-            if farmPoint then TweenTo(farmPoint) end
+
+            -- If the stable destination is already stale by more than 18 studs,
+            -- refresh it once rather than freezing the player on an old point.
+            if farmPoint and (farmPoint.Position - (rp.Position + Vector3.new(0, 38, 0))).Magnitude > 18 then
+                FarmDestination = rp.CFrame * CFrame.new(0, 38, 0)
+                farmPoint = FarmDestination
+            end
+
+            if farmPoint then
+                TweenTo(farmPoint)
+            end
 
             if not _G.AutoLevel then return end
 
             BringMobs(NameMon, rp)
 
-            if ChooseWeapon ~= "Blox Fruit" or FruitM1Enabled then
+            -- Attack only after a tool is actually equipped.
+            local equippedTool = EquipFarmWeapon()
+            if equippedTool and (ChooseWeapon ~= "Blox Fruit" or FruitM1Enabled) then
                 FastAttack()
             end
 
@@ -2230,6 +2294,25 @@ function CheckLevel()
         end
     end
 end
+
+-- Recover from stale targets/spawn transitions without touching the UI.
+task.spawn(function()
+    while _G.AutoLevel do
+        task.wait(0.15)
+
+        if ActiveTarget then
+            local hum = ActiveTarget:FindFirstChildOfClass("Humanoid")
+            if not ActiveTarget.Parent or not hum or hum.Health <= 0 then
+                ActiveTarget = nil
+                FarmDestination = nil
+                FarmDestinationTarget = nil
+                StopFarmTween()
+            end
+        end
+    end
+end)
+
+
 -- Start only after CheckLevel has been declared above.
 task.spawn(function()
     while Gui.Parent do
