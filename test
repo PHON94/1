@@ -1478,6 +1478,76 @@ local function QuestText()
 
     return q, title
 end
+
+
+-- Gravity lock for Farm Level.
+-- Farm ON  -> disable character falling.
+-- Farm OFF -> immediately restore normal physics.
+local GravityConnection = nil
+local GravityForce = nil
+local GravityAttachment = nil
+
+local function DisableFarmGravity()
+    local root = GetRoot()
+    if not root then return end
+
+    if GravityConnection or GravityForce then
+        return
+    end
+
+    GravityAttachment = Instance.new("Attachment")
+    GravityAttachment.Name = "PhongdzFarmGravityAttachment"
+    GravityAttachment.Parent = root
+
+    GravityForce = Instance.new("VectorForce")
+    GravityForce.Name = "PhongdzFarmNoGravity"
+    GravityForce.Attachment0 = GravityAttachment
+    GravityForce.RelativeTo = Enum.ActuatorRelativeTo.World
+    GravityForce.ApplyAtCenterOfMass = true
+    GravityForce.Force = Vector3.zero
+    GravityForce.Parent = root
+
+    GravityConnection = RunService.Heartbeat:Connect(function()
+        if not _G.AutoLevel then
+            return
+        end
+
+        local character = LocalPlayer.Character
+        local currentRoot = GetRoot()
+        if not character or not currentRoot or not currentRoot.Parent then
+            return
+        end
+
+        local mass = currentRoot.AssemblyMass
+        GravityForce.Force = Vector3.new(
+            0,
+            mass * workspace.Gravity,
+            0
+        )
+    end)
+end
+
+local function RestoreFarmGravity()
+    if GravityConnection then
+        GravityConnection:Disconnect()
+        GravityConnection = nil
+    end
+
+    if GravityForce then
+        pcall(function()
+            GravityForce:Destroy()
+        end)
+        GravityForce = nil
+    end
+
+    if GravityAttachment then
+        pcall(function()
+            GravityAttachment:Destroy()
+        end)
+        GravityAttachment = nil
+    end
+end
+
 local function RunFarm()
     CheckLevel()
     if not NameMon or not NameQuest or not CFrameQ then return end
@@ -1604,7 +1674,9 @@ local function RunFarm()
                 TweenTo(farmPoint)
             end
 
-            if not _G.AutoLevel then return end
+            if not _G.AutoLevel then
+                return
+            end
 
             BringMobs(NameMon, rp)
 
@@ -2319,6 +2391,19 @@ task.spawn(function()
 end)
 
 
+
+LocalPlayer.CharacterAdded:Connect(function()
+    RestoreFarmGravity()
+
+    if _G.AutoLevel then
+        task.delay(0.75, function()
+            if _G.AutoLevel then
+                DisableFarmGravity()
+            end
+        end)
+    end
+end)
+
 -- Start only after CheckLevel has been declared above.
 -- IMPORTANT: FARM_SOURCE is loaded through loadstring(), so it does NOT
 -- inherit the UI's local `Gui` variable. Never use `Gui.Parent` here.
@@ -2334,6 +2419,7 @@ task.spawn(function()
                 task.wait(0.045)
             end
         else
+            RestoreFarmGravity()
             task.wait(0.12)
         end
     end
