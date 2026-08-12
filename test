@@ -754,7 +754,7 @@ CategoryLayer.ZIndex = 20
 CategoryLayer.Active = false
 CategoryLayer.Parent = Main
 
-local CategoryBar = Instance.new("Frame")
+local CategoryBar = Instance.new("ScrollingFrame")
 CategoryBar.Name = "CategoryBar"
 CategoryBar.Position = UDim2.fromOffset(10, 70)
 CategoryBar.Size = UDim2.new(0, 118, 1, -80)
@@ -762,7 +762,12 @@ CategoryBar.BackgroundColor3 = Color3.fromRGB(18, 21, 28)
 CategoryBar.BorderSizePixel = 0
 CategoryBar.ClipsDescendants = true
 CategoryBar.ZIndex = 25
-CategoryBar.Active = false
+CategoryBar.Active = true
+CategoryBar.ScrollingDirection = Enum.ScrollingDirection.Y
+CategoryBar.ScrollBarThickness = 4
+CategoryBar.ScrollBarImageColor3 = Color3.fromRGB(255, 211, 65)
+CategoryBar.CanvasSize = UDim2.fromOffset(0, 0)
+CategoryBar.AutomaticCanvasSize = Enum.AutomaticSize.Y
 CategoryBar.Parent = CategoryLayer
 
 local cbCorner = Instance.new("UICorner")
@@ -780,7 +785,70 @@ local cbPadding = Instance.new("UIPadding")
 cbPadding.PaddingTop = UDim.new(0, 9)
 cbPadding.PaddingLeft = UDim.new(0, 8)
 cbPadding.PaddingRight = UDim.new(0, 8)
+cbPadding.PaddingBottom = UDim.new(0, 10)
 cbPadding.Parent = CategoryBar
+
+-- Major-section scroll helpers.
+local function ScrollMajorSections(delta)
+    local maxY = math.max(0, CategoryBar.AbsoluteCanvasSize.Y - CategoryBar.AbsoluteWindowSize.Y)
+    CategoryBar.CanvasPosition = Vector2.new(
+        0,
+        math.clamp(CategoryBar.CanvasPosition.Y + (delta or 0), 0, maxY)
+    )
+end
+
+local function ScrollMajorSectionsTop()
+    CategoryBar.CanvasPosition = Vector2.new(0, 0)
+end
+
+local function ScrollMajorSectionsBottom()
+    CategoryBar.CanvasPosition = Vector2.new(
+        0,
+        math.max(0, CategoryBar.AbsoluteCanvasSize.Y - CategoryBar.AbsoluteWindowSize.Y)
+    )
+end
+
+_G.PhongdzScrollMajor = ScrollMajorSections
+_G.PhongdzScrollMajorTop = ScrollMajorSectionsTop
+_G.PhongdzScrollMajorBottom = ScrollMajorSectionsBottom
+
+CategoryBar.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseWheel then
+        ScrollMajorSections(-(input.Position.Z or 0) * 42)
+    end
+end)
+
+local majorTouching = false
+local majorTouchStart = 0
+local majorScrollStart = 0
+
+CategoryBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.Touch then
+        majorTouching = true
+        majorTouchStart = input.Position.Y
+        majorScrollStart = CategoryBar.CanvasPosition.Y
+    end
+end)
+
+CategoryBar.InputChanged:Connect(function(input)
+    if not majorTouching or input.UserInputType ~= Enum.UserInputType.Touch then
+        return
+    end
+
+    local dy = input.Position.Y - majorTouchStart
+    local maxY = math.max(0, CategoryBar.AbsoluteCanvasSize.Y - CategoryBar.AbsoluteWindowSize.Y)
+
+    CategoryBar.CanvasPosition = Vector2.new(
+        0,
+        math.clamp(majorScrollStart - dy, 0, maxY)
+    )
+end)
+
+UIS.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.Touch then
+        majorTouching = false
+    end
+end)
 
 local CategoryContent = Instance.new("Frame")
 CategoryContent.Name = "CategoryContent"
@@ -880,6 +948,77 @@ farmButton.Activated:Connect(function() activateCategory("FARM") end)
 espButton.Activated:Connect(function() activateCategory("ESP") end)
 settingButton.Activated:Connect(function() activateCategory("SETTING") end)
 miscButton.Activated:Connect(function() activateCategory("MISC") end)
+
+-- Function-level scroll helpers: one independent scrollbar per section.
+local function ScrollFunctions(page, delta)
+    if not page then return end
+    local maxY = math.max(0, page.AbsoluteCanvasSize.Y - page.AbsoluteWindowSize.Y)
+
+    page.CanvasPosition = Vector2.new(
+        0,
+        math.clamp(page.CanvasPosition.Y + (delta or 0), 0, maxY)
+    )
+end
+
+local function ScrollFunctionsTop(page)
+    if page then
+        page.CanvasPosition = Vector2.new(0, 0)
+    end
+end
+
+local function ScrollFunctionsBottom(page)
+    if page then
+        page.CanvasPosition = Vector2.new(
+            0,
+            math.max(0, page.AbsoluteCanvasSize.Y - page.AbsoluteWindowSize.Y)
+        )
+    end
+end
+
+_G.PhongdzScrollFunctions = ScrollFunctions
+_G.PhongdzScrollFunctionsTop = ScrollFunctionsTop
+_G.PhongdzScrollFunctionsBottom = ScrollFunctionsBottom
+
+for _, page in pairs(CategoryPages) do
+    page.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseWheel then
+            ScrollFunctions(page, -(input.Position.Z or 0) * 42)
+        end
+    end)
+
+    local touching = false
+    local touchStart = 0
+    local scrollStart = 0
+
+    page.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.Touch then
+            touching = true
+            touchStart = input.Position.Y
+            scrollStart = page.CanvasPosition.Y
+        end
+    end)
+
+    page.InputChanged:Connect(function(input)
+        if not touching or input.UserInputType ~= Enum.UserInputType.Touch then
+            return
+        end
+
+        local dy = input.Position.Y - touchStart
+        local maxY = math.max(0, page.AbsoluteCanvasSize.Y - page.AbsoluteWindowSize.Y)
+
+        page.CanvasPosition = Vector2.new(
+            0,
+            math.clamp(scrollStart - dy, 0, maxY)
+        )
+    end)
+
+    UIS.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.Touch then
+            touching = false
+        end
+    end)
+end
+
 
 local function sectionCard(parent, title, subtitle)
     local card = Instance.new("Frame")
@@ -1077,7 +1216,7 @@ local TweenService = game:GetService("TweenService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local LocalPlayer = Players.LocalPlayer
 
-_G.AutoLevel = _G.AutoLevel or false
+_G.AutoLevel = (_G.AutoLevel == true)
 _G.Fast_Delay = _G.Fast_Delay or 0.01
 
 local Sea1, Sea2, Sea3 = false, false, false
@@ -1237,7 +1376,7 @@ local function FastAttack()
                 local rp = mob:FindFirstChild("HumanoidRootPart")
                 if hum and head and rp and hum.Health > 0 then
                     local d = (root.Position - head.Position).Magnitude
-                    if d <= 70 and (not bestDistance or d < bestDistance) then
+                    if d <= 90 and (not bestDistance or d < bestDistance) then
                         bestMob, bestHead, bestDistance = mob, head, d
                     end
                 end
@@ -1270,20 +1409,63 @@ local function FastAttack()
         HitRemote:FireServer(bestHead, hits)
     end)
 end
-local function QuestText() local pg=LocalPlayer:FindFirstChild("PlayerGui"); local main=pg and pg:FindFirstChild("Main"); local q=main and main:FindFirstChild("Quest"); local c=q and q:FindFirstChild("Container"); local qt=c and c:FindFirstChild("QuestTitle"); return q,qt and qt:FindFirstChild("Title") end
+local function QuestText()
+    local pg = LocalPlayer:FindFirstChild("PlayerGui")
+    local main = pg and pg:FindFirstChild("Main")
+    local q = main and main:FindFirstChild("Quest")
+    local c = q and q:FindFirstChild("Container")
+    local qt = c and c:FindFirstChild("QuestTitle")
+    local title = qt and qt:FindFirstChild("Title")
+
+    -- Fallback for UI variants that nest the title differently.
+    if not title and q then
+        for _, obj in ipairs(q:GetDescendants()) do
+            if obj:IsA("TextLabel") and string.find(
+                string.lower(obj.Text or ""),
+                string.lower(NameMon or ""),
+                1,
+                true
+            ) then
+                title = obj
+                break
+            end
+        end
+    end
+
+    return q, title
+end
 local function RunFarm()
     CheckLevel()
     if not NameMon or not NameQuest or not CFrameQ then return end
 
     local q, title = QuestText()
-    if not q or not title then return end
 
-    local correct = q.Visible and string.find(
-        tostring(title.Text or ""),
-        tostring(NameMon),
-        1,
-        true
-    )
+    -- Direct server-side quest fallback. This only fires periodically and
+    -- avoids depending entirely on the visual Quest GUI.
+    local now = os.clock()
+    if (not q or not title) and (not _G.__PhongdzLastQuestStart or now - _G.__PhongdzLastQuestStart > 1.25) then
+        local rem = ReplicatedStorage:FindFirstChild("Remotes")
+        local comm = rem and rem:FindFirstChild("CommF_")
+        if comm then
+            pcall(function()
+                comm:InvokeServer("StartQuest", NameQuest, QuestLv)
+            end)
+            _G.__PhongdzLastQuestStart = now
+        end
+    end
+
+    local correct
+    if q and title then
+        correct = q.Visible and string.find(
+            tostring(title.Text or ""),
+            tostring(NameMon),
+            1,
+            true
+        )
+    else
+        -- Without a visible Quest UI, let the farm proceed using the level map.
+        correct = true
+    end
 
     if not correct then
         local rem = ReplicatedStorage:FindFirstChild("Remotes")
@@ -2094,6 +2276,7 @@ local function loadFarm()
     end
 
     farmLoaded = true
+    farmError = nil
     return true
 end
 
@@ -2122,14 +2305,24 @@ local function updateToggle()
 end
 
 Toggle.Activated:Connect(function()
-    farmEnabled = not farmEnabled
-    _G.AutoLevel = farmEnabled
+    local nextState = not farmEnabled
 
-    if farmEnabled and not farmLoaded then
-        if not loadFarm() then
-            farmEnabled = false
-            _G.AutoLevel = false
+    if nextState then
+        if not farmLoaded then
+            if not loadFarm() then
+                farmEnabled = false
+                _G.AutoLevel = false
+                updateToggle()
+                return
+            end
         end
+
+        -- Enable only after FARM_SOURCE has initialized.
+        farmEnabled = true
+        _G.AutoLevel = true
+    else
+        farmEnabled = false
+        _G.AutoLevel = false
     end
 
     updateToggle()
