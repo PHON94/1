@@ -1038,37 +1038,52 @@ local function GetRoot() local c=LocalPlayer.Character return c and c:FindFirstC
 local ActiveTween
 local ActiveTarget
 local LastEquipName
+local FarmDestination
+local FarmDestinationTarget
+local LastMoveAt = 0
+
+local function StopFarmTween()
+    if ActiveTween then
+        pcall(function() ActiveTween:Cancel() end)
+        ActiveTween = nil
+    end
+end
 
 local function TweenTo(cf)
     local r = GetRoot()
     if not r or typeof(cf) ~= "CFrame" then return end
 
     local distance = (cf.Position - r.Position).Magnitude
+    local now = os.clock()
 
-    -- Don't recreate tweens every tick; that was wasting a shitload of work.
-    if distance <= 85 then
-        if ActiveTween then
-            pcall(function() ActiveTween:Cancel() end)
-            ActiveTween = nil
+    -- Never teleport the root every farm tick. That was fighting Roblox's
+    -- replication and causing the visible one-step rubber-band.
+    if distance <= 18 then
+        StopFarmTween()
+        if now - LastMoveAt >= 0.14 then
+            r.CFrame = cf
+            LastMoveAt = now
         end
-        r.CFrame = cf
         return
     end
 
-    if ActiveTween then
-        return
-    end
+    -- Keep the current tween alive. Recreating/cancelling it every tick makes
+    -- the character briefly reverse toward the previous replicated position.
+    if ActiveTween then return end
 
-    local duration = math.clamp(distance / 900, 0.035, 0.45)
-    ActiveTween = TweenService:Create(
+    local duration = math.clamp(distance / 900, 0.10, 0.55)
+    local tween = TweenService:Create(
         r,
         TweenInfo.new(duration, Enum.EasingStyle.Linear),
         {CFrame = cf}
     )
-    ActiveTween.Completed:Connect(function()
-        ActiveTween = nil
+    ActiveTween = tween
+    tween.Completed:Connect(function()
+        if ActiveTween == tween then
+            ActiveTween = nil
+        end
     end)
-    ActiveTween:Play()
+    tween:Play()
 end
 local function EquipFarmWeapon()
     local c = LocalPlayer.Character
@@ -1103,7 +1118,12 @@ local AttackRemote,HitRemote
 local function ResolveAttackRemotes() if AttackRemote and HitRemote then return true end; local modules=ReplicatedStorage:FindFirstChild("Modules"); local net=modules and modules:FindFirstChild("Net"); if not net then return false end; AttackRemote=net:FindFirstChild("RE/RegisterAttack"); HitRemote=net:FindFirstChild("RE/RegisterHit"); return AttackRemote~=nil and HitRemote~=nil end
 local function GetFarmPoint(targetRoot)
     if not targetRoot then return nil end
-    return targetRoot.CFrame * CFrame.new(0, 38, 0)
+    local target = targetRoot.Parent
+    if FarmDestinationTarget ~= target or not FarmDestination then
+        FarmDestinationTarget = target
+        FarmDestination = targetRoot.CFrame * CFrame.new(0, 38, 0)
+    end
+    return FarmDestination
 end
 
 local function BringMobs(targetName, centerRoot)
@@ -1120,8 +1140,6 @@ local function BringMobs(targetName, centerRoot)
                 if (rp.Position - center).Magnitude <= 220 then
                     pcall(function()
                         rp.CanCollide = false
-                        rp.AssemblyLinearVelocity = Vector3.zero
-                        rp.AssemblyAngularVelocity = Vector3.zero
                         rp.CFrame = CFrame.new(center)
                     end)
                 end
@@ -1264,7 +1282,12 @@ local function RunFarm()
             end
         end
 
-        ActiveTarget = target
+        if ActiveTarget ~= target then
+            ActiveTarget = target
+            FarmDestination = nil
+            FarmDestinationTarget = nil
+            StopFarmTween()
+        end
     end
 
     if target then
@@ -1289,11 +1312,14 @@ local function RunFarm()
             pcall(function()
                 rp.Size = Vector3.new(60, 60, 60)
                 rp.CanCollide = false
-                rp.AssemblyLinearVelocity = Vector3.zero
-                rp.AssemblyAngularVelocity = Vector3.zero
+                -- Do not zero NPC physics every tick; the server can fight it
+                -- and feed the correction back into the farm movement.
             end)
         else
             ActiveTarget = nil
+            FarmDestination = nil
+            FarmDestinationTarget = nil
+            StopFarmTween()
         end
         return
     end
