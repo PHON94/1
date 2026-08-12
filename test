@@ -2296,17 +2296,23 @@ function CheckLevel()
 end
 
 -- Recover from stale targets/spawn transitions without touching the UI.
+-- Keep this thread alive even while Farm is OFF, because AutoLevel can be
+-- enabled later by the UI after FARM_SOURCE has already loaded.
 task.spawn(function()
-    while _G.AutoLevel do
+    while true do
         task.wait(0.15)
 
-        if ActiveTarget then
+        if _G.AutoLevel and ActiveTarget then
             local hum = ActiveTarget:FindFirstChildOfClass("Humanoid")
+
             if not ActiveTarget.Parent or not hum or hum.Health <= 0 then
                 ActiveTarget = nil
                 FarmDestination = nil
                 FarmDestinationTarget = nil
-                StopFarmTween()
+
+                pcall(function()
+                    StopFarmTween()
+                end)
             end
         end
     end
@@ -2314,12 +2320,19 @@ end)
 
 
 -- Start only after CheckLevel has been declared above.
+-- IMPORTANT: FARM_SOURCE is loaded through loadstring(), so it does NOT
+-- inherit the UI's local `Gui` variable. Never use `Gui.Parent` here.
 task.spawn(function()
-    while Gui.Parent do
+    while true do
         if _G.AutoLevel then
             local ok, err = pcall(RunFarm)
-            if not ok then warn("[PhongdzHub] Farm tick:", err) end
-            task.wait(0.045)
+
+            if not ok then
+                warn("[PhongdzHub] Farm tick:", err)
+                task.wait(0.12)
+            else
+                task.wait(0.045)
+            end
         else
             task.wait(0.12)
         end
@@ -2401,8 +2414,9 @@ Toggle.Activated:Connect(function()
         end
 
         -- Enable only after FARM_SOURCE has initialized.
-        farmEnabled = true
+        -- The Farm worker is persistent and will see this state immediately.
         _G.AutoLevel = true
+        farmEnabled = true
     else
         farmEnabled = false
         _G.AutoLevel = false
