@@ -55,183 +55,6 @@ local X, Y = 0, 0
 local Main = Instance.new("Frame")
 
 --===========================================================================
--- PHONGDZ HUB :: CATEGORY MENU
---===========================================================================
-local CategoryLayer = Instance.new("Frame")
-CategoryLayer.Name = "CategoryLayer"
-CategoryLayer.BackgroundTransparency = 1
-CategoryLayer.Size = UDim2.fromScale(1, 1)
-CategoryLayer.ZIndex = 100
-CategoryLayer.Parent = Main
-
-local CategoryBar = Instance.new("Frame")
-CategoryBar.Name = "CategoryBar"
-CategoryBar.Position = UDim2.fromOffset(10, 66)
-CategoryBar.Size = UDim2.fromOffset(104, H - 76)
-CategoryBar.BackgroundColor3 = Color3.fromRGB(18, 21, 28)
-CategoryBar.BorderSizePixel = 0
-CategoryBar.ZIndex = 101
-CategoryBar.Parent = CategoryLayer
-
-local cbCorner = Instance.new("UICorner")
-cbCorner.CornerRadius = UDim.new(0, 11)
-cbCorner.Parent = CategoryBar
-
-local cbLayout = Instance.new("UIListLayout")
-cbLayout.Padding = UDim.new(0, 7)
-cbLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-cbLayout.VerticalAlignment = Enum.VerticalAlignment.Top
-cbLayout.Parent = CategoryBar
-
-local cbPadding = Instance.new("UIPadding")
-cbPadding.PaddingTop = UDim.new(0, 9)
-cbPadding.Parent = CategoryBar
-
-local CategoryContent = Instance.new("Frame")
-CategoryContent.Name = "CategoryContent"
-CategoryContent.Position = UDim2.fromOffset(122, 66)
-CategoryContent.Size = UDim2.new(1, -132, 1, -76)
-CategoryContent.BackgroundTransparency = 1
-CategoryContent.ZIndex = 102
-CategoryContent.Parent = CategoryLayer
-
-local CategoryPages = {}
-local CategoryButtons = {}
-
-local function makeCategory(name, icon)
-    local button = Instance.new("TextButton")
-    button.Name = name .. "Button"
-    button.Size = UDim2.fromOffset(90, 40)
-    button.BackgroundColor3 = Color3.fromRGB(30, 34, 43)
-    button.BorderSizePixel = 0
-    button.Text = icon .. "  " .. name
-    button.Font = Enum.Font.GothamBold
-    button.TextSize = 9
-    button.TextColor3 = Color3.fromRGB(170, 176, 188)
-    button.AutoButtonColor = false
-    button.ZIndex = 103
-    button.Parent = CategoryBar
-
-    local bc = Instance.new("UICorner")
-    bc.CornerRadius = UDim.new(0, 8)
-    bc.Parent = button
-
-    local page = Instance.new("ScrollingFrame")
-    page.Name = name .. "Page"
-    page.Size = UDim2.fromScale(1, 1)
-    page.BackgroundTransparency = 1
-    page.BorderSizePixel = 0
-    page.ScrollBarThickness = 4
-    page.ScrollBarImageColor3 = Color3.fromRGB(255, 211, 65)
-    page.ScrollingDirection = Enum.ScrollingDirection.Y
-    page.CanvasSize = UDim2.fromOffset(0, 0)
-    page.Visible = false
-    page.ZIndex = 104
-    page.Parent = CategoryContent
-
-    local pp = Instance.new("UIPadding")
-    pp.PaddingBottom = UDim.new(0, 15)
-    pp.Parent = page
-
-    CategoryButtons[name] = button
-    CategoryPages[name] = page
-
-    return button, page
-end
-
-local farmButton, farmPage = makeCategory("FARM", "⚔")
-local espButton, espPage = makeCategory("ESP", "◉")
-local settingButton, settingPage = makeCategory("SETTING", "⚙")
-local miscButton, miscPage = makeCategory("MISC", "✦")
-
-local function activateCategory(name)
-    for pageName, page in pairs(CategoryPages) do
-        page.Visible = pageName == name
-    end
-
-    for buttonName, button in pairs(CategoryButtons) do
-        local selected = buttonName == name
-        button.BackgroundColor3 = selected
-            and Color3.fromRGB(255, 211, 65)
-            or Color3.fromRGB(30, 34, 43)
-        button.TextColor3 = selected
-            and Color3.fromRGB(15, 17, 22)
-            or Color3.fromRGB(170, 176, 188)
-    end
-end
-
-farmButton.Activated:Connect(function() activateCategory("FARM") end)
-espButton.Activated:Connect(function() activateCategory("ESP") end)
-settingButton.Activated:Connect(function() activateCategory("SETTING") end)
-miscButton.Activated:Connect(function() activateCategory("MISC") end)
-
-local function sectionCard(parent, title, subtitle)
-    local card = Instance.new("Frame")
-    card.Size = UDim2.new(1, -12, 0, 68)
-    card.Position = UDim2.fromOffset(6, 6)
-    card.BackgroundColor3 = Color3.fromRGB(22, 25, 33)
-    card.BorderSizePixel = 0
-    card.ZIndex = 105
-    card.Parent = parent
-
-    local cc = Instance.new("UICorner")
-    cc.CornerRadius = UDim.new(0, 10)
-    cc.Parent = card
-
-    local titleLabel = Instance.new("TextLabel")
-    titleLabel.Position = UDim2.fromOffset(12, 10)
-    titleLabel.Size = UDim2.new(1, -24, 0, 20)
-    titleLabel.BackgroundTransparency = 1
-    titleLabel.Text = title
-    titleLabel.Font = Enum.Font.GothamBlack
-    titleLabel.TextSize = 11
-    titleLabel.TextColor3 = Color3.fromRGB(255, 211, 65)
-    titleLabel.TextXAlignment = Enum.TextXAlignment.Left
-    titleLabel.ZIndex = 106
-    titleLabel.Parent = card
-
-    local sub = Instance.new("TextLabel")
-    sub.Position = UDim2.fromOffset(12, 34)
-    sub.Size = UDim2.new(1, -24, 0, 18)
-    sub.BackgroundTransparency = 1
-    sub.Text = subtitle
-    sub.Font = Enum.Font.Gotham
-    sub.TextSize = 8
-    sub.TextColor3 = Color3.fromRGB(140, 146, 160)
-    sub.TextXAlignment = Enum.TextXAlignment.Left
-    sub.ZIndex = 106
-    sub.Parent = card
-end
-
-sectionCard(espPage, "ESP", "ESP controls can be placed here.")
-sectionCard(miscPage, "MISC", "Miscellaneous controls can be placed here.")
-
--- Move the existing feature panels into the correct category pages.
-if SettingFarm then
-    SettingFarm.Parent = settingPage
-    SettingFarm.Position = UDim2.fromOffset(6, 6)
-    SettingFarm.Size = UDim2.new(1, -12, 0, 152)
-end
-
-if Card then
-    Card.Parent = farmPage
-    Card.Position = UDim2.fromOffset(6, 6)
-    Card.Size = UDim2.new(1, -12, 0, 68)
-end
-
-if Toggle then
-    Toggle.Parent = farmPage
-    Toggle.Position = UDim2.fromOffset(6, 82)
-end
-
-if Hint then
-    Hint.Parent = farmPage
-    Hint.Position = UDim2.fromOffset(6, 142)
-end
-
-activateCategory("FARM")
-
---===========================================================================
 -- MOVABLE MINIMIZED CIRCLE
 --===========================================================================
 local MiniLauncher = Instance.new("TextButton")
@@ -349,6 +172,7 @@ Main.Name = "Main"
 Main.Size = UDim2.fromOffset(W, H)
 Main.BackgroundColor3 = Color3.fromRGB(16, 18, 24)
 Main.BorderSizePixel = 0
+Main.Active = false
 Main.Visible = true
 Main.Parent = Gui
 
@@ -401,6 +225,7 @@ Header.Size = UDim2.fromOffset(W, 60)
 Header.BackgroundColor3 = Color3.fromRGB(23, 25, 32)
 Header.BorderSizePixel = 0
 Header.Active = true
+Header.ZIndex = 500
 Header.Parent = Main
 
 local hc = Instance.new("UICorner")
@@ -446,6 +271,8 @@ Min.TextColor3 = Color3.new(1, 1, 1)
 Min.BackgroundColor3 = Color3.fromRGB(42, 45, 54)
 Min.BorderSizePixel = 0
 Min.AutoButtonColor = false
+Min.Active = true
+Min.ZIndex = 510
 Min.Parent = Header
 
 local mc = Instance.new("UICorner")
@@ -462,6 +289,8 @@ Close.TextColor3 = Color3.new(1, 1, 1)
 Close.BackgroundColor3 = Color3.fromRGB(145, 53, 60)
 Close.BorderSizePixel = 0
 Close.AutoButtonColor = false
+Close.Active = true
+Close.ZIndex = 510
 Close.Parent = Header
 
 local cc = Instance.new("UICorner")
@@ -908,6 +737,236 @@ Hint.TextSize = 8
 Hint.TextColor3 = Color3.fromRGB(86, 91, 104)
 Hint.TextXAlignment = Enum.TextXAlignment.Center
 Hint.Parent = FolderScroll
+
+--===========================================================================
+-- PHONGDZ HUB :: CATEGORY MENU (FIXED)
+-- Sidebar and content are isolated. Existing Farm/FastAttack objects are
+-- re-parented only after they have been created.
+--===========================================================================
+
+local CategoryLayer = Instance.new("Frame")
+CategoryLayer.Name = "CategoryLayer"
+CategoryLayer.BackgroundTransparency = 1
+CategoryLayer.Size = UDim2.fromScale(1, 1)
+CategoryLayer.Position = UDim2.fromOffset(0, 0)
+CategoryLayer.BorderSizePixel = 0
+CategoryLayer.ZIndex = 20
+CategoryLayer.Active = false
+CategoryLayer.Parent = Main
+
+local CategoryBar = Instance.new("Frame")
+CategoryBar.Name = "CategoryBar"
+CategoryBar.Position = UDim2.fromOffset(10, 70)
+CategoryBar.Size = UDim2.new(0, 118, 1, -80)
+CategoryBar.BackgroundColor3 = Color3.fromRGB(18, 21, 28)
+CategoryBar.BorderSizePixel = 0
+CategoryBar.ClipsDescendants = true
+CategoryBar.ZIndex = 25
+CategoryBar.Active = false
+CategoryBar.Parent = CategoryLayer
+
+local cbCorner = Instance.new("UICorner")
+cbCorner.CornerRadius = UDim.new(0, 11)
+cbCorner.Parent = CategoryBar
+
+local cbLayout = Instance.new("UIListLayout")
+cbLayout.Padding = UDim.new(0, 7)
+cbLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+cbLayout.VerticalAlignment = Enum.VerticalAlignment.Top
+cbLayout.SortOrder = Enum.SortOrder.LayoutOrder
+cbLayout.Parent = CategoryBar
+
+local cbPadding = Instance.new("UIPadding")
+cbPadding.PaddingTop = UDim.new(0, 9)
+cbPadding.PaddingLeft = UDim.new(0, 8)
+cbPadding.PaddingRight = UDim.new(0, 8)
+cbPadding.Parent = CategoryBar
+
+local CategoryContent = Instance.new("Frame")
+CategoryContent.Name = "CategoryContent"
+CategoryContent.Position = UDim2.fromOffset(138, 70)
+CategoryContent.Size = UDim2.new(1, -148, 1, -80)
+CategoryContent.BackgroundColor3 = Color3.fromRGB(19, 21, 28)
+CategoryContent.BorderSizePixel = 0
+CategoryContent.ClipsDescendants = true
+CategoryContent.ZIndex = 25
+CategoryContent.Active = false
+CategoryContent.Parent = CategoryLayer
+
+local contentCorner = Instance.new("UICorner")
+contentCorner.CornerRadius = UDim.new(0, 11)
+contentCorner.Parent = CategoryContent
+
+local CategoryPages = {}
+local CategoryButtons = {}
+
+local function makeCategory(name, icon, order)
+    local button = Instance.new("TextButton")
+    button.Name = name .. "Button"
+    button.Size = UDim2.new(1, 0, 0, 43)
+    button.LayoutOrder = order
+    button.BackgroundColor3 = Color3.fromRGB(30, 34, 43)
+    button.BorderSizePixel = 0
+    button.Text = icon .. "  " .. name
+    button.Font = Enum.Font.GothamBold
+    button.TextSize = 9
+    button.TextColor3 = Color3.fromRGB(170, 176, 188)
+    button.TextXAlignment = Enum.TextXAlignment.Left
+    button.AutoButtonColor = false
+    button.Active = true
+    button.ZIndex = 50
+    button.Parent = CategoryBar
+
+    local bp = Instance.new("UIPadding")
+    bp.PaddingLeft = UDim.new(0, 10)
+    bp.Parent = button
+
+    local bc = Instance.new("UICorner")
+    bc.CornerRadius = UDim.new(0, 8)
+    bc.Parent = button
+
+    local page = Instance.new("ScrollingFrame")
+    page.Name = name .. "Page"
+    page.Position = UDim2.fromOffset(7, 7)
+    page.Size = UDim2.new(1, -14, 1, -14)
+    page.BackgroundTransparency = 1
+    page.BorderSizePixel = 0
+    page.ScrollBarThickness = 4
+    page.ScrollBarImageColor3 = Color3.fromRGB(255, 211, 65)
+    page.ScrollingDirection = Enum.ScrollingDirection.Y
+    page.CanvasSize = UDim2.fromOffset(0, 0)
+    page.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    page.Visible = false
+    page.Active = true
+    page.ClipsDescendants = true
+    page.ZIndex = 40
+    page.Parent = CategoryContent
+
+    local pp = Instance.new("UIPadding")
+    pp.PaddingTop = UDim.new(0, 2)
+    pp.PaddingBottom = UDim.new(0, 15)
+    pp.PaddingLeft = UDim.new(0, 2)
+    pp.PaddingRight = UDim.new(0, 2)
+    pp.Parent = page
+
+    CategoryButtons[name] = button
+    CategoryPages[name] = page
+
+    return button, page
+end
+
+local farmButton, farmPage = makeCategory("FARM", "⚔", 1)
+local espButton, espPage = makeCategory("ESP", "◉", 2)
+local settingButton, settingPage = makeCategory("SETTING", "⚙", 3)
+local miscButton, miscPage = makeCategory("MISC", "✦", 4)
+
+local function activateCategory(name)
+    for pageName, page in pairs(CategoryPages) do
+        page.Visible = pageName == name
+    end
+
+    for buttonName, button in pairs(CategoryButtons) do
+        local selected = buttonName == name
+        button.BackgroundColor3 = selected
+            and Color3.fromRGB(255, 211, 65)
+            or Color3.fromRGB(30, 34, 43)
+        button.TextColor3 = selected
+            and Color3.fromRGB(15, 17, 22)
+            or Color3.fromRGB(170, 176, 188)
+    end
+end
+
+farmButton.Activated:Connect(function() activateCategory("FARM") end)
+espButton.Activated:Connect(function() activateCategory("ESP") end)
+settingButton.Activated:Connect(function() activateCategory("SETTING") end)
+miscButton.Activated:Connect(function() activateCategory("MISC") end)
+
+local function sectionCard(parent, title, subtitle)
+    local card = Instance.new("Frame")
+    card.Size = UDim2.new(1, -6, 0, 68)
+    card.BackgroundColor3 = Color3.fromRGB(22, 25, 33)
+    card.BorderSizePixel = 0
+    card.ZIndex = 45
+    card.Active = false
+    card.Parent = parent
+
+    local cc = Instance.new("UICorner")
+    cc.CornerRadius = UDim.new(0, 10)
+    cc.Parent = card
+
+    local titleLabel = Instance.new("TextLabel")
+    titleLabel.Position = UDim2.fromOffset(12, 10)
+    titleLabel.Size = UDim2.new(1, -24, 0, 20)
+    titleLabel.BackgroundTransparency = 1
+    titleLabel.Text = title
+    titleLabel.Font = Enum.Font.GothamBlack
+    titleLabel.TextSize = 11
+    titleLabel.TextColor3 = Color3.fromRGB(255, 211, 65)
+    titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+    titleLabel.ZIndex = 46
+    titleLabel.Parent = card
+
+    local sub = Instance.new("TextLabel")
+    sub.Position = UDim2.fromOffset(12, 34)
+    sub.Size = UDim2.new(1, -24, 0, 18)
+    sub.BackgroundTransparency = 1
+    sub.Text = subtitle
+    sub.Font = Enum.Font.Gotham
+    sub.TextSize = 8
+    sub.TextColor3 = Color3.fromRGB(140, 146, 160)
+    sub.TextXAlignment = Enum.TextXAlignment.Left
+    sub.ZIndex = 46
+    sub.Parent = card
+end
+
+sectionCard(espPage, "ESP", "ESP controls can be placed here.")
+sectionCard(miscPage, "MISC", "Miscellaneous controls can be placed here.")
+
+-- Existing controls are NOW available, so re-parenting works reliably.
+SettingFarm.Parent = settingPage
+SettingFarm.Position = UDim2.fromOffset(4, 4)
+SettingFarm.Size = UDim2.new(1, -8, 0, 152)
+SettingFarm.ZIndex = 45
+SettingFarm.Active = true
+
+Card.Parent = farmPage
+Card.Position = UDim2.fromOffset(4, 4)
+Card.Size = UDim2.new(1, -8, 0, 68)
+Card.ZIndex = 45
+Card.Active = false
+
+Toggle.Parent = farmPage
+Toggle.Position = UDim2.fromOffset(4, 80)
+Toggle.Size = UDim2.new(1, -8, 0, 58)
+Toggle.ZIndex = 50
+Toggle.Active = true
+
+Hint.Parent = farmPage
+Hint.Position = UDim2.fromOffset(4, 145)
+Hint.Size = UDim2.new(1, -8, 0, 22)
+Hint.ZIndex = 45
+Hint.Active = false
+
+-- Keep controls above their cards/dropdowns clickable.
+WeaponButton.ZIndex = 70
+WeaponButton.Active = true
+FruitM1Toggle.ZIndex = 70
+FruitM1Toggle.Active = true
+if FinishModeToggle then
+    FinishModeToggle.ZIndex = 70
+    FinishModeToggle.Active = true
+end
+WeaponDrop.ZIndex = 200
+
+for _, obj in ipairs(WeaponDrop:GetDescendants()) do
+    if obj:IsA("GuiButton") then
+        obj.ZIndex = 210
+        obj.Active = true
+    end
+end
+
+activateCategory("FARM")
+
 
 -- Circular launcher.
 local Launcher = Instance.new("TextButton")
