@@ -49,10 +49,302 @@ Gui.IgnoreGuiInset = true
 Gui.DisplayOrder = 999999
 Gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
-local W, H = 560, 470
+local W, H = 440, 250
 local X, Y = 0, 0
 
 local Main = Instance.new("Frame")
+
+--===========================================================================
+-- PHONGDZ HUB :: CATEGORY MENU
+--===========================================================================
+local CategoryLayer = Instance.new("Frame")
+CategoryLayer.Name = "CategoryLayer"
+CategoryLayer.BackgroundTransparency = 1
+CategoryLayer.Size = UDim2.fromScale(1, 1)
+CategoryLayer.ZIndex = 100
+CategoryLayer.Parent = Main
+
+local CategoryBar = Instance.new("Frame")
+CategoryBar.Name = "CategoryBar"
+CategoryBar.Position = UDim2.fromOffset(10, 66)
+CategoryBar.Size = UDim2.fromOffset(104, H - 76)
+CategoryBar.BackgroundColor3 = Color3.fromRGB(18, 21, 28)
+CategoryBar.BorderSizePixel = 0
+CategoryBar.ZIndex = 101
+CategoryBar.Parent = CategoryLayer
+
+local cbCorner = Instance.new("UICorner")
+cbCorner.CornerRadius = UDim.new(0, 11)
+cbCorner.Parent = CategoryBar
+
+local cbLayout = Instance.new("UIListLayout")
+cbLayout.Padding = UDim.new(0, 7)
+cbLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+cbLayout.VerticalAlignment = Enum.VerticalAlignment.Top
+cbLayout.Parent = CategoryBar
+
+local cbPadding = Instance.new("UIPadding")
+cbPadding.PaddingTop = UDim.new(0, 9)
+cbPadding.Parent = CategoryBar
+
+local CategoryContent = Instance.new("Frame")
+CategoryContent.Name = "CategoryContent"
+CategoryContent.Position = UDim2.fromOffset(122, 66)
+CategoryContent.Size = UDim2.new(1, -132, 1, -76)
+CategoryContent.BackgroundTransparency = 1
+CategoryContent.ZIndex = 102
+CategoryContent.Parent = CategoryLayer
+
+local CategoryPages = {}
+local CategoryButtons = {}
+
+local function makeCategory(name, icon)
+    local button = Instance.new("TextButton")
+    button.Name = name .. "Button"
+    button.Size = UDim2.fromOffset(90, 40)
+    button.BackgroundColor3 = Color3.fromRGB(30, 34, 43)
+    button.BorderSizePixel = 0
+    button.Text = icon .. "  " .. name
+    button.Font = Enum.Font.GothamBold
+    button.TextSize = 9
+    button.TextColor3 = Color3.fromRGB(170, 176, 188)
+    button.AutoButtonColor = false
+    button.ZIndex = 103
+    button.Parent = CategoryBar
+
+    local bc = Instance.new("UICorner")
+    bc.CornerRadius = UDim.new(0, 8)
+    bc.Parent = button
+
+    local page = Instance.new("ScrollingFrame")
+    page.Name = name .. "Page"
+    page.Size = UDim2.fromScale(1, 1)
+    page.BackgroundTransparency = 1
+    page.BorderSizePixel = 0
+    page.ScrollBarThickness = 4
+    page.ScrollBarImageColor3 = Color3.fromRGB(255, 211, 65)
+    page.ScrollingDirection = Enum.ScrollingDirection.Y
+    page.CanvasSize = UDim2.fromOffset(0, 0)
+    page.Visible = false
+    page.ZIndex = 104
+    page.Parent = CategoryContent
+
+    local pp = Instance.new("UIPadding")
+    pp.PaddingBottom = UDim.new(0, 15)
+    pp.Parent = page
+
+    CategoryButtons[name] = button
+    CategoryPages[name] = page
+
+    return button, page
+end
+
+local farmButton, farmPage = makeCategory("FARM", "⚔")
+local espButton, espPage = makeCategory("ESP", "◉")
+local settingButton, settingPage = makeCategory("SETTING", "⚙")
+local miscButton, miscPage = makeCategory("MISC", "✦")
+
+local function activateCategory(name)
+    for pageName, page in pairs(CategoryPages) do
+        page.Visible = pageName == name
+    end
+
+    for buttonName, button in pairs(CategoryButtons) do
+        local selected = buttonName == name
+        button.BackgroundColor3 = selected
+            and Color3.fromRGB(255, 211, 65)
+            or Color3.fromRGB(30, 34, 43)
+        button.TextColor3 = selected
+            and Color3.fromRGB(15, 17, 22)
+            or Color3.fromRGB(170, 176, 188)
+    end
+end
+
+farmButton.Activated:Connect(function() activateCategory("FARM") end)
+espButton.Activated:Connect(function() activateCategory("ESP") end)
+settingButton.Activated:Connect(function() activateCategory("SETTING") end)
+miscButton.Activated:Connect(function() activateCategory("MISC") end)
+
+local function sectionCard(parent, title, subtitle)
+    local card = Instance.new("Frame")
+    card.Size = UDim2.new(1, -12, 0, 68)
+    card.Position = UDim2.fromOffset(6, 6)
+    card.BackgroundColor3 = Color3.fromRGB(22, 25, 33)
+    card.BorderSizePixel = 0
+    card.ZIndex = 105
+    card.Parent = parent
+
+    local cc = Instance.new("UICorner")
+    cc.CornerRadius = UDim.new(0, 10)
+    cc.Parent = card
+
+    local titleLabel = Instance.new("TextLabel")
+    titleLabel.Position = UDim2.fromOffset(12, 10)
+    titleLabel.Size = UDim2.new(1, -24, 0, 20)
+    titleLabel.BackgroundTransparency = 1
+    titleLabel.Text = title
+    titleLabel.Font = Enum.Font.GothamBlack
+    titleLabel.TextSize = 11
+    titleLabel.TextColor3 = Color3.fromRGB(255, 211, 65)
+    titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+    titleLabel.ZIndex = 106
+    titleLabel.Parent = card
+
+    local sub = Instance.new("TextLabel")
+    sub.Position = UDim2.fromOffset(12, 34)
+    sub.Size = UDim2.new(1, -24, 0, 18)
+    sub.BackgroundTransparency = 1
+    sub.Text = subtitle
+    sub.Font = Enum.Font.Gotham
+    sub.TextSize = 8
+    sub.TextColor3 = Color3.fromRGB(140, 146, 160)
+    sub.TextXAlignment = Enum.TextXAlignment.Left
+    sub.ZIndex = 106
+    sub.Parent = card
+end
+
+sectionCard(espPage, "ESP", "ESP controls can be placed here.")
+sectionCard(miscPage, "MISC", "Miscellaneous controls can be placed here.")
+
+-- Move the existing feature panels into the correct category pages.
+if SettingFarm then
+    SettingFarm.Parent = settingPage
+    SettingFarm.Position = UDim2.fromOffset(6, 6)
+    SettingFarm.Size = UDim2.new(1, -12, 0, 152)
+end
+
+if Card then
+    Card.Parent = farmPage
+    Card.Position = UDim2.fromOffset(6, 6)
+    Card.Size = UDim2.new(1, -12, 0, 68)
+end
+
+if Toggle then
+    Toggle.Parent = farmPage
+    Toggle.Position = UDim2.fromOffset(6, 82)
+end
+
+if Hint then
+    Hint.Parent = farmPage
+    Hint.Position = UDim2.fromOffset(6, 142)
+end
+
+activateCategory("FARM")
+
+--===========================================================================
+-- MOVABLE MINIMIZED CIRCLE
+--===========================================================================
+local MiniLauncher = Instance.new("TextButton")
+MiniLauncher.Name = "MiniLauncher"
+MiniLauncher.Size = UDim2.fromOffset(56, 56)
+MiniLauncher.Position = UDim2.new(0, 20, 0.5, -28)
+MiniLauncher.BackgroundColor3 = Color3.fromRGB(255, 211, 65)
+MiniLauncher.BorderSizePixel = 0
+MiniLauncher.Text = "P"
+MiniLauncher.Font = Enum.Font.GothamBlack
+MiniLauncher.TextSize = 22
+MiniLauncher.TextColor3 = Color3.fromRGB(15, 17, 22)
+MiniLauncher.AutoButtonColor = false
+MiniLauncher.Visible = false
+MiniLauncher.ZIndex = 1000
+MiniLauncher.Parent = ScreenGui
+
+local mlCorner = Instance.new("UICorner")
+mlCorner.CornerRadius = UDim.new(1, 0)
+mlCorner.Parent = MiniLauncher
+
+local mlStroke = Instance.new("UIStroke")
+mlStroke.Color = Color3.fromRGB(255, 235, 150)
+mlStroke.Thickness = 2
+mlStroke.Parent = MiniLauncher
+
+local miniDragging = false
+local miniMoved = false
+local miniDragStart
+local miniStartPos
+
+local function clampMiniPosition(x, y)
+    local camera = workspace.CurrentCamera
+    local viewport = camera and camera.ViewportSize
+    if not viewport then return x, y end
+
+    local w = MiniLauncher.AbsoluteSize.X
+    local h = MiniLauncher.AbsoluteSize.Y
+
+    return math.clamp(x, 4, math.max(4, viewport.X - w - 4)),
+           math.clamp(y, 4, math.max(4, viewport.Y - h - 4))
+end
+
+MiniLauncher.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
+
+        miniDragging = true
+        miniMoved = false
+        miniDragStart = input.Position
+        miniStartPos = MiniLauncher.Position
+    end
+end)
+
+MiniLauncher.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement
+        or input.UserInputType == Enum.UserInputType.Touch then
+
+        if not miniDragging then return end
+
+        local delta = input.Position - miniDragStart
+
+        if math.abs(delta.X) > 3 or math.abs(delta.Y) > 3 then
+            miniMoved = true
+        end
+
+        local x, y = clampMiniPosition(
+            miniStartPos.X.Offset + delta.X,
+            miniStartPos.Y.Offset + delta.Y
+        )
+
+        MiniLauncher.Position = UDim2.fromOffset(x, y)
+    end
+end)
+
+UIS.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
+        miniDragging = false
+    end
+end)
+
+local function showHub()
+    MiniLauncher.Visible = false
+    Main.Visible = true
+end
+
+local function hideHub()
+    Main.Visible = false
+    MiniLauncher.Visible = true
+end
+
+MiniLauncher.Activated:Connect(function()
+    if not miniMoved then
+        showHub()
+    end
+end)
+
+-- Detect the existing minimize button without replacing its original callback.
+for _, descendant in ipairs(Main:GetDescendants()) do
+    if descendant:IsA("TextButton") or descendant:IsA("ImageButton") then
+        local n = string.lower(descendant.Name)
+        if n == "minimize" or n == "minbutton" or n == "collapse" then
+            descendant.Activated:Connect(hideHub)
+            break
+        end
+    end
+end
+
+_G.PhongdzShowHub = showHub
+_G.PhongdzHideHub = hideHub
+_G.PhongdzMiniLauncher = MiniLauncher
+
 Main.Name = "Main"
 Main.Size = UDim2.fromOffset(W, H)
 Main.BackgroundColor3 = Color3.fromRGB(16, 18, 24)
@@ -177,94 +469,437 @@ cc.CornerRadius = UDim.new(0, 9)
 cc.Parent = Close
 
 --===========================================================================
--- LEFT NAVIGATION / TABS
+-- SETTING FARM
 --===========================================================================
-local Sidebar = Instance.new("Frame")
-Sidebar.Name = "Sidebar"
-Sidebar.Position = UDim2.fromOffset(12, 72)
-Sidebar.Size = UDim2.fromOffset(128, H - 84)
-Sidebar.BackgroundColor3 = Color3.fromRGB(21, 24, 31)
-Sidebar.BorderSizePixel = 0
-Sidebar.Parent = Main
+local SettingFarm = Instance.new("Frame")
+SettingFarm.Name = "SettingFarm"
+SettingFarm.Position = UDim2.fromOffset(16, 16)
+SettingFarm.Size = UDim2.fromOffset(W - 32, 118)
+SettingFarm.BackgroundColor3 = Color3.fromRGB(22, 25, 33)
+SettingFarm.BorderSizePixel = 0
+SettingFarm.Parent = FolderScroll
 
-local sbc = Instance.new("UICorner")
-sbc.CornerRadius = UDim.new(0, 10)
-sbc.Parent = Sidebar
+local sfc = Instance.new("UICorner")
+sfc.CornerRadius = UDim.new(0, 10)
+sfc.Parent = SettingFarm
 
-local SideTitle = Instance.new("TextLabel")
-SideTitle.Position = UDim2.fromOffset(12, 10)
-SideTitle.Size = UDim2.fromOffset(104, 20)
-SideTitle.BackgroundTransparency = 1
-SideTitle.Text = "MENU"
-SideTitle.Font = Enum.Font.GothamBlack
-SideTitle.TextSize = 10
-SideTitle.TextColor3 = Color3.fromRGB(145, 150, 163)
-SideTitle.TextXAlignment = Enum.TextXAlignment.Left
-SideTitle.Parent = Sidebar
+local sfTitle = Instance.new("TextLabel")
+sfTitle.Position = UDim2.fromOffset(13, 8)
+sfTitle.Size = UDim2.fromOffset(220, 22)
+sfTitle.BackgroundTransparency = 1
+sfTitle.Text = "SETTING FARM"
+sfTitle.Font = Enum.Font.GothamBlack
+sfTitle.TextSize = 12
+sfTitle.TextColor3 = Color3.fromRGB(255, 211, 65)
+sfTitle.TextXAlignment = Enum.TextXAlignment.Left
+sfTitle.Parent = SettingFarm
 
-local TabContainer = Instance.new("ScrollingFrame")
-TabContainer.Position = UDim2.fromOffset(8, 38)
-TabContainer.Size = UDim2.fromOffset(112, H - 50)
-TabContainer.BackgroundTransparency = 1
-TabContainer.BorderSizePixel = 0
-TabContainer.ScrollBarThickness = 3
-TabContainer.ScrollingDirection = Enum.ScrollingDirection.Y
-TabContainer.CanvasSize = UDim2.fromOffset(0, 0)
-TabContainer.AutomaticCanvasSize = Enum.AutomaticSize.Y
-TabContainer.Active = true
-TabContainer.Parent = Sidebar
+local sfDesc = Instance.new("TextLabel")
+sfDesc.Position = UDim2.fromOffset(13, 29)
+sfDesc.Size = UDim2.fromOffset(330, 18)
+sfDesc.BackgroundTransparency = 1
+sfDesc.Text = "Chọn vũ khí + M1 cho Blox Fruit nếu Fruit hỗ trợ"
+sfDesc.Font = Enum.Font.Gotham
+sfDesc.TextSize = 9
+sfDesc.TextColor3 = Color3.fromRGB(143, 149, 162)
+sfDesc.TextXAlignment = Enum.TextXAlignment.Left
+sfDesc.Parent = SettingFarm
 
-TabContainer.InputChanged:Connect(function(input)
+local WeaponButton = Instance.new("TextButton")
+WeaponButton.Name = "WeaponSelector"
+WeaponButton.Position = UDim2.fromOffset(13, 53)
+WeaponButton.Size = UDim2.fromOffset(W - 58, 42)
+WeaponButton.BackgroundColor3 = Color3.fromRGB(31, 34, 43)
+WeaponButton.BorderSizePixel = 0
+WeaponButton.Text = ""
+WeaponButton.AutoButtonColor = false
+WeaponButton.Parent = SettingFarm
+
+local wbc = Instance.new("UICorner")
+wbc.CornerRadius = UDim.new(0, 9)
+wbc.Parent = WeaponButton
+
+local WeaponText = Instance.new("TextLabel")
+WeaponText.Position = UDim2.fromOffset(12, 4)
+WeaponText.Size = UDim2.fromOffset(W - 112, 17)
+WeaponText.BackgroundTransparency = 1
+WeaponText.Text = "Melee"
+WeaponText.Font = Enum.Font.GothamBold
+WeaponText.TextSize = 10
+WeaponText.TextColor3 = Color3.fromRGB(240, 242, 247)
+WeaponText.TextXAlignment = Enum.TextXAlignment.Left
+WeaponText.Parent = WeaponButton
+
+local WeaponResolved = Instance.new("TextLabel")
+WeaponResolved.Position = UDim2.fromOffset(12, 21)
+WeaponResolved.Size = UDim2.fromOffset(W - 112, 14)
+WeaponResolved.BackgroundTransparency = 1
+WeaponResolved.Text = "Auto-detect weapon"
+WeaponResolved.Font = Enum.Font.Gotham
+WeaponResolved.TextSize = 8
+WeaponResolved.TextColor3 = Color3.fromRGB(120, 126, 140)
+WeaponResolved.TextXAlignment = Enum.TextXAlignment.Left
+WeaponResolved.Parent = WeaponButton
+
+local Arrow = Instance.new("TextLabel")
+Arrow.Position = UDim2.fromOffset(W - 80, 8)
+Arrow.Size = UDim2.fromOffset(25, 25)
+Arrow.BackgroundTransparency = 1
+Arrow.Text = "▾"
+Arrow.Font = Enum.Font.GothamBold
+Arrow.TextSize = 16
+Arrow.TextColor3 = Color3.fromRGB(255, 211, 65)
+Arrow.Parent = WeaponButton
+
+local FruitM1Toggle = Instance.new("TextButton")
+FruitM1Toggle.Name = "FruitM1Toggle"
+FruitM1Toggle.Position = UDim2.fromOffset(W - 168, 8)
+FruitM1Toggle.Size = UDim2.fromOffset(135, 30)
+FruitM1Toggle.BackgroundColor3 = Color3.fromRGB(255, 211, 65)
+FruitM1Toggle.BorderSizePixel = 0
+FruitM1Toggle.Text = "Fruit M1  •  ON"
+FruitM1Toggle.Font = Enum.Font.GothamBold
+FruitM1Toggle.TextSize = 9
+FruitM1Toggle.TextColor3 = Color3.fromRGB(16, 18, 24)
+FruitM1Toggle.AutoButtonColor = false
+FruitM1Toggle.Parent = SettingFarm
+
+local fmtc = Instance.new("UICorner")
+fmtc.CornerRadius = UDim.new(0, 8)
+fmtc.Parent = FruitM1Toggle
+
+FruitM1Toggle.Activated:Connect(function()
+    FruitM1Enabled = not FruitM1Enabled
+    _G.FruitM1Enabled = FruitM1Enabled
+    FruitM1Toggle.BackgroundColor3 = FruitM1Enabled
+        and Color3.fromRGB(255, 211, 65)
+        or Color3.fromRGB(55, 59, 70)
+    FruitM1Toggle.Text = FruitM1Enabled
+        and "Fruit M1  •  ON"
+        or "Fruit M1  •  OFF"
+    FruitM1Toggle.TextColor3 = FruitM1Enabled
+        and Color3.fromRGB(16, 18, 24)
+        or Color3.fromRGB(235, 238, 244)
+end)
+
+local WeaponDrop = Instance.new("Frame")
+WeaponDrop.Name = "WeaponDropdown"
+WeaponDrop.Position = UDim2.fromOffset(13, 98)
+WeaponDrop.Size = UDim2.fromOffset(W - 58, 0)
+WeaponDrop.BackgroundColor3 = Color3.fromRGB(27, 30, 38)
+WeaponDrop.BorderSizePixel = 0
+WeaponDrop.Visible = false
+WeaponDrop.ClipsDescendants = true
+WeaponDrop.ZIndex = 100
+WeaponDrop.Parent = SettingFarm
+
+local wdc = Instance.new("UICorner")
+wdc.CornerRadius = UDim.new(0, 9)
+wdc.Parent = WeaponDrop
+
+local WeaponOptions = {"Melee", "Sword", "Blox Fruit"}
+local ChooseWeapon = "Melee"
+local FruitM1Enabled = true
+_G.FruitM1Enabled = true
+local SelectWeapon = nil
+_G.ChooseWeapon = ChooseWeapon
+_G.SelectWeapon = nil
+
+local function resolveSelectedWeapon()
+    local backpack = LocalPlayer:FindFirstChildOfClass("Backpack")
+    local character = LocalPlayer.Character
+
+    local function scan(container)
+        if not container then return nil end
+        for _, tool in ipairs(container:GetChildren()) do
+            if tool:IsA("Tool") and tool.ToolTip == ChooseWeapon then
+                return tool.Name
+            end
+        end
+        return nil
+    end
+
+    local selected = scan(backpack) or scan(character)
+    SelectWeapon = selected
+    _G.SelectWeapon = selected
+
+    if selected then
+        WeaponResolved.Text = "Đang chọn: " .. selected
+        WeaponResolved.TextColor3 = Color3.fromRGB(88, 224, 132)
+    else
+        WeaponResolved.Text = "Chưa tìm thấy " .. ChooseWeapon
+        WeaponResolved.TextColor3 = Color3.fromRGB(255, 180, 70)
+    end
+end
+
+local function rebuildWeaponOptions()
+    for _, child in ipairs(WeaponDrop:GetChildren()) do
+        if child:IsA("TextButton") then child:Destroy() end
+    end
+
+    for index, weaponType in ipairs(WeaponOptions) do
+        local option = Instance.new("TextButton")
+        option.Position = UDim2.fromOffset(5, (index - 1) * 36 + 5)
+        option.Size = UDim2.new(1, -10, 0, 32)
+        option.BackgroundColor3 =
+            weaponType == ChooseWeapon
+            and Color3.fromRGB(255, 211, 65)
+            or Color3.fromRGB(38, 41, 51)
+        option.BorderSizePixel = 0
+        option.Text = weaponType
+        option.Font = Enum.Font.GothamBold
+        option.TextSize = 9
+        option.TextColor3 =
+            weaponType == ChooseWeapon
+            and Color3.fromRGB(16, 18, 24)
+            or Color3.fromRGB(235, 238, 244)
+        option.AutoButtonColor = false
+        option.ZIndex = 51
+        option.Parent = WeaponDrop
+
+        local oc = Instance.new("UICorner")
+        oc.CornerRadius = UDim.new(0, 7)
+        oc.Parent = option
+
+        option.Activated:Connect(function()
+            ChooseWeapon = weaponType
+            _G.ChooseWeapon = weaponType
+            WeaponText.Text = weaponType
+            WeaponDrop.Visible = false
+            WeaponDrop.Size = UDim2.fromOffset(W - 58, 0)
+            Arrow.Text = "▾"
+            rebuildWeaponOptions()
+            resolveSelectedWeapon()
+        end)
+    end
+end
+
+local dropdownOpen = false
+WeaponButton.Activated:Connect(function()
+    dropdownOpen = not dropdownOpen
+    WeaponDrop.Visible = dropdownOpen
+    Arrow.Text = dropdownOpen and "▴" or "▾"
+    WeaponDrop.Size = dropdownOpen
+        and UDim2.fromOffset(W - 58, #WeaponOptions * 36 + 10)
+        or UDim2.fromOffset(W - 58, 0)
+    if dropdownOpen then rebuildWeaponOptions() end
+end)
+
+rebuildWeaponOptions()
+resolveSelectedWeapon()
+
+task.spawn(function()
+    while Gui.Parent do
+        if _G.AutoLevel then resolveSelectedWeapon() end
+        task.wait(0.5)
+    end
+end)
+
+--===========================================================================
+-- FOLDER SCROLL SYSTEM
+--===========================================================================
+-- "Vuốt lên / vuốt xuống": mouse wheel, touch swipe và kéo thanh scroll.
+-- Nội dung được đặt trong một ScrollingFrame để không cần thay đổi logic
+-- của từng folder/section hiện có.
+
+local FolderScroll = Instance.new("ScrollingFrame")
+FolderScroll.Name = "FolderScroll"
+FolderScroll.Position = UDim2.fromOffset(0, 60)
+FolderScroll.Size = UDim2.fromOffset(W, H - 60)
+FolderScroll.BackgroundTransparency = 1
+FolderScroll.BorderSizePixel = 0
+FolderScroll.CanvasSize = UDim2.fromOffset(0, 380)
+FolderScroll.ScrollBarThickness = 5
+FolderScroll.ScrollBarImageColor3 = Color3.fromRGB(255, 211, 65)
+FolderScroll.ScrollingDirection = Enum.ScrollingDirection.Y
+FolderScroll.ElasticBehavior = Enum.ElasticBehavior.WhenScrollable
+FolderScroll.Active = true
+FolderScroll.ClipsDescendants = true
+FolderScroll.ZIndex = 10
+FolderScroll.Parent = Main
+
+local FolderPadding = Instance.new("UIPadding")
+FolderPadding.PaddingBottom = UDim.new(0, 18)
+FolderPadding.Parent = FolderScroll
+
+-- The sections below are positioned relative to this scroll canvas.
+local function putFolder(guiObject, x, y)
+    guiObject.Parent = FolderScroll
+    guiObject.Position = UDim2.fromOffset(x, y)
+end
+
+-- Mouse-wheel scrolling.
+UIS.InputChanged:Connect(function(input)
+    if not Main.Visible or not FolderScroll.Visible then
+        return
+    end
+
     if input.UserInputType == Enum.UserInputType.MouseWheel then
-        local delta = -input.Position.Z * 38
-        local maxY = math.max(
+        local delta = input.Position.Z
+        local target = FolderScroll.CanvasPosition.Y - delta * 42
+        local maxY = math.max(0, FolderScroll.AbsoluteCanvasSize.Y - FolderScroll.AbsoluteWindowSize.Y)
+        FolderScroll.CanvasPosition = Vector2.new(
             0,
-            TabContainer.AbsoluteCanvasSize.Y - TabContainer.AbsoluteSize.Y
-        )
-        TabContainer.CanvasPosition = Vector2.new(
-            0,
-            math.clamp(TabContainer.CanvasPosition.Y + delta, 0, maxY)
+            math.clamp(target, 0, maxY)
         )
     end
 end)
 
-local tabLayout = Instance.new("UIListLayout")
-tabLayout.Padding = UDim.new(0, 7)
-tabLayout.SortOrder = Enum.SortOrder.LayoutOrder
-tabLayout.Parent = TabContainer
+-- Touch swipe with a little momentum.
+local swipeActive = false
+local swipeStartY = 0
+local swipeStartScroll = 0
+local lastTouchY = 0
+local lastTouchTime = 0
 
-local tabs = {}
-local activeTab = "Farm"
-
--- Forward declarations for the content controls.
-local FarmContent
-local Card
-local Toggle
-local BoneCard
-local BoneToggle
-local BoneStatus
-local SettingsFrame
-local WeaponDropdown
-
-
--- Scroll Settings Farm with the mouse wheel.
-SettingsFrame.Active = true
-SettingsFrame.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseWheel then
-        local delta = -input.Position.Z * 38
-        local maxY = math.max(
-            0,
-            SettingsFrame.AbsoluteCanvasSize.Y - SettingsFrame.AbsoluteSize.Y
-        )
-        SettingsFrame.CanvasPosition = Vector2.new(
-            0,
-            math.clamp(SettingsFrame.CanvasPosition.Y + delta, 0, maxY)
-        )
+FolderScroll.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.Touch then
+        swipeActive = true
+        swipeStartY = input.Position.Y
+        swipeStartScroll = FolderScroll.CanvasPosition.Y
+        lastTouchY = input.Position.Y
+        lastTouchTime = os.clock()
     end
 end)
+
+FolderScroll.InputChanged:Connect(function(input)
+    if not swipeActive or input.UserInputType ~= Enum.UserInputType.Touch then
+        return
+    end
+
+    local y = input.Position.Y
+    local dy = y - swipeStartY
+    FolderScroll.CanvasPosition = Vector2.new(0, swipeStartScroll - dy)
+
+    lastTouchY = y
+    lastTouchTime = os.clock()
+end)
+
+UIS.InputEnded:Connect(function(input)
+    if input.UserInputType ~= Enum.UserInputType.Touch then
+        return
+    end
+
+    if not swipeActive then
+        return
+    end
+
+    swipeActive = false
+
+    -- Clamp after the swipe.
+    local maxY = math.max(0, FolderScroll.AbsoluteCanvasSize.Y - FolderScroll.AbsoluteWindowSize.Y)
+    FolderScroll.CanvasPosition = Vector2.new(
+        0,
+        math.clamp(FolderScroll.CanvasPosition.Y, 0, maxY)
+    )
+end)
+
+-- Convenience controls for scripts/folders.
+local function scrollFoldersToTop()
+    FolderScroll.CanvasPosition = Vector2.new(0, 0)
+end
+
+local function scrollFoldersToBottom()
+    local maxY = math.max(0, FolderScroll.AbsoluteCanvasSize.Y - FolderScroll.AbsoluteWindowSize.Y)
+    FolderScroll.CanvasPosition = Vector2.new(0, maxY)
+end
+
+-- Expose safe controls to the rest of the UI.
+_G.PhongdzFolderScrollTop = scrollFoldersToTop
+_G.PhongdzFolderScrollBottom = scrollFoldersToBottom
+
+local Card = Instance.new("Frame")
+Card.Position = UDim2.fromOffset(16, 144)
+Card.Size = UDim2.fromOffset(W - 32, 65)
+Card.BackgroundColor3 = Color3.fromRGB(22, 25, 33)
+Card.BorderSizePixel = 0
+Card.Parent = FolderScroll
+
+local cardCorner = Instance.new("UICorner")
+cardCorner.CornerRadius = UDim.new(0, 10)
+cardCorner.Parent = Card
+
+local CardTitle = Instance.new("TextLabel")
+CardTitle.Position = UDim2.fromOffset(13, 8)
+CardTitle.Size = UDim2.fromOffset(W - 58, 23)
+CardTitle.BackgroundTransparency = 1
+CardTitle.Text = "Automatic Level Farming"
+CardTitle.Font = Enum.Font.GothamBold
+CardTitle.TextSize = 12
+CardTitle.TextColor3 = Color3.fromRGB(241, 243, 247)
+CardTitle.TextXAlignment = Enum.TextXAlignment.Left
+CardTitle.Parent = Card
+
+local CardDesc = Instance.new("TextLabel")
+CardDesc.Position = UDim2.fromOffset(13, 32)
+CardDesc.Size = UDim2.fromOffset(W - 58, 22)
+CardDesc.BackgroundTransparency = 1
+CardDesc.Text = "Quest → đúng mob → di chuyển → Fast Attack"
+CardDesc.Font = Enum.Font.Gotham
+CardDesc.TextSize = 9
+CardDesc.TextColor3 = Color3.fromRGB(143, 149, 162)
+CardDesc.TextXAlignment = Enum.TextXAlignment.Left
+CardDesc.Parent = Card
+
+local Toggle = Instance.new("TextButton")
+Toggle.Position = UDim2.fromOffset(16, 222)
+Toggle.Size = UDim2.fromOffset(W - 32, 52)
+Toggle.Text = ""
+Toggle.BackgroundColor3 = Color3.fromRGB(55, 59, 70)
+Toggle.BorderSizePixel = 0
+Toggle.AutoButtonColor = false
+Toggle.Parent = FolderScroll
+
+local tc = Instance.new("UICorner")
+tc.CornerRadius = UDim.new(0, 10)
+tc.Parent = Toggle
+
+local Label = Instance.new("TextLabel")
+Label.Position = UDim2.fromOffset(13, 5)
+Label.Size = UDim2.fromOffset(290, 20)
+Label.BackgroundTransparency = 1
+Label.Text = "FARM LEVEL + FAST ATTACK"
+Label.Font = Enum.Font.GothamBold
+Label.TextSize = 11
+Label.TextColor3 = Color3.fromRGB(240, 242, 247)
+Label.TextXAlignment = Enum.TextXAlignment.Left
+Label.Parent = Toggle
+
+local Status = Instance.new("TextLabel")
+Status.Position = UDim2.fromOffset(13, 27)
+Status.Size = UDim2.fromOffset(310, 17)
+Status.BackgroundTransparency = 1
+Status.Text = "● MENU READY — FARM OFF"
+Status.Font = Enum.Font.GothamMedium
+Status.TextSize = 9
+Status.TextColor3 = Color3.fromRGB(130, 135, 148)
+Status.TextXAlignment = Enum.TextXAlignment.Left
+Status.Parent = Toggle
+
+local Pill = Instance.new("Frame")
+Pill.Size = UDim2.fromOffset(52, 29)
+Pill.Position = UDim2.fromOffset(W - 84, 11)
+Pill.BackgroundColor3 = Color3.fromRGB(70, 74, 85)
+Pill.BorderSizePixel = 0
+Pill.Parent = Toggle
+
+local pc = Instance.new("UICorner")
+pc.CornerRadius = UDim.new(1, 0)
+pc.Parent = Pill
+
+local Knob = Instance.new("Frame")
+Knob.Size = UDim2.fromOffset(23, 23)
+Knob.Position = UDim2.fromOffset(3, 3)
+Knob.BackgroundColor3 = Color3.fromRGB(230, 232, 238)
+Knob.BorderSizePixel = 0
+Knob.Parent = Pill
+
+local kc = Instance.new("UICorner")
+kc.CornerRadius = UDim.new(1, 0)
+kc.Parent = Knob
 
 local Hint = Instance.new("TextLabel")
-Hint.Position = UDim2.fromOffset(16, 366)
+Hint.Position = UDim2.fromOffset(16, 287)
 Hint.Size = UDim2.fromOffset(W - 32, 18)
 Hint.BackgroundTransparency = 1
 Hint.Text = "Kéo header để di chuyển  •  — để thu nhỏ"
@@ -272,7 +907,7 @@ Hint.Font = Enum.Font.GothamMedium
 Hint.TextSize = 8
 Hint.TextColor3 = Color3.fromRGB(86, 91, 104)
 Hint.TextXAlignment = Enum.TextXAlignment.Center
-Hint.Parent = Main
+Hint.Parent = FolderScroll
 
 -- Circular launcher.
 local Launcher = Instance.new("TextButton")
@@ -340,7 +975,7 @@ local function minimizeMenu()
 
     local v = viewport()
     Launcher.Position = UDim2.fromOffset(
-        math.clamp(savedX + 250, 0, math.max(0, v.X - 58)),
+        math.clamp(savedX + 190, 0, math.max(0, v.X - 58)),
         math.clamp(savedY + 96, 0, math.max(0, v.Y - 58))
     )
 
@@ -362,99 +997,10 @@ end
 Min.Activated:Connect(minimizeMenu)
 Launcher.Activated:Connect(restoreMenu)
 
--- Cho phép kéo nút Launcher khi menu đang thu nhỏ.
-local launcherDragging = false
-local launcherDragStart = Vector2.zero
-local launcherOrigin = Vector2.zero
-
-Launcher.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1
-        or input.UserInputType == Enum.UserInputType.Touch then
-        launcherDragging = true
-        launcherDragStart = input.Position
-        local p = Launcher.AbsolutePosition
-        launcherOrigin = Vector2.new(p.X, p.Y)
-    end
-end)
-
-UIS.InputChanged:Connect(function(input)
-    if not launcherDragging or not Launcher.Visible then
-        return
-    end
-
-    if input.UserInputType == Enum.UserInputType.MouseMovement
-        or input.UserInputType == Enum.UserInputType.Touch then
-        local d = input.Position - launcherDragStart
-        local v = viewport()
-
-        local nx = math.clamp(
-            launcherOrigin.X + d.X,
-            0,
-            math.max(0, v.X - Launcher.AbsoluteSize.X)
-        )
-
-        local ny = math.clamp(
-            launcherOrigin.Y + d.Y,
-            0,
-            math.max(0, v.Y - Launcher.AbsoluteSize.Y)
-        )
-
-        Launcher.Position = UDim2.fromOffset(nx, ny)
-    end
-end)
-
-UIS.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1
-        or input.UserInputType == Enum.UserInputType.Touch then
-        launcherDragging = false
-    end
-end)
-
 Close.Activated:Connect(function()
     _G.AutoLevel = false
-    _G.AutoBone = false
-    if ActiveTween then
-        pcall(function()
-            ActiveTween:Cancel()
-            ActiveTween:Destroy()
-        end)
-        ActiveTween = nil
-    end
-    if _G.__PhongdzFlightTween then
-        pcall(function()
-            _G.__PhongdzFlightTween:Cancel()
-            _G.__PhongdzFlightTween:Destroy()
-        end)
-        _G.__PhongdzFlightTween = nil
-    end
-    StopGather()
-    StopFlight()
-    SetNoGravity(false)
-    RestoreCharacterState()
     Gui:Destroy()
 end)
-
-FarmTab.Activated:Connect(function()
-    setActiveTab("Farm")
-end)
-
-PlayerTab.Activated:Connect(function()
-    setActiveTab("Player")
-end)
-
-VisualTab.Activated:Connect(function()
-    setActiveTab("Visual")
-end)
-
-MiscTab.Activated:Connect(function()
-    setActiveTab("Misc")
-end)
-
-SettingsTab.Activated:Connect(function()
-    setActiveTab("Settings Farm")
-end)
-
-setActiveTab("Farm")
 
 -- IMPORTANT: The UI above is complete before the farm source is loaded.
 print("[PhongdzHub] UI READY")
@@ -464,6 +1010,9 @@ print("[PhongdzHub] UI READY")
 --===========================================================================
 
 local FARM_SOURCE = [=[
+ChooseWeapon = _G.ChooseWeapon or "Melee"
+SelectWeapon = _G.SelectWeapon
+FruitM1Enabled = _G.FruitM1Enabled ~= false
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -471,7 +1020,6 @@ local LocalPlayer = Players.LocalPlayer
 
 _G.AutoLevel = _G.AutoLevel or false
 _G.Fast_Delay = _G.Fast_Delay or 0.01
-_G.FlySpeed = 300
 
 local Sea1, Sea2, Sea3 = false, false, false
 if game.PlaceId == 2753915549 then
@@ -487,381 +1035,178 @@ end
 --=============================================================================
 
 local function GetRoot() local c=LocalPlayer.Character return c and c:FindFirstChild("HumanoidRootPart") end
-
---===========================================================================
--- CHARACTER STATE BACKUP / RESTORE
---===========================================================================
-local CharacterState
-
-local function CaptureCharacterState()
-    local c = LocalPlayer.Character
-    local hum = c and c:FindFirstChildOfClass("Humanoid")
-    local root = c and c:FindFirstChild("HumanoidRootPart")
-    if not c or not hum or not root then return end
-
-    CharacterState = {
-        humanoid = hum,
-        root = root,
-        WalkSpeed = hum.WalkSpeed,
-        JumpPower = hum.JumpPower,
-        AutoRotate = hum.AutoRotate,
-        UseJumpPower = hum.UseJumpPower,
-        RootCanCollide = root.CanCollide,
-        RootAnchored = root.Anchored,
-        RootAssemblyLinearVelocity = root.AssemblyLinearVelocity,
-        RootAssemblyAngularVelocity = root.AssemblyAngularVelocity,
-    }
-end
-
-local function RestoreCharacterState()
-    local state = CharacterState
-    CharacterState = nil
-
-    if not state then return end
-
-    local c = LocalPlayer.Character
-    local hum = c and c:FindFirstChildOfClass("Humanoid")
-    local root = c and c:FindFirstChild("HumanoidRootPart")
-
-    -- Restore only if this is still the same character/root that was captured.
-    if hum and state.humanoid == hum then
-        pcall(function() hum.WalkSpeed = state.WalkSpeed end)
-        pcall(function() hum.JumpPower = state.JumpPower end)
-        pcall(function() hum.AutoRotate = state.AutoRotate end)
-        pcall(function() hum.UseJumpPower = state.UseJumpPower end)
-    end
-
-    if root and state.root == root then
-        pcall(function() root.CanCollide = state.RootCanCollide end)
-        pcall(function() root.Anchored = state.RootAnchored end)
-        pcall(function()
-            root.AssemblyLinearVelocity = Vector3.zero
-            root.AssemblyAngularVelocity = Vector3.zero
-        end)
-    end
-end
-
-local NoGravityAttachment
-local NoGravityForce
-
-local function SetNoGravity(enabled)
-    local c = LocalPlayer.Character
-    local root = c and c:FindFirstChild("HumanoidRootPart")
-
-    if enabled and root then
-        if not NoGravityAttachment or NoGravityAttachment.Parent ~= root then
-            if NoGravityAttachment then
-                pcall(function() NoGravityAttachment:Destroy() end)
-            end
-            NoGravityAttachment = Instance.new("Attachment")
-            NoGravityAttachment.Name = "Phongdz_NoGravity"
-            NoGravityAttachment.Parent = root
-        end
-
-        if not NoGravityForce or NoGravityForce.Parent ~= root then
-            if NoGravityForce then
-                pcall(function() NoGravityForce:Destroy() end)
-            end
-            NoGravityForce = Instance.new("VectorForce")
-            NoGravityForce.Name = "Phongdz_NoGravityForce"
-            NoGravityForce.Attachment0 = NoGravityAttachment
-            NoGravityForce.RelativeTo = Enum.ActuatorRelativeTo.World
-            NoGravityForce.ApplyAtCenterOfMass = true
-            NoGravityForce.Parent = root
-        end
-
-        NoGravityForce.Force = Vector3.new(0, root.AssemblyMass * workspace.Gravity, 0)
-    else
-        if NoGravityForce then
-            pcall(function() NoGravityForce:Destroy() end)
-            NoGravityForce = nil
-        end
-        if NoGravityAttachment then
-            pcall(function() NoGravityAttachment:Destroy() end)
-            NoGravityAttachment = nil
-        end
-    end
-end
-
-task.spawn(function()
-    while task.wait() do
-        pcall(function()
-            SetNoGravity(_G.AutoLevel == true)
-        end)
-    end
-end)
-
-local FlightAttachment
-local FlightVelocity
-local FlightTarget
-
-local function StopFlight()
-    FlightTarget = nil
-
-    if FlightVelocity then
-        pcall(function()
-            FlightVelocity.VectorVelocity = Vector3.zero
-            FlightVelocity:Destroy()
-        end)
-        FlightVelocity = nil
-    end
-
-    if FlightAttachment then
-        pcall(function()
-            FlightAttachment:Destroy()
-        end)
-        FlightAttachment = nil
-    end
-end
-
-local function RestoreAfterFarm()
-    StopGather()
-    StopFlight()
-    SetNoGravity(false)
-    RestoreCharacterState()
-end
-
-local function EnsureFlightController(root)
-    if not root then return false end
-
-    if FlightVelocity and FlightVelocity.Parent == root then
-        return true
-    end
-
-    StopFlight()
-
-    FlightAttachment = Instance.new("Attachment")
-    FlightAttachment.Name = "Phongdz_FlightAttachment"
-    FlightAttachment.Parent = root
-
-    FlightVelocity = Instance.new("LinearVelocity")
-    FlightVelocity.Name = "Phongdz_FlightVelocity"
-    FlightVelocity.Attachment0 = FlightAttachment
-    FlightVelocity.RelativeTo = Enum.ActuatorRelativeTo.World
-    FlightVelocity.MaxForce = math.huge
-    FlightVelocity.VectorVelocity = Vector3.zero
-    FlightVelocity.Parent = root
-
-    return true
-end
-
-local FlightAttachment
-local FlightVelocity
-
-local function StopFlight()
-    if FlightVelocity then
-        pcall(function()
-            FlightVelocity.VectorVelocity = Vector3.zero
-            FlightVelocity:Destroy()
-        end)
-        FlightVelocity = nil
-    end
-
-    if FlightAttachment then
-        pcall(function()
-            FlightAttachment:Destroy()
-        end)
-        FlightAttachment = nil
-    end
-end
-
-local function EnsureFlightController(root)
-    if not root then return false end
-
-    if FlightVelocity and FlightVelocity.Parent == root then
-        return true
-    end
-
-    StopFlight()
-
-    FlightAttachment = Instance.new("Attachment")
-    FlightAttachment.Name = "Phongdz_FlightAttachment"
-    FlightAttachment.Parent = root
-
-    FlightVelocity = Instance.new("LinearVelocity")
-    FlightVelocity.Name = "Phongdz_FlightVelocity"
-    FlightVelocity.Attachment0 = FlightAttachment
-    FlightVelocity.RelativeTo = Enum.ActuatorRelativeTo.World
-    FlightVelocity.MaxForce = math.huge
-    FlightVelocity.VectorVelocity = Vector3.zero
-    FlightVelocity.Parent = root
-
-    return true
-end
+local ActiveTween
+local ActiveTarget
+local LastEquipName
 
 local function TweenTo(cf)
-    local root = GetRoot()
-    if not root or not cf then
-        StopFlight()
+    local r = GetRoot()
+    if not r or typeof(cf) ~= "CFrame" then return end
+
+    local distance = (cf.Position - r.Position).Magnitude
+
+    -- Don't recreate tweens every tick; that was wasting a shitload of work.
+    if distance <= 85 then
+        if ActiveTween then
+            pcall(function() ActiveTween:Cancel() end)
+            ActiveTween = nil
+        end
+        r.CFrame = cf
         return
     end
 
-    if not EnsureFlightController(root) then return end
-
-    local delta = cf.Position - root.Position
-    local distance = delta.Magnitude
-
-    if distance <= 3 then
-        FlightVelocity.VectorVelocity = Vector3.zero
+    if ActiveTween then
         return
     end
 
-    local speed = math.max(50, tonumber(_G.FlySpeed) or 300)
-    local moveSpeed = speed
-
-    -- Smooth deceleration near the destination.
-    if distance < 35 then
-        moveSpeed = math.max(70, speed * (distance / 35))
-    end
-
-    FlightVelocity.VectorVelocity = delta.Unit * moveSpeed
+    local duration = math.clamp(distance / 900, 0.035, 0.45)
+    ActiveTween = TweenService:Create(
+        r,
+        TweenInfo.new(duration, Enum.EasingStyle.Linear),
+        {CFrame = cf}
+    )
+    ActiveTween.Completed:Connect(function()
+        ActiveTween = nil
+    end)
+    ActiveTween:Play()
 end
+local function EquipFarmWeapon()
+    local c = LocalPlayer.Character
+    local h = c and c:FindFirstChildOfClass("Humanoid")
+    if not h then return end
 
+    local wanted = SelectWeapon
+    if not wanted then return end
+
+    local equipped = c:FindFirstChild(wanted)
+    if equipped and equipped:IsA("Tool") then
+        LastEquipName = wanted
+        return equipped
+    end
+
+    if LastEquipName == wanted then
+        return c:FindFirstChild(wanted)
+    end
+
+    local b = LocalPlayer:FindFirstChildOfClass("Backpack")
+    local tool = b and b:FindFirstChild(wanted)
+    if tool and tool:IsA("Tool") then
+        pcall(function()
+            h:EquipTool(tool)
+        end)
+        LastEquipName = wanted
+        return tool
+    end
+end
 local function AutoHaki() local c=LocalPlayer.Character; local rem=ReplicatedStorage:FindFirstChild("Remotes"); local comm=rem and rem:FindFirstChild("CommF_"); if c and not c:FindFirstChild("HasBuso") and comm then pcall(function() comm:InvokeServer("Buso") end) end end
 local AttackRemote,HitRemote
 local function ResolveAttackRemotes() if AttackRemote and HitRemote then return true end; local modules=ReplicatedStorage:FindFirstChild("Modules"); local net=modules and modules:FindFirstChild("Net"); if not net then return false end; AttackRemote=net:FindFirstChild("RE/RegisterAttack"); HitRemote=net:FindFirstChild("RE/RegisterHit"); return AttackRemote~=nil and HitRemote~=nil end
+local function GetFarmPoint(targetRoot)
+    if not targetRoot then return nil end
+    return targetRoot.CFrame * CFrame.new(0, 38, 0)
+end
+
+local function BringMobs(targetName, centerRoot)
+    if not centerRoot then return end
+    local enemies = workspace:FindFirstChild("Enemies")
+    if not enemies then return end
+    local center = centerRoot.Position
+
+    for _, mob in ipairs(enemies:GetChildren()) do
+        if mob.Name == targetName then
+            local hum = mob:FindFirstChildOfClass("Humanoid")
+            local rp = mob:FindFirstChild("HumanoidRootPart")
+            if hum and rp and hum.Health > 0 then
+                if (rp.Position - center).Magnitude <= 220 then
+                    pcall(function()
+                        rp.CanCollide = false
+                        rp.AssemblyLinearVelocity = Vector3.zero
+                        rp.AssemblyAngularVelocity = Vector3.zero
+                        rp.CFrame = CFrame.new(center)
+                    end)
+                end
+            end
+        end
+    end
+end
+
 local function FastAttack()
     if not ResolveAttackRemotes() then return end
-
-    local character = LocalPlayer.Character
-    local tool = character and character:FindFirstChildOfClass("Tool")
-    if not tool then
-        tool = EquipFarmWeapon()
-    end
-    if not tool then return end
-
     local enemies = workspace:FindFirstChild("Enemies")
     local root = GetRoot()
     if not enemies or not root then return end
 
-    local candidates = {}
+    local bestMob, bestHead, bestDistance
+    local hits = {}
 
-    for _, mob in ipairs(enemies:GetChildren()) do
-        local hum = mob:FindFirstChildOfClass("Humanoid")
-        local head = mob:FindFirstChild("Head")
+    local preferred = ActiveTarget
+    local preferredHum = preferred and preferred:FindFirstChildOfClass("Humanoid")
+    local preferredHead = preferred and preferred:FindFirstChild("Head")
+    local preferredRoot = preferred and preferred:FindFirstChild("HumanoidRootPart")
 
-        if hum and head and hum.Health > 0 then
-            local distance = (root.Position - head.Position).Magnitude
-            if distance <= 60 then
-                candidates[#candidates + 1] = {
-                    mob = mob,
-                    head = head,
-                    distance = distance
-                }
+    if preferred and preferred.Parent and preferredHum and preferredHead and preferredRoot
+        and preferredHum.Health > 0 and preferred.Name == Ms
+        and (root.Position - preferredRoot.Position).Magnitude <= 90 then
+        bestMob = preferred
+        bestHead = preferredHead
+        bestDistance = (root.Position - preferredHead.Position).Magnitude
+    end
+
+    if not bestMob then
+        for _, mob in ipairs(enemies:GetChildren()) do
+            if mob.Name == Ms then
+                local hum = mob:FindFirstChildOfClass("Humanoid")
+                local head = mob:FindFirstChild("Head")
+                local rp = mob:FindFirstChild("HumanoidRootPart")
+                if hum and head and rp and hum.Health > 0 then
+                    local d = (root.Position - head.Position).Magnitude
+                    if d <= 70 and (not bestDistance or d < bestDistance) then
+                        bestMob, bestHead, bestDistance = mob, head, d
+                    end
+                end
             end
         end
     end
 
-    table.sort(candidates, function(a, b)
-        return a.distance < b.distance
+    if not bestMob or not bestHead then return end
+    ActiveTarget = bestMob
+
+    local centerRoot = bestMob:FindFirstChild("HumanoidRootPart")
+    if centerRoot then
+        for _, mob in ipairs(enemies:GetChildren()) do
+            if mob.Name == Ms then
+                local hum = mob:FindFirstChildOfClass("Humanoid")
+                local head = mob:FindFirstChild("Head")
+                local rp = mob:FindFirstChild("HumanoidRootPart")
+                if hum and head and rp and hum.Health > 0
+                    and (rp.Position - centerRoot.Position).Magnitude <= 55 then
+                    hits[#hits + 1] = {mob, head}
+                end
+            end
+        end
+    end
+
+    if #hits == 0 then hits[1] = {bestMob, bestHead} end
+
+    pcall(function()
+        AttackRemote:FireServer(1e-9)
+        HitRemote:FireServer(bestHead, hits)
     end)
-
-    local hits = {}
-    local firstHead
-
-    for i = 1, math.min(2, #candidates) do
-        local target = candidates[i]
-        hits[#hits + 1] = {target.mob, target.head}
-        if i == 1 then
-            firstHead = target.head
-        end
-    end
-
-    if firstHead and #hits > 0 then
-        pcall(function()
-            AttackRemote:FireServer(1e-9)
-            HitRemote:FireServer(firstHead, hits)
-        end)
-    end
 end
-
 local function QuestText() local pg=LocalPlayer:FindFirstChild("PlayerGui"); local main=pg and pg:FindFirstChild("Main"); local q=main and main:FindFirstChild("Quest"); local c=q and q:FindFirstChild("Container"); local qt=c and c:FindFirstChild("QuestTitle"); return q,qt and qt:FindFirstChild("Title") end
-
--- Stable 2-mob gather controller.
-local bringmob = false
-local FarmPos
-local MonFarm
-local GatherPosition
-
-local function SetFarmTarget(root, mobName)
-    if root then
-        MonFarm = mobName
-        GatherPosition = root.Position + Vector3.new(0, 8, 0)
-        FarmPos = CFrame.new(GatherPosition)
-    end
-end
-
-local function StopGather()
-    bringmob = false
-    FarmPos = nil
-    MonFarm = nil
-    GatherPosition = nil
-end
-
-task.spawn(function()
-    while task.wait(0.04) do
-        if _G.AutoLevel and bringmob and GatherPosition and MonFarm then
-            pcall(function()
-                local enemies = workspace:FindFirstChild("Enemies")
-                if not enemies then return end
-
-                local candidates = {}
-
-                for _, mob in ipairs(enemies:GetChildren()) do
-                    if mob.Name == MonFarm then
-                        local hum = mob:FindFirstChildOfClass("Humanoid")
-                        local mobRoot = mob:FindFirstChild("HumanoidRootPart")
-
-                        if hum and mobRoot and hum.Health > 0 then
-                            candidates[#candidates + 1] = {
-                                mob = mob,
-                                distance = (mobRoot.Position - GatherPosition).Magnitude
-                            }
-                        end
-                    end
-                end
-
-                table.sort(candidates, function(a, b)
-                    return a.distance < b.distance
-                end)
-
-                local gatherCF = CFrame.new(GatherPosition)
-
-                for i = 1, math.min(2, #candidates) do
-                    local mob = candidates[i].mob
-                    local hum = mob:FindFirstChildOfClass("Humanoid")
-                    local mobRoot = mob:FindFirstChild("HumanoidRootPart")
-
-                    if hum and mobRoot and hum.Health > 0 then
-                        mob:PivotTo(gatherCF)
-                        mobRoot.AssemblyLinearVelocity = Vector3.zero
-                        mobRoot.AssemblyAngularVelocity = Vector3.zero
-                        mobRoot.CanCollide = false
-                        hum.WalkSpeed = 0
-                        hum.JumpPower = 0
-                        hum.AutoRotate = false
-                    end
-                end
-            end)
-        end
-    end
-end)
-
 local function RunFarm()
-    if not _G.AutoLevel then
-        StopGather()
-        RestoreAfterFarm()
-        return
-    end
-
     CheckLevel()
     if not NameMon or not NameQuest or not CFrameQ then return end
 
     local q, title = QuestText()
     if not q or not title then return end
 
-    local correct = q.Visible
-        and string.find(tostring(title.Text or ""), tostring(NameMon), 1, true)
+    local correct = q.Visible and string.find(
+        tostring(title.Text or ""),
+        tostring(NameMon),
+        1,
+        true
+    )
 
     if not correct then
         local rem = ReplicatedStorage:FindFirstChild("Remotes")
@@ -885,70 +1230,97 @@ local function RunFarm()
     end
 
     local enemies = workspace:FindFirstChild("Enemies")
-    if not enemies then return end
+    local root = GetRoot()
+    if not enemies or not root then return end
 
-    local found = false
+    -- Reuse the current target when possible; otherwise acquire nearest mob.
+    local target = ActiveTarget
+    local targetHum = target and target:FindFirstChildOfClass("Humanoid")
+    local targetRoot = target and target:FindFirstChild("HumanoidRootPart")
 
-    for _, mob in ipairs(enemies:GetChildren()) do
-        local hum = mob:FindFirstChildOfClass("Humanoid")
-        local rp = mob:FindFirstChild("HumanoidRootPart")
+    if not target
+        or not target.Parent
+        or not targetHum
+        or targetHum.Health <= 0
+        or not targetRoot
+        or target.Name ~= Ms
+        or (root.Position - targetRoot.Position).Magnitude > 180 then
 
-        if hum and rp and hum.Health > 0 and mob.Name == Ms then
-            found = true
+        target = nil
+        local bestDistance
 
-            repeat
-                if not _G.AutoLevel then break end
+        for _, mob in ipairs(enemies:GetChildren()) do
+            if mob.Name == Ms then
+                local hum = mob:FindFirstChildOfClass("Humanoid")
+                local rp = mob:FindFirstChild("HumanoidRootPart")
 
-                task.wait(math.min(tonumber(_G.Fast_Delay) or 0.03, 0.03))
-
-                AutoHaki()
-                local equippedTool = EquipFarmWeapon()
-
-                bringmob = true
-                if MonFarm ~= mob.Name
-                    or not GatherPosition
-                    or (GatherPosition - rp.Position).Magnitude > 12 then
-                    SetFarmTarget(rp, mob.Name)
-                end
-
-                local targetCF = CFrame.new(GatherPosition) * CFrame.new(0, 32, 0)
-                TweenTo(targetCF)
-
-                local currentRoot = GetRoot()
-                if currentRoot and (currentRoot.Position - rp.Position).Magnitude <= 60 then
-                    FastAttack()
-                end
-
-                pcall(function()
-                    rp.Size = Vector3.new(60, 60, 60)
-                    rp.CanCollide = false
-                end)
-
-            until not mob.Parent
-                or hum.Health <= 0
-                or not q.Visible
-                or not _G.AutoLevel
-        end
-    end
-
-    if not found then
-        local wo = workspace:FindFirstChild("_WorldOrigin")
-        local sp = wo and wo:FindFirstChild("EnemySpawns")
-
-        if sp then
-            for _, part in ipairs(sp:GetChildren()) do
-                if string.find(tostring(part.Name), tostring(NameMon), 1, true) then
-                    local root = GetRoot()
-
-                    if root and (root.Position - part.Position).Magnitude >= 10 then
-                        TweenTo(part.CFrame * CFrame.new(0, 40, 0))
-                        break
+                if hum and rp and hum.Health > 0 then
+                    local d = (root.Position - rp.Position).Magnitude
+                    if not bestDistance or d < bestDistance then
+                        target = mob
+                        bestDistance = d
                     end
                 end
             end
         end
+
+        ActiveTarget = target
+    end
+
+    if target then
+        local hum = target:FindFirstChildOfClass("Humanoid")
+        local rp = target:FindFirstChild("HumanoidRootPart")
+
+        if hum and rp and hum.Health > 0 then
+            AutoHaki()
+            EquipFarmWeapon()
+
+            local farmPoint = GetFarmPoint(rp)
+            if farmPoint then TweenTo(farmPoint) end
+
+            if not _G.AutoLevel then return end
+
+            BringMobs(NameMon, rp)
+
+            if ChooseWeapon ~= "Blox Fruit" or FruitM1Enabled then
+                FastAttack()
+            end
+
+            pcall(function()
+                rp.Size = Vector3.new(60, 60, 60)
+                rp.CanCollide = false
+                rp.AssemblyLinearVelocity = Vector3.zero
+                rp.AssemblyAngularVelocity = Vector3.zero
+            end)
+        else
+            ActiveTarget = nil
+        end
+        return
+    end
+
+    -- No mob alive: move to the nearest known spawn instead of scanning
+    -- and waiting through the whole enemy folder again.
+    local wo = workspace:FindFirstChild("_WorldOrigin")
+    local sp = wo and wo:FindFirstChild("EnemySpawns")
+    if sp then
+        local bestSpawn, bestDistance
+
+        for _, part in ipairs(sp:GetChildren()) do
+            if string.find(tostring(part.Name), tostring(NameMon), 1, true) then
+                local d = (root.Position - part.Position).Magnitude
+                if not bestDistance or d < bestDistance then
+                    bestSpawn = part
+                    bestDistance = d
+                end
+            end
+        end
+
+        if bestSpawn then
+            TweenTo(bestSpawn.CFrame * CFrame.new(0, 40, 0))
+        end
     end
 end
+
 
 function CheckLevel()
     local v197 = game:GetService("Players").LocalPlayer.Data.Level.Value;
@@ -1591,25 +1963,15 @@ function CheckLevel()
         end
     end
 end
--- Keep flight direction synchronized with the current farm target.
-task.spawn(function()
-    while task.wait(0.04) do
-        if _G.AutoLevel then
-            pcall(function()
-                local root = GetRoot()
-                if root and FarmPos then
-                    TweenTo(FarmPos)
-                end
-            end)
-        end
-    end
-end)
-
 -- Start only after CheckLevel has been declared above.
 task.spawn(function()
-    while task.wait() do
+    while Gui.Parent do
         if _G.AutoLevel then
-            pcall(RunFarm)
+            local ok, err = pcall(RunFarm)
+            if not ok then warn("[PhongdzHub] Farm tick:", err) end
+            task.wait(0.045)
+        else
+            task.wait(0.12)
         end
     end
 end)
@@ -1676,20 +2038,12 @@ end
 
 Toggle.Activated:Connect(function()
     farmEnabled = not farmEnabled
-
-    if farmEnabled then
-        CaptureCharacterState()
-    else
-        RestoreAfterFarm()
-    end
-
     _G.AutoLevel = farmEnabled
 
     if farmEnabled and not farmLoaded then
         if not loadFarm() then
             farmEnabled = false
             _G.AutoLevel = false
-            RestoreAfterFarm()
         end
     end
 
@@ -1720,23 +2074,3 @@ RunService.RenderStepped:Connect(function()
 end)
 
 updateToggle()
--- Refresh weapon choices after character respawn.
-task.spawn(function()
-    while task.wait(2) do
-        pcall(function()
-            if WeaponDropdown and WeaponDropdown.Parent and _G.FarmWeapon then
-                WeaponDropdown.Text = "Vũ khí: " .. tostring(_G.FarmWeapon)
-            end
-        end)
-    end
-end)
-
-task.spawn(function()
-    while task.wait(0.15) do
-        pcall(function()
-            if not _G.AutoLevel then
-                StopFlight()
-            end
-        end)
-    end
-end)
