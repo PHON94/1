@@ -1213,6 +1213,7 @@ SelectWeapon = _G.SelectWeapon
 FruitM1Enabled = _G.FruitM1Enabled ~= false
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local LocalPlayer = Players.LocalPlayer
 
@@ -1253,17 +1254,29 @@ local function TweenTo(cf)
 
     local distance = (cf.Position - r.Position).Magnitude
 
-    -- Never repeatedly write CFrame while already near the destination.
-    -- That periodic snap is a common source of vertical rubber-banding.
-    if distance <= 8 then
+    -- Source vẫn dùng TweenService để bay tới CFrame.
+    -- Khi đã gần điểm farm thì chỉ dừng tween, tuyệt đối không snap
+    -- CFrame liên tục vì snap Y là nguyên nhân gây giật lên/xuống.
+    if distance <= 10 then
         StopFarmTween()
+
+        -- Chỉ triệt vận tốc dọc nếu đang rơi. Không đẩy nhân vật lên.
+        local v = r.AssemblyLinearVelocity
+        if v.Y < -1 then
+            r.AssemblyLinearVelocity = Vector3.new(v.X, 0, v.Z)
+        end
         return
     end
 
-    -- Keep one tween alive; do not cancel/recreate it every farm tick.
-    if ActiveTween then return end
+    -- Không tạo tween mới nếu tween hiện tại vẫn đang chạy.
+    if ActiveTween then
+        return
+    end
 
-    local duration = math.clamp(distance / 420, 0.24, 0.95)
+    -- Giữ đúng cơ chế Tween của source, chỉ giảm tốc để tránh
+    -- rubber-band/giật khi server cập nhật vị trí.
+    local duration = math.clamp(distance / 360, 0.28, 1.10)
+
     local tween = TweenService:Create(
         r,
         TweenInfo.new(duration, Enum.EasingStyle.Linear, Enum.EasingDirection.Out),
@@ -1271,13 +1284,16 @@ local function TweenTo(cf)
     )
 
     ActiveTween = tween
+
     tween.Completed:Connect(function()
         if ActiveTween == tween then
             ActiveTween = nil
         end
     end)
+
     tween:Play()
 end
+
 local function FindFarmTool()
     local c = LocalPlayer.Character
     local b = LocalPlayer:FindFirstChildOfClass("Backpack")
@@ -1493,30 +1509,84 @@ local function RestoreFarmGravity()
     GravityRoot = nil
 end
 
-local function DisableFarmGravity()
-    local root = GetRoot()
-    if not root then return end
+-- NO GRAVITY — MOVEMENT ONLY
+-- Không đụng Fast Attack / CheckLevel / Quest / BringMobs.
+-- Khi Farm ON: nhân vật không bị kéo rơi xuống.
+-- Khi Farm OFF: trả physics bình thường.
+local GravityConnection = nil
+local GravityHumanoid = nil
 
-    if GravityRoot == root and GravityForce and GravityForce.Parent then
-        -- Keep exact anti-gravity force updated for the current assembly mass.
-        GravityForce.Force = Vector3.new(0, root.AssemblyMass * workspace.Gravity, 0)
+local function RestoreFarmGravity()
+    if GravityConnection then
+        GravityConnection:Disconnect()
+        GravityConnection = nil
+    end
+
+    if GravityHumanoid and GravityHumanoid.Parent then
+        pcall(function()
+            GravityHumanoid.PlatformStand = false
+            GravityHumanoid.AutoRotate = true
+            GravityHumanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
+        end)
+    end
+
+    GravityHumanoid = nil
+end
+
+local function DisableFarmGravity()
+    local character = LocalPlayer.Character
+    local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+    local root = GetRoot()
+
+    if not humanoid or not root then
+        return
+    end
+
+    if GravityConnection and GravityHumanoid == humanoid then
         return
     end
 
     RestoreFarmGravity()
-    GravityRoot = root
+    GravityHumanoid = humanoid
 
-    GravityAttachment = Instance.new("Attachment")
-    GravityAttachment.Name = "PhongdzFarmNoGravityAttachment"
-    GravityAttachment.Parent = root
+    -- Physics state removes the normal Humanoid falling behavior.
+    pcall(function()
+        humanoid.AutoRotate = true
+        humanoid:ChangeState(Enum.HumanoidStateType.Physics)
+    end)
 
-    GravityForce = Instance.new("VectorForce")
-    GravityForce.Name = "PhongdzFarmNoGravity"
-    GravityForce.Attachment0 = GravityAttachment
-    GravityForce.RelativeTo = Enum.ActuatorRelativeTo.World
-    GravityForce.ApplyAtCenterOfMass = true
-    GravityForce.Force = Vector3.new(0, root.AssemblyMass * workspace.Gravity, 0)
-    GravityForce.Parent = root
+    GravityConnection = RunService.Heartbeat:Connect(function()
+        if not _G.AutoLevel then
+            return
+        end
+
+        local currentCharacter = LocalPlayer.Character
+        local currentHumanoid = currentCharacter
+            and currentCharacter:FindFirstChildOfClass("Humanoid")
+        local currentRoot = GetRoot()
+
+        if not currentHumanoid or not currentRoot then
+            return
+        end
+
+        -- Respawn/replacement recovery.
+        if currentHumanoid ~= GravityHumanoid then
+            RestoreFarmGravity()
+            DisableFarmGravity()
+            return
+        end
+
+        -- Never pull upward. Only cancel downward drift.
+        local velocity = currentRoot.AssemblyLinearVelocity
+
+        if velocity.Y < -2 then
+            currentRoot.AssemblyLinearVelocity = Vector3.new(
+                velocity.X,
+                0,
+                velocity.Z
+            )
+        end
+    end)
 end
 
 local function RunFarm()
