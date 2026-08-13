@@ -1252,29 +1252,24 @@ local function TweenTo(cf)
     if not r or typeof(cf) ~= "CFrame" then return end
 
     local distance = (cf.Position - r.Position).Magnitude
-    local now = os.clock()
 
-    -- Never teleport the root every farm tick. That was fighting Roblox's
-    -- replication and causing the visible one-step rubber-band.
-    if distance <= 18 then
+    -- Never repeatedly write CFrame while already near the destination.
+    -- That periodic snap is a common source of vertical rubber-banding.
+    if distance <= 8 then
         StopFarmTween()
-        if now - LastMoveAt >= 0.14 then
-            r.CFrame = cf
-            LastMoveAt = now
-        end
         return
     end
 
-    -- Keep the current tween alive. Recreating/cancelling it every tick makes
-    -- the character briefly reverse toward the previous replicated position.
+    -- Keep one tween alive; do not cancel/recreate it every farm tick.
     if ActiveTween then return end
 
-    local duration = math.clamp(distance / 900, 0.10, 0.55)
+    local duration = math.clamp(distance / 420, 0.24, 0.95)
     local tween = TweenService:Create(
         r,
-        TweenInfo.new(duration, Enum.EasingStyle.Linear),
+        TweenInfo.new(duration, Enum.EasingStyle.Linear, Enum.EasingDirection.Out),
         {CFrame = cf}
     )
+
     ActiveTween = tween
     tween.Completed:Connect(function()
         if ActiveTween == tween then
@@ -1363,7 +1358,7 @@ local function GetFarmPoint(targetRoot)
     local target = targetRoot.Parent
     if FarmDestinationTarget ~= target or not FarmDestination then
         FarmDestinationTarget = target
-        FarmDestination = targetRoot.CFrame * CFrame.new(0, 38, 0)
+        FarmDestination = CFrame.new(targetRoot.Position + Vector3.new(0, 42, 0))
     end
     return FarmDestination
 end
@@ -1480,23 +1475,39 @@ local function QuestText()
 end
 
 
--- Gravity lock for Farm Level.
--- Farm ON  -> disable character falling.
--- Farm OFF -> immediately restore normal physics.
-local GravityConnection = nil
+-- Stable no-gravity state. Do not use VectorForce/BodyVelocity here:
+-- those forces fight TweenTo and create an up/down oscillation.
 local GravityForce = nil
 local GravityAttachment = nil
+local GravityRoot = nil
+
+local function RestoreFarmGravity()
+    if GravityForce then
+        pcall(function() GravityForce:Destroy() end)
+        GravityForce = nil
+    end
+    if GravityAttachment then
+        pcall(function() GravityAttachment:Destroy() end)
+        GravityAttachment = nil
+    end
+    GravityRoot = nil
+end
 
 local function DisableFarmGravity()
     local root = GetRoot()
     if not root then return end
 
-    if GravityConnection or GravityForce then
+    if GravityRoot == root and GravityForce and GravityForce.Parent then
+        -- Keep exact anti-gravity force updated for the current assembly mass.
+        GravityForce.Force = Vector3.new(0, root.AssemblyMass * workspace.Gravity, 0)
         return
     end
 
+    RestoreFarmGravity()
+    GravityRoot = root
+
     GravityAttachment = Instance.new("Attachment")
-    GravityAttachment.Name = "PhongdzFarmGravityAttachment"
+    GravityAttachment.Name = "PhongdzFarmNoGravityAttachment"
     GravityAttachment.Parent = root
 
     GravityForce = Instance.new("VectorForce")
@@ -1504,51 +1515,18 @@ local function DisableFarmGravity()
     GravityForce.Attachment0 = GravityAttachment
     GravityForce.RelativeTo = Enum.ActuatorRelativeTo.World
     GravityForce.ApplyAtCenterOfMass = true
-    GravityForce.Force = Vector3.zero
+    GravityForce.Force = Vector3.new(0, root.AssemblyMass * workspace.Gravity, 0)
     GravityForce.Parent = root
-
-    GravityConnection = RunService.Heartbeat:Connect(function()
-        if not _G.AutoLevel then
-            return
-        end
-
-        local character = LocalPlayer.Character
-        local currentRoot = GetRoot()
-        if not character or not currentRoot or not currentRoot.Parent then
-            return
-        end
-
-        local mass = currentRoot.AssemblyMass
-        GravityForce.Force = Vector3.new(
-            0,
-            mass * workspace.Gravity,
-            0
-        )
-    end)
-end
-
-local function RestoreFarmGravity()
-    if GravityConnection then
-        GravityConnection:Disconnect()
-        GravityConnection = nil
-    end
-
-    if GravityForce then
-        pcall(function()
-            GravityForce:Destroy()
-        end)
-        GravityForce = nil
-    end
-
-    if GravityAttachment then
-        pcall(function()
-            GravityAttachment:Destroy()
-        end)
-        GravityAttachment = nil
-    end
 end
 
 local function RunFarm()
+    if not _G.AutoLevel then
+        RestoreFarmGravity()
+        StopFarmTween()
+        return
+    end
+
+    DisableFarmGravity()
     CheckLevel()
     if not NameMon or not NameQuest or not CFrameQ then return end
 
@@ -1665,7 +1643,7 @@ local function RunFarm()
 
             -- If the stable destination is already stale by more than 18 studs,
             -- refresh it once rather than freezing the player on an old point.
-            if farmPoint and (farmPoint.Position - (rp.Position + Vector3.new(0, 38, 0))).Magnitude > 18 then
+            if farmPoint and (farmPoint.Position - (rp.Position + Vector3.new(0, 42, 0))).Magnitude > 18 then
                 FarmDestination = rp.CFrame * CFrame.new(0, 38, 0)
                 farmPoint = FarmDestination
             end
