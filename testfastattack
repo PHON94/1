@@ -330,7 +330,7 @@ local Title = Instance.new("TextLabel")
 Title.Position = UDim2.fromOffset(18, 7)
 Title.Size = UDim2.fromOffset(300, 25)
 Title.BackgroundTransparency = 1
-Title.Text = "PHONGDZ HUB  v1.9"
+Title.Text = "PHONGDZ HUB  v2.0"
 Title.Font = Enum.Font.GothamBlack
 Title.TextSize = 19
 Title.TextColor3 = Color3.fromRGB(255, 211, 65)
@@ -2310,6 +2310,40 @@ local function updateToggle()
     end
 end
 
+-- Camera lock for Farm Level only.
+local FarmCameraLocked = false
+local FarmCameraCFrame = nil
+local FarmCameraType = nil
+local FarmCameraSubject = nil
+
+local function LockFarmCamera()
+    if FarmCameraLocked then return end
+    local camera = workspace.CurrentCamera
+    if not camera then return end
+    FarmCameraLocked = true
+    FarmCameraCFrame = camera.CFrame
+    FarmCameraType = camera.CameraType
+    FarmCameraSubject = camera.CameraSubject
+    camera.CameraType = Enum.CameraType.Scriptable
+    camera.CFrame = FarmCameraCFrame
+end
+
+local function UnlockFarmCamera()
+    if not FarmCameraLocked then return end
+    local camera = workspace.CurrentCamera
+    if camera then
+        camera.CameraType = FarmCameraType or Enum.CameraType.Custom
+        camera.CameraSubject = FarmCameraSubject
+        if FarmCameraCFrame then
+            camera.CFrame = FarmCameraCFrame
+        end
+    end
+    FarmCameraLocked = false
+    FarmCameraCFrame = nil
+    FarmCameraType = nil
+    FarmCameraSubject = nil
+end
+
 Toggle.Activated:Connect(function()
     local nextState = not farmEnabled
 
@@ -2327,9 +2361,11 @@ Toggle.Activated:Connect(function()
         -- The Farm worker is persistent and will see this state immediately.
         _G.AutoLevel = true
         farmEnabled = true
+        LockFarmCamera()
     else
         farmEnabled = false
         _G.AutoLevel = false
+        UnlockFarmCamera()
     end
 
     updateToggle()
