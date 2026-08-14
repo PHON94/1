@@ -243,7 +243,7 @@ local Title = Instance.new("TextLabel")
 Title.Position = UDim2.fromOffset(18, 7)
 Title.Size = UDim2.fromOffset(300, 25)
 Title.BackgroundTransparency = 1
-Title.Text = "PHONGDZ HUB"
+Title.Text = "PHONGDZ HUB  v1.1"
 Title.Font = Enum.Font.GothamBlack
 Title.TextSize = 19
 Title.TextColor3 = Color3.fromRGB(255, 211, 65)
@@ -1234,371 +1234,281 @@ end
 --=============================================================================
 
 local function GetRoot() local c=LocalPlayer.Character return c and c:FindFirstChild("HumanoidRootPart") end
-local ActiveTween
 local ActiveTarget
 local LastEquipName
 local FarmDestination
 local FarmDestinationTarget
 local LastMoveAt = 0
 
+--===========================================================================
+-- SOURCE MOVEMENT CORE
+-- Based directly on source.txt:
+--   invisible anchored block + TweenService + character follows block.
+-- CheckLevel and FastAttack are intentionally outside this patch.
+--===========================================================================
+
+local block = workspace:FindFirstChild("Phongdz_SourceFarmBlock")
+if block then
+    pcall(function() block:Destroy() end)
+end
+
+block = Instance.new("Part")
+block.Name = "Phongdz_SourceFarmBlock"
+block.Size = Vector3.new(1, 1, 1)
+block.Anchored = true
+block.CanCollide = false
+block.CanTouch = false
+block.CanQuery = false
+block.Transparency = 1
+block.Parent = workspace
+
+local shouldTween = false
+local SourceMoveConnection = nil
+local ActiveTween = nil
+
 local function StopFarmTween()
+    shouldTween = false
+
     if ActiveTween then
-        pcall(function() ActiveTween:Cancel() end)
+        pcall(function()
+            ActiveTween:Cancel()
+        end)
         ActiveTween = nil
     end
 end
 
---===========================================================================
--- PHONGDZ HUB :: MOVEMENT ONLY
--- Based on the NEW source.txt _tp() model.
--- DO NOT TOUCH FastAttack / CheckLevel / Quest / BringEnemy.
---===========================================================================
+local function StartSourceMovement()
+    if SourceMoveConnection then return end
 
-local FarmMoveAnchor = nil
-local FarmMoveTween = nil
-local FarmMoveConnection = nil
-local FarmMoveTarget = nil
-
-local function EnsureFarmMoveAnchor()
-    if FarmMoveAnchor and FarmMoveAnchor.Parent then
-        return FarmMoveAnchor
-    end
-
-    FarmMoveAnchor = Instance.new("Part")
-    FarmMoveAnchor.Name = "PhongdzFarmMoveAnchor"
-    FarmMoveAnchor.Size = Vector3.new(2, 2, 2)
-    FarmMoveAnchor.Transparency = 1
-    FarmMoveAnchor.Anchored = true
-    FarmMoveAnchor.CanCollide = false
-    FarmMoveAnchor.CanTouch = false
-    FarmMoveAnchor.CanQuery = false
-    FarmMoveAnchor.Parent = workspace
-
-    return FarmMoveAnchor
-end
-
-local function StopFarmTween()
-    if FarmMoveTween then
-        pcall(function()
-            FarmMoveTween:Cancel()
-        end)
-        FarmMoveTween = nil
-    end
-end
-
-local function StopFarmMovement()
-    StopFarmTween()
-
-    if FarmMoveConnection then
-        FarmMoveConnection:Disconnect()
-        FarmMoveConnection = nil
-    end
-
-    FarmMoveTarget = nil
-
-    if FarmMoveAnchor then
-        pcall(function()
-            FarmMoveAnchor:Destroy()
-        end)
-        FarmMoveAnchor = nil
-    end
-end
-
-local function StartFarmMovement()
     local root = GetRoot()
-    if not root then
-        return
+    if root then
+        block.CFrame = root.CFrame
     end
 
-    local anchor = EnsureFarmMoveAnchor()
+    SourceMoveConnection = RunService.Heartbeat:Connect(function()
+        local character = LocalPlayer.Character
+        local rootPart = character and character:FindFirstChild("HumanoidRootPart")
 
-    if (anchor.Position - root.Position).Magnitude > 6 then
-        anchor.CFrame = root.CFrame
-    end
+        if not character or not rootPart then
+            return
+        end
 
-    if FarmMoveConnection then
-        return
-    end
-
-    FarmMoveConnection = RunService.Heartbeat:Connect(function()
         if not _G.AutoLevel then
-            StopFarmMovement()
-            return
+            shouldTween = false
         end
 
-        local currentRoot = GetRoot()
+        if shouldTween and block and block.Parent == workspace then
+            -- This is the same relationship used by source.txt:
+            -- the block is the tween target and the character follows it.
+            if (rootPart.Position - block.Position).Magnitude <= 200 then
+                rootPart.CFrame = block.CFrame
+            else
+                block.CFrame = rootPart.CFrame
+            end
 
-        if not currentRoot or not anchor.Parent then
-            return
-        end
-
-        local delta = anchor.Position - currentRoot.Position
-        local distance = delta.Magnitude
-
-        -- Source-style anchor following, but without hard snapping every tick.
-        if distance > 1.5 then
-            local alpha = math.clamp(0.16 + distance / 180, 0.16, 0.50)
-
-            currentRoot.CFrame = currentRoot.CFrame:Lerp(
-                CFrame.new(anchor.Position),
-                alpha
-            )
-        end
-
-        -- Only cancel downward drift; never push the player upward.
-        local velocity = currentRoot.AssemblyLinearVelocity
-        if velocity.Y < -3 then
-            currentRoot.AssemblyLinearVelocity = Vector3.new(
-                velocity.X,
-                0,
-                velocity.Z
-            )
+            for _, part in ipairs(character:GetChildren()) do
+                if part:IsA("BasePart") then
+                    part.CanCollide = false
+                end
+            end
+        else
+            for _, part in ipairs(character:GetChildren()) do
+                if part:IsA("BasePart") then
+                    part.CanCollide = true
+                end
+            end
         end
     end)
 end
 
-local function TweenTo(cf)
-    local root = GetRoot()
-    if not root or typeof(cf) ~= "CFrame" then
-        return
-    end
-
-    local anchor = EnsureFarmMoveAnchor()
-
-    local distance = (cf.Position - anchor.Position).Magnitude
-
-    -- Same base speed as the NEW source's _tp() implementation.
-    local duration = math.max(distance / 300, 0.12)
-
-    -- Do not rebuild the same tween while it is already running.
-    if FarmMoveTween
-        and FarmMoveTarget
-        and (FarmMoveTarget.Position - cf.Position).Magnitude <= 3
-    then
-        StartFarmMovement()
-        return
-    end
-
+local function StopSourceMovement()
+    shouldTween = false
     StopFarmTween()
 
-    FarmMoveTarget = cf
+    if SourceMoveConnection then
+        SourceMoveConnection:Disconnect()
+        SourceMoveConnection = nil
+    end
 
-    FarmMoveTween = TweenService:Create(
-        anchor,
+    local character = LocalPlayer.Character
+    if character then
+        for _, part in ipairs(character:GetChildren()) do
+            if part:IsA("BasePart") then
+                part.CanCollide = true
+            end
+        end
+    end
+end
+
+local function TweenTo(target)
+    if typeof(target) ~= "CFrame" then
+        if typeof(target) == "Vector3" then
+            target = CFrame.new(target)
+        elseif typeof(target) == "Instance" and target:IsA("BasePart") then
+            target = target.CFrame
+        else
+            return
+        end
+    end
+
+    local root = GetRoot()
+    if not root then return end
+
+    StartSourceMovement()
+    shouldTween = true
+
+    local distance = (target.Position - root.Position).Magnitude
+    local duration = math.max(distance / 300, 0.08)
+
+    if ActiveTween then
+        pcall(function()
+            ActiveTween:Cancel()
+        end)
+        ActiveTween = nil
+    end
+
+    -- Exact source idea: tween the invisible block, not the character.
+    ActiveTween = TweenService:Create(
+        block,
         TweenInfo.new(duration, Enum.EasingStyle.Linear),
-        {CFrame = cf}
+        {CFrame = target}
     )
 
-    local tweenRef = FarmMoveTween
+    local tweenRef = ActiveTween
 
     tweenRef.Completed:Connect(function()
-        if FarmMoveTween == tweenRef then
-            FarmMoveTween = nil
+        if ActiveTween == tweenRef then
+            ActiveTween = nil
         end
     end)
 
     tweenRef:Play()
-    StartFarmMovement()
-end
-
-
-local function FindFarmTool()
-    local c = LocalPlayer.Character
-    local b = LocalPlayer:FindFirstChildOfClass("Backpack")
-
-    local function scan(container)
-        if not container then return nil end
-
-        -- Prefer an explicit selection resolved by the UI.
-        if SelectWeapon then
-            local selected = container:FindFirstChild(SelectWeapon)
-            if selected and selected:IsA("Tool") then
-                return selected
-            end
-        end
-
-        local fallback = nil
-
-        for _, tool in ipairs(container:GetChildren()) do
-            if tool:IsA("Tool") then
-                local tip = string.lower(tostring(tool.ToolTip or ""))
-                local name = string.lower(tool.Name)
-
-                if ChooseWeapon == "Melee" then
-                    if tip == "melee" or name:find("combat", 1, true)
-                        or name:find("step", 1, true)
-                        or name:find("claw", 1, true)
-                        or name:find("kung fu", 1, true)
-                        or name:find("talon", 1, true)
-                        or name:find("godhuman", 1, true)
-                        or name:find("sanguine", 1, true) then
-                        return tool
-                    end
-                elseif ChooseWeapon == "Sword" then
-                    if tip == "sword" then
-                        return tool
-                    end
-                elseif ChooseWeapon == "Blox Fruit" then
-                    if tip == "blox fruit" or name:find("fruit", 1, true) then
-                        return tool
-                    end
-                end
-
-                fallback = fallback or tool
-            end
-        end
-
-        return fallback
-    end
-
-    return scan(c) or scan(b)
-end
-
-local function EquipFarmWeapon()
-    local c = LocalPlayer.Character
-    local h = c and c:FindFirstChildOfClass("Humanoid")
-    if not h then return nil end
-
-    local tool = FindFarmTool()
-    if not tool then return nil end
-
-    if tool.Parent ~= c then
-        pcall(function()
-            h:EquipTool(tool)
-        end)
-    end
-
-    LastEquipName = tool.Name
-    SelectWeapon = tool.Name
-    _G.SelectWeapon = tool.Name
-
-    return tool
-end
-local function AutoHaki() local c=LocalPlayer.Character; local rem=ReplicatedStorage:FindFirstChild("Remotes"); local comm=rem and rem:FindFirstChild("CommF_"); if c and not c:FindFirstChild("HasBuso") and comm then pcall(function() comm:InvokeServer("Buso") end) end end
-local AttackRemote,HitRemote
-local function ResolveAttackRemotes() if AttackRemote and HitRemote then return true end; local modules=ReplicatedStorage:FindFirstChild("Modules"); local net=modules and modules:FindFirstChild("Net"); if not net then return false end; AttackRemote=net:FindFirstChild("RE/RegisterAttack"); HitRemote=net:FindFirstChild("RE/RegisterHit"); return AttackRemote~=nil and HitRemote~=nil end
-local function GetFarmPoint(targetRoot)
-    if not targetRoot then return nil end
-    local target = targetRoot.Parent
-    if FarmDestinationTarget ~= target or not FarmDestination then
-        FarmDestinationTarget = target
-        FarmDestination = CFrame.new(targetRoot.Position + Vector3.new(0, 42, 0))
-    end
-    return FarmDestination
-end
-
-local BringConnection = nil
-local BringCenter = nil
-local BringName = nil
-
-local function StopBringMobs()
-    if BringConnection then
-        BringConnection:Disconnect()
-        BringConnection = nil
-    end
-    BringCenter = nil
-    BringName = nil
 end
 
 --===========================================================================
--- PHONGDZ HUB :: SOURCE-BASED MOB GROUPING ONLY
--- Movement/FastAttack/Farm target selection are untouched.
+-- SOURCE BRING ENEMY CORE
+-- Based on source.txt BringEnemy(Mon).
+-- Only the mob grouping layer is replaced; CheckLevel remains unchanged.
 --===========================================================================
 
-local BringMobsConnection = nil
-local BringMobsCenter = nil
-local BringMobsName = nil
+local _B = true
+local BringSourceConnection = nil
 
 local function StopBringMobs()
-    if BringMobsConnection then
-        BringMobsConnection:Disconnect()
-        BringMobsConnection = nil
+    if BringSourceConnection then
+        BringSourceConnection:Disconnect()
+        BringSourceConnection = nil
     end
 
-    BringMobsCenter = nil
-    BringMobsName = nil
+    -- Remove only BodyVelocity objects created by this routine.
+    local enemies = workspace:FindFirstChild("Enemies")
+    if enemies then
+        for _, mob in ipairs(enemies:GetChildren()) do
+            local root = mob:FindFirstChild("HumanoidRootPart")
+            local bv = root and root:FindFirstChild("PhongdzSourceBringVelocity")
+            if bv then
+                pcall(function() bv:Destroy() end)
+            end
+        end
+    end
 end
 
-local function StartBringMobs(targetName, centerRoot)
-    if not targetName or not centerRoot or not centerRoot.Parent then
+local function IsSourceNetworkOwner(part)
+    local ok, owner = pcall(function()
+        if typeof(isnetworkowner) == "function" then
+            return isnetworkowner(part)
+        end
+        return nil
+    end)
+
+    if ok and owner ~= nil then
+        return owner
+    end
+
+    return part.ReceiveAge == 0
+        and not part.Anchored
+        and part.AssemblyLinearVelocity.Magnitude > 0
+end
+
+local function BringEnemy(Mon)
+    if not _B or not Mon then
         return
     end
 
     local enemies = workspace:FindFirstChild("Enemies")
-    if not enemies then
+    local targetRoot = Mon:FindFirstChild("HumanoidRootPart")
+    if not enemies or not targetRoot then
         return
     end
 
-    -- Reuse one Heartbeat worker for the current target.
-    if BringMobsConnection
-        and BringMobsCenter == centerRoot
-        and BringMobsName == targetName
-    then
+    local targetPos = targetRoot.Position
+
+    -- Source creates/maintains one worker instead of creating a new loop
+    -- for every mob.
+    if BringSourceConnection then
         return
     end
 
-    StopBringMobs()
-
-    BringMobsCenter = centerRoot
-    BringMobsName = targetName
-
-    BringMobsConnection = RunService.Heartbeat:Connect(function()
-        if not _G.AutoLevel then
+    BringSourceConnection = RunService.Heartbeat:Connect(function()
+        if not _G.AutoLevel or not _B then
             StopBringMobs()
             return
         end
 
-        local center = BringMobsCenter
-        if not center or not center.Parent then
+        if not Mon.Parent then
             StopBringMobs()
             return
         end
 
-        local currentEnemies = workspace:FindFirstChild("Enemies")
-        if not currentEnemies then
+        local currentRoot = Mon:FindFirstChild("HumanoidRootPart")
+        local currentHum = Mon:FindFirstChildOfClass("Humanoid")
+        if not currentRoot or not currentHum or currentHum.Health <= 0 then
+            StopBringMobs()
             return
         end
 
-        local centerPosition = center.Position
+        local center = currentRoot.Position
+        local areaMob = false
 
-        for _, mob in ipairs(currentEnemies:GetChildren()) do
-            if mob.Name == BringMobsName then
-                local humanoid = mob:FindFirstChildOfClass("Humanoid")
+        for _, mob in ipairs(enemies:GetChildren()) do
+            if mob ~= Mon and mob.Name == Mon.Name then
+                local hum = mob:FindFirstChildOfClass("Humanoid")
                 local root = mob:FindFirstChild("HumanoidRootPart")
 
-                if humanoid and root and humanoid.Health > 0 then
-                    local offset = root.Position - centerPosition
-                    local horizontalDistance = Vector3.new(
-                        offset.X,
-                        0,
-                        offset.Z
-                    ).Magnitude
+                if hum and root and hum.Health > 0 then
+                    local distance = (root.Position - center).Magnitude
 
-                    -- Same practical idea as the source grouping:
-                    -- only pull mobs from the current farming area.
-                    if horizontalDistance <= 220 then
-                        local targetPosition = Vector3.new(
-                            centerPosition.X,
-                            root.Position.Y,
-                            centerPosition.Z
-                        )
+                    if distance <= 3000 then
+                        local bv = root:FindFirstChild("PhongdzSourceBringVelocity")
+                        if not bv then
+                            bv = Instance.new("BodyVelocity")
+                            bv.Name = "PhongdzSourceBringVelocity"
+                            bv.MaxForce = Vector3.new(1e9, 1e9, 1e9)
+                            bv.Velocity = Vector3.zero
+                            bv.Parent = root
+                        end
 
-                        pcall(function()
-                            root.AssemblyLinearVelocity = Vector3.zero
-                            root.AssemblyAngularVelocity = Vector3.zero
+                        if distance <= 10 then
+                            areaMob = true
+                        end
 
-                            -- Preserve each mob's Y level; group them on X/Z
-                            -- so the Farm movement system remains in control
-                            -- of the player's vertical position.
-                            root.CFrame = CFrame.new(targetPosition)
-                        end)
+                        if not areaMob and IsSourceNetworkOwner(root) then
+                            root.CFrame = CFrame.new(center)
+                        end
+
+                        root.CanCollide = false
+                        hum.WalkSpeed = 0
+                        hum.JumpPower = 0
                     end
                 end
             end
         end
+
+        currentRoot.CanCollide = false
+        currentHum.WalkSpeed = 0
+        currentHum.JumpPower = 0
     end)
 end
-
 
 local function FastAttack()
     if not ResolveAttackRemotes() then return end
@@ -1737,12 +1647,12 @@ end
 local function RunFarm()
     if not _G.AutoLevel then
         RestoreFarmGravity()
-        StopFarmMovement()
+        StopSourceMovement()
         return
     end
 
     DisableFarmGravity()
-    StartFarmMovement()
+    StartSourceMovement()
     CheckLevel()
     if not NameMon or not NameQuest or not CFrameQ then return end
 
@@ -1872,7 +1782,7 @@ local function RunFarm()
                 return
             end
 
-            StartBringMobs(NameMon, rp)
+            BringEnemy(target)
 
             -- Attack only after a tool is actually equipped.
             local equippedTool = EquipFarmWeapon()
@@ -2587,7 +2497,8 @@ end)
 
 
 LocalPlayer.CharacterAdded:Connect(function()
-    StopFarmMovement()
+    StopSourceMovement()
+    StopBringMobs()
     RestoreFarmGravity()
 
     if _G.AutoLevel then
@@ -2616,7 +2527,7 @@ task.spawn(function()
         else
             StopBringMobs()
             RestoreFarmGravity()
-            StopFarmMovement()
+            StopSourceMovement()
             task.wait(0.12)
         end
     end
