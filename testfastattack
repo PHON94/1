@@ -330,7 +330,7 @@ local Title = Instance.new("TextLabel")
 Title.Position = UDim2.fromOffset(18, 7)
 Title.Size = UDim2.fromOffset(300, 25)
 Title.BackgroundTransparency = 1
-Title.Text = "PHONGDZ HUB  v2.0"
+Title.Text = "PHONGDZ HUB  v2.1"
 Title.Font = Enum.Font.GothamBlack
 Title.TextSize = 19
 Title.TextColor3 = Color3.fromRGB(255, 211, 65)
@@ -1373,6 +1373,12 @@ local plr = LocalPlayer
 local replicated = ReplicatedStorage
 local Sec = 0.1
 
+-- Source camera handling: stop CameraShaker instead of forcing Scriptable.
+pcall(function()
+    local cameraModule = require(ReplicatedStorage.Util.CameraShaker)
+    cameraModule:Stop()
+end)
+
 _G.AutoLevel = (_G.AutoLevel == true)
 _G.Fast_Delay = _G.Fast_Delay or 0.01
 
@@ -1404,156 +1410,126 @@ local LastMoveAt = 0
 --===========================================================================
 
 local block = workspace:FindFirstChild("Phongdz_SourceFarmBlock")
-if block then
-    pcall(function() block:Destroy() end)
-end
-
-block = Instance.new("Part")
-block.Name = "Phongdz_SourceFarmBlock"
+if block then pcall(function() block:Destroy() end) end
+block = Instance.new("Part", workspace)
 block.Size = Vector3.new(1, 1, 1)
+block.Name = "Phongdz_SourceFarmBlock"
 block.Anchored = true
 block.CanCollide = false
 block.CanTouch = false
 block.CanQuery = false
 block.Transparency = 1
-block.Parent = workspace
 
 local shouldTween = false
-local SourceMoveConnection = nil
 local ActiveTween = nil
+local SourceMoveConnection = nil
 
 local function StopFarmTween()
     shouldTween = false
-
     if ActiveTween then
-        pcall(function()
-            ActiveTween:Cancel()
-        end)
+        pcall(function() ActiveTween:Cancel() end)
         ActiveTween = nil
     end
 end
 
+-- Source movement controller: tween the invisible block and hand the
+-- character to it inside the source's 200-stud range.
 local function StartSourceMovement()
     if SourceMoveConnection then return end
 
-    local root = GetRoot()
-    if root then
-        block.CFrame = root.CFrame
-    end
+    task.spawn(function()
+        local character = LocalPlayer.Character
+        while not character or not character.PrimaryPart do
+            task.wait()
+            character = LocalPlayer.Character
+        end
+        if character and character.PrimaryPart then
+            block.CFrame = character.PrimaryPart.CFrame
+        end
+    end)
 
     SourceMoveConnection = RunService.Heartbeat:Connect(function()
-        local character = LocalPlayer.Character
-        local rootPart = character and character:FindFirstChild("HumanoidRootPart")
+        pcall(function()
+            local character = LocalPlayer.Character
+            local primary = character and character.PrimaryPart
+            if not character or not primary then return end
 
-        if not character or not rootPart then
-            return
-        end
+            if _G.AutoLevel and shouldTween then
+                if block and block.Parent == workspace then
+                    if (primary.Position - block.Position).Magnitude <= 200 then
+                        primary.CFrame = block.CFrame
+                    else
+                        block.CFrame = primary.CFrame
+                    end
+                end
 
-        if not _G.AutoLevel then
-            shouldTween = false
-        end
-
-        if shouldTween and block and block.Parent == workspace then
-            -- TweenTo owns the character movement now. Do not overwrite
-            -- HumanoidRootPart while an active tween is running.
-            if not ActiveTween or ActiveTween.PlaybackState ~= Enum.PlaybackState.Playing then
-                block.CFrame = rootPart.CFrame
-            end
-
-            for _, part in ipairs(character:GetChildren()) do
-                if part:IsA("BasePart") then
-                    part.CanCollide = false
+                for _, part in ipairs(character:GetChildren()) do
+                    if part:IsA("BasePart") then
+                        part.CanCollide = false
+                    end
+                end
+            else
+                for _, part in ipairs(character:GetChildren()) do
+                    if part:IsA("BasePart") then
+                        part.CanCollide = true
+                    end
                 end
             end
-        else
-            for _, part in ipairs(character:GetChildren()) do
-                if part:IsA("BasePart") then
-                    part.CanCollide = true
-                end
-            end
-        end
+        end)
     end)
 end
 
 local function StopSourceMovement()
     shouldTween = false
     StopFarmTween()
-
     if SourceMoveConnection then
         SourceMoveConnection:Disconnect()
         SourceMoveConnection = nil
     end
-
     local character = LocalPlayer.Character
     if character then
         for _, part in ipairs(character:GetChildren()) do
-            if part:IsA("BasePart") then
-                part.CanCollide = true
-            end
+            if part:IsA("BasePart") then part.CanCollide = true end
         end
     end
 end
 
 local function TweenTo(target)
-    if typeof(target) ~= "CFrame" then
-        if typeof(target) == "Vector3" then
-            target = CFrame.new(target)
-        elseif typeof(target) == "Instance" and target:IsA("BasePart") then
-            target = target.CFrame
-        else
-            return
-        end
+    local gg
+    if typeof(target) == "Vector3" then
+        gg = CFrame.new(target)
+    elseif typeof(target) == "CFrame" then
+        gg = target
+    elseif typeof(target) == "Instance" and target:IsA("BasePart") then
+        gg = target.CFrame
     end
+    if not gg then return end
 
-    local root = GetRoot()
-    if not root then return end
+    local character = LocalPlayer.Character
+    local rootPart = character and character:FindFirstChild("HumanoidRootPart")
+    if not rootPart then return end
 
     StartSourceMovement()
     shouldTween = true
 
-    -- Don't restart an already-running trip to the same destination.
-    -- Farm Level calls TweenTo repeatedly while a mob is alive. Recreating
-    -- the tween every cycle makes HumanoidRootPart repeatedly snap toward
-    -- the newest CFrame, which causes the visible up/down jerk and "rubber
-    -- band" back to the previous position. Let the current trip finish.
-    if ActiveTween and ActiveTween.PlaybackState == Enum.PlaybackState.Playing then
-        FarmDestinationTarget = target
-        FarmDestination = target
-        return
+    local distance = (gg.Position - rootPart.Position).Magnitude
+    local tweenInfo = TweenInfo.new(distance / 300, Enum.EasingStyle.Linear)
+    local tween = TweenService:Create(block, tweenInfo, {CFrame = gg})
+    ActiveTween = tween
+
+    if character:FindFirstChildOfClass("Humanoid")
+        and character:FindFirstChildOfClass("Humanoid").Sit == true then
+        block.CFrame = CFrame.new(block.Position.X, gg.Y, block.Position.Z)
     end
 
-    if ActiveTween then
-        pcall(function()
-            ActiveTween:Cancel()
-        end)
-        ActiveTween = nil
-    end
-
-    FarmDestinationTarget = target
-    FarmDestination = target
-
-    local distance = (target.Position - root.Position).Magnitude
-    local duration = math.clamp(distance / 250, 0.15, 8)
-
-    -- Move the character root directly. The old implementation tweened an
-    -- invisible anchor but then reset that anchor to the player's position
-    -- while the destination was farther than 200 studs, so long trips never
-    -- actually advanced.
-    ActiveTween = TweenService:Create(
-        root,
-        TweenInfo.new(duration, Enum.EasingStyle.Linear, Enum.EasingDirection.Out),
-        {CFrame = target}
-    )
-
-    local tweenRef = ActiveTween
-    tweenRef.Completed:Connect(function()
-        if ActiveTween == tweenRef then
-            ActiveTween = nil
-        end
+    tween.Completed:Connect(function()
+        if ActiveTween == tween then ActiveTween = nil end
     end)
-
-    tweenRef:Play()
+    tween:Play()
+    return tween
 end
+
+StartSourceMovement()
 
 --===========================================================================
 -- SOURCE BRING ENEMY CORE
@@ -1683,165 +1659,175 @@ end
 local EquipFarmWeapon
 
 local SourceFastAttack = {
-    LastFire = 0,
-    Interval = 0.025,
-    Range = 60,
-    AttackRemote = nil,
-    HitRemote = nil,
+    Rate = 0.000000002,
+    Enabled = true,
 }
 
-local function GetSourceFastAttackRemotes()
-    if SourceFastAttack.AttackRemote and SourceFastAttack.HitRemote
-        and SourceFastAttack.AttackRemote.Parent and SourceFastAttack.HitRemote.Parent then
-        return SourceFastAttack.AttackRemote, SourceFastAttack.HitRemote
+local Enemies = workspace:WaitForChild("Enemies")
+local Modules = ReplicatedStorage:WaitForChild("Modules")
+local Net = Modules:WaitForChild("Net")
+
+local function SourceNearbyTargets(character, folder)
+    if not character or not folder then return {} end
+    local pos = character:GetPivot().Position
+    local result = {}
+    for _, target in ipairs(folder:GetChildren()) do
+        local humanoid = target:FindFirstChild("Humanoid")
+        local rootPart = target:FindFirstChild("HumanoidRootPart")
+        if humanoid and rootPart and humanoid.Health > 0
+            and (rootPart.Position - pos).Magnitude <= 60 then
+            result[#result + 1] = target
+        end
     end
-
-    local ok = pcall(function()
-        local storage = ReplicatedStorage
-        local modules = storage:FindFirstChild("Modules")
-        local net = modules and modules:FindFirstChild("Net")
-        if not net then return end
-
-        SourceFastAttack.AttackRemote = net:FindFirstChild("RE/RegisterAttack")
-        SourceFastAttack.HitRemote = net:FindFirstChild("RE/RegisterHit")
-    end)
-
-    if ok and SourceFastAttack.AttackRemote and SourceFastAttack.HitRemote then
-        return SourceFastAttack.AttackRemote, SourceFastAttack.HitRemote
-    end
-
-    return nil, nil
+    return result
 end
 
--- Source-derived target scan: enemies only, so this farm routine never
--- intentionally targets other players.
-local function GetSourceFarmTargets(character, range)
-    local enemiesFolder = workspace:FindFirstChild("Enemies")
-    local root = character and character:FindFirstChild("HumanoidRootPart")
-    if not enemiesFolder or not root then return {} end
+local function SourceTargetParts(targets)
+    local result = {}
+    for _, target in ipairs(targets) do
+        local head = target:FindFirstChild("Head") or target.PrimaryPart
+        if head then result[#result + 1] = {target, head} end
+    end
+    return result
+end
 
-    local targets = {}
-    for _, enemy in ipairs(enemiesFolder:GetChildren()) do
-        if enemy.Name == (ActiveTarget and ActiveTarget.Name or "") and not enemy:GetAttribute("IsBoat") then
-            local enemyRoot = enemy:FindFirstChild("HumanoidRootPart")
-            local hum = enemy:FindFirstChildOfClass("Humanoid")
-            if enemyRoot and hum and hum.Health > 0 then
-                if (enemyRoot.Position - root.Position).Magnitude <= range then
-                    targets[#targets + 1] = enemy
+local function ExecuteSourceFastAttack()
+    if not _G.AutoLevel or not SourceFastAttack.Enabled then return end
+    local character = LocalPlayer.Character
+    if not character then return end
+    local tool = character:FindFirstChildOfClass("Tool")
+    if not tool then return end
+
+    local targets = SourceNearbyTargets(character, Enemies)
+    if #targets < 1 then return end
+    local targetParts = SourceTargetParts(targets)
+    if #targetParts < 1 then return end
+
+    local attackRemote = Net:FindFirstChild("RE/RegisterAttack")
+    local hitRemote = Net:FindFirstChild("RE/RegisterHit")
+    if not attackRemote or not hitRemote then return end
+
+    attackRemote:FireServer(SourceFastAttack.Rate)
+    hitRemote:FireServer(targetParts[1][2], targetParts)
+end
+
+local AttackRemoteTarget
+local AttackRemoteId
+
+local function InitializeHitRegistration()
+    local folders = {
+        ReplicatedStorage:FindFirstChild("Util"),
+        ReplicatedStorage:FindFirstChild("Common"),
+        ReplicatedStorage:FindFirstChild("Remotes"),
+        ReplicatedStorage:FindFirstChild("Assets"),
+        ReplicatedStorage:FindFirstChild("FX"),
+    }
+
+    for _, folder in ipairs(folders) do
+        if folder then
+            for _, child in ipairs(folder:GetChildren()) do
+                if child:IsA("RemoteEvent") and child:GetAttribute("Id") then
+                    AttackRemoteTarget = child
+                    AttackRemoteId = child:GetAttribute("Id")
+                end
+            end
+
+            folder.ChildAdded:Connect(function(child)
+                if child:IsA("RemoteEvent") and child:GetAttribute("Id") then
+                    AttackRemoteTarget = child
+                    AttackRemoteId = child:GetAttribute("Id")
+                end
+            end)
+        end
+    end
+end
+
+InitializeHitRegistration()
+
+local function ExecuteSourceHitRegistration()
+    if not _G.AutoLevel then return end
+
+    local character = LocalPlayer.Character
+    local root = character and character:FindFirstChild("HumanoidRootPart")
+    if not character or not root then return end
+
+    local hitTargets = {}
+
+    for _, target in ipairs(Enemies:GetChildren()) do
+        local humanoid = target:FindFirstChild("Humanoid")
+        local targetRoot = target:FindFirstChild("HumanoidRootPart")
+
+        if humanoid and targetRoot and humanoid.Health > 0
+            and target ~= character
+            and (targetRoot.Position - root.Position).Magnitude <= 60 then
+
+            for _, child in ipairs(target:GetChildren()) do
+                if child:IsA("BasePart") then
+                    hitTargets[#hitTargets + 1] = {target, child}
                 end
             end
         end
     end
-    return targets
-end
 
--- Source-style hit-part selection. Prefer combat limbs, then Head/PrimaryPart.
-local function GetSourceHitPart(enemy)
-    local limbs = {
-        "RightLowerArm", "RightUpperArm", "LeftLowerArm",
-        "LeftUpperArm", "RightHand", "LeftHand"
-    }
+    local tool = character:FindFirstChildOfClass("Tool")
+    if #hitTargets == 0 or not tool then return end
 
-    for _, name in ipairs(limbs) do
-        local part = enemy:FindFirstChild(name)
-        if part then return part end
-    end
+    local weaponType = tool:GetAttribute("WeaponType")
+    if weaponType ~= "Melee" and weaponType ~= "Sword" then return end
 
-    return enemy:FindFirstChild("Head") or enemy.PrimaryPart
-end
+    local seedRemote = Modules:FindFirstChild("Net")
+        and Modules.Net:FindFirstChild("seed")
 
-local function FastAttack()
-    if not _G.AutoLevel then return end
-    if os.clock() - SourceFastAttack.LastFire < SourceFastAttack.Interval then return end
-
-    local character = LocalPlayer.Character
-    local root = character and character:FindFirstChild("HumanoidRootPart")
-    local hum = character and character:FindFirstChildOfClass("Humanoid")
-    if not character or not root or not hum or hum.Health <= 0 then return end
-
-    local equippedWeapon = character:FindFirstChildOfClass("Tool")
-    if not equippedWeapon then
-        equippedWeapon = EquipFarmWeapon()
-    end
-    if not equippedWeapon then return end
-
-    -- Keep the existing weapon selector intact.
-    if ChooseWeapon == "Blox Fruit" and not FruitM1Enabled then
-        return
-    end
-
-    local targets = GetSourceFarmTargets(character, SourceFastAttack.Range)
-    if #targets == 0 then return end
-
-    local attackEvent, hitEvent = GetSourceFastAttackRemotes()
-    if not attackEvent or not hitEvent then return end
-
-    local hitTargets = {}
-    local mainTarget = nil
-
-    for _, enemy in ipairs(targets) do
-        local hitPart = GetSourceHitPart(enemy)
-        if hitPart then
-            hitTargets[#hitTargets + 1] = {enemy, hitPart}
-            mainTarget = mainTarget or hitPart
-        end
-    end
-
-    if not mainTarget or #hitTargets == 0 then return end
-
-    -- Match the source's combat-remote-thread branch when available.
-    local sent = false
-    pcall(function()
-        attackEvent:FireServer(0)
-        sent = true
-    end)
-
-    local modules = ReplicatedStorage:FindFirstChild("Modules")
-    local flagsModule = modules and modules:FindFirstChild("Flags")
-    local combatRemoteThread = false
-
-    if flagsModule then
+    local seed
+    if seedRemote then
         pcall(function()
-            combatRemoteThread = require(flagsModule).COMBAT_REMOTE_THREAD or false
+            seed = seedRemote:InvokeServer()
         end)
     end
 
-    if combatRemoteThread then
-        -- Some executors expose the source's SendHitsToServer through the
-        -- current PlayerScripts environment. Use it when available.
-        local playerScripts = LocalPlayer:FindFirstChild("PlayerScripts")
-        local localScript = playerScripts and playerScripts:FindFirstChildOfClass("LocalScript")
-        local hitFunction
+    local attackRemote = Net:FindFirstChild("RE/RegisterAttack")
+    local hitRemote = Net:FindFirstChild("RE/RegisterHit")
+    if not attackRemote or not hitRemote then return end
 
-        if localScript and type(getsenv) == "function" then
-            pcall(function()
-                local env = getsenv(localScript)
-                if env then hitFunction = env._G and env._G.SendHitsToServer end
-            end)
-        end
+    attackRemote:FireServer()
 
-        if type(hitFunction) == "function" then
-            pcall(function()
-                hitFunction(mainTarget, hitTargets)
-                sent = true
-            end)
-        else
-            pcall(function()
-                hitEvent:FireServer(mainTarget, hitTargets)
-                sent = true
-            end)
-        end
-    else
+    local targetHead = hitTargets[1][1]:FindFirstChild("Head")
+    if not targetHead then return end
+
+    hitRemote:FireServer(targetHead, hitTargets, {})
+
+    if AttackRemoteTarget and AttackRemoteId and seed
+        and type(bit32) == "table" then
+
+        local encryptionKey =
+            math.floor(workspace:GetServerTimeNow() / 10 % 10) + 1
+
+        local encodedString = string.gsub("RE/RegisterHit", ".", function(char)
+            return string.char(bit32.bxor(string.byte(char), encryptionKey))
+        end)
+
+        local finalId = bit32.bxor(AttackRemoteId + 909090, seed * 2)
+
         pcall(function()
-            hitEvent:FireServer(mainTarget, hitTargets)
-            sent = true
+            AttackRemoteTarget:FireServer(
+                encodedString,
+                finalId,
+                targetHead,
+                hitTargets
+            )
         end)
     end
-
-    if sent then
-        SourceFastAttack.LastFire = os.clock()
-    end
 end
+
+task.spawn(function()
+    while task.wait(SourceFastAttack.Rate) do
+        pcall(ExecuteSourceFastAttack)
+    end
+end)
+
+RunService.Heartbeat:Connect(function()
+    pcall(ExecuteSourceHitRegistration)
+end)
 
 EquipFarmWeapon = function()
     resolveSelectedWeapon()
@@ -2195,18 +2181,6 @@ task.spawn(function()
     end
 end)
 
--- Keep attacks separate, matching the source's Farm Level + attack architecture.
-task.spawn(function()
-    while task.wait(0.01) do
-        if _G.AutoLevel then
-            pcall(function()
-                if ActiveTarget and SourceFarmAlive(ActiveTarget) then
-                    FastAttack()
-                end
-            end)
-        end
-    end
-end)
 -- Recover from stale targets/spawn transitions without touching the UI.
 -- Keep this thread alive even while Farm is OFF, because AutoLevel can be
 -- enabled later by the UI after FARM_SOURCE has already loaded.
@@ -2310,40 +2284,6 @@ local function updateToggle()
     end
 end
 
--- Camera lock for Farm Level only.
-local FarmCameraLocked = false
-local FarmCameraCFrame = nil
-local FarmCameraType = nil
-local FarmCameraSubject = nil
-
-local function LockFarmCamera()
-    if FarmCameraLocked then return end
-    local camera = workspace.CurrentCamera
-    if not camera then return end
-    FarmCameraLocked = true
-    FarmCameraCFrame = camera.CFrame
-    FarmCameraType = camera.CameraType
-    FarmCameraSubject = camera.CameraSubject
-    camera.CameraType = Enum.CameraType.Scriptable
-    camera.CFrame = FarmCameraCFrame
-end
-
-local function UnlockFarmCamera()
-    if not FarmCameraLocked then return end
-    local camera = workspace.CurrentCamera
-    if camera then
-        camera.CameraType = FarmCameraType or Enum.CameraType.Custom
-        camera.CameraSubject = FarmCameraSubject
-        if FarmCameraCFrame then
-            camera.CFrame = FarmCameraCFrame
-        end
-    end
-    FarmCameraLocked = false
-    FarmCameraCFrame = nil
-    FarmCameraType = nil
-    FarmCameraSubject = nil
-end
-
 Toggle.Activated:Connect(function()
     local nextState = not farmEnabled
 
@@ -2361,11 +2301,11 @@ Toggle.Activated:Connect(function()
         -- The Farm worker is persistent and will see this state immediately.
         _G.AutoLevel = true
         farmEnabled = true
-        LockFarmCamera()
+        pcall(StartSourceMovement)
     else
         farmEnabled = false
         _G.AutoLevel = false
-        UnlockFarmCamera()
+        pcall(StopSourceMovement)
     end
 
     updateToggle()
