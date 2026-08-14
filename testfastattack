@@ -338,7 +338,7 @@ local Title = Instance.new("TextLabel")
 Title.Position = UDim2.fromOffset(18, 7)
 Title.Size = UDim2.fromOffset(300, 25)
 Title.BackgroundTransparency = 1
-Title.Text = "PHONGDZ HUB  v1.5"
+Title.Text = "PHONGDZ HUB  v1.6"
 Title.Font = Enum.Font.GothamBlack
 Title.TextSize = 19
 Title.TextColor3 = Color3.fromRGB(255, 211, 65)
@@ -1393,11 +1393,9 @@ local function StartSourceMovement()
         end
 
         if shouldTween and block and block.Parent == workspace then
-            -- This is the same relationship used by source.txt:
-            -- the block is the tween target and the character follows it.
-            if (rootPart.Position - block.Position).Magnitude <= 200 then
-                rootPart.CFrame = block.CFrame
-            else
+            -- TweenTo owns the character movement now. Do not overwrite
+            -- HumanoidRootPart while an active tween is running.
+            if not ActiveTween or ActiveTween.PlaybackState ~= Enum.PlaybackState.Playing then
                 block.CFrame = rootPart.CFrame
             end
 
@@ -1452,14 +1450,11 @@ local function TweenTo(target)
     StartSourceMovement()
     shouldTween = true
 
-    -- IMPORTANT:
-    -- Do not cancel/recreate the same long-distance tween every Farm tick.
-    -- The old version restarted the quest tween every ~0.045s, so it could
-    -- accept the quest but never finish moving to the quest/mob.
-    if ActiveTween
-        and ActiveTween.PlaybackState == Enum.PlaybackState.Playing
-        and FarmDestinationTarget
-        and (FarmDestinationTarget.Position - target.Position).Magnitude <= 3 then
+    -- Don't restart an already-running trip to the same destination.
+    if FarmDestinationTarget
+        and (FarmDestinationTarget.Position - target.Position).Magnitude <= 3
+        and ActiveTween
+        and ActiveTween.PlaybackState == Enum.PlaybackState.Playing then
         return
     end
 
@@ -1474,11 +1469,15 @@ local function TweenTo(target)
     FarmDestination = target
 
     local distance = (target.Position - root.Position).Magnitude
-    local duration = math.max(distance / 300, 0.08)
+    local duration = math.clamp(distance / 300, 0.15, 8)
 
+    -- Move the character root directly. The old implementation tweened an
+    -- invisible anchor but then reset that anchor to the player's position
+    -- while the destination was farther than 200 studs, so long trips never
+    -- actually advanced.
     ActiveTween = TweenService:Create(
-        block,
-        TweenInfo.new(duration, Enum.EasingStyle.Linear),
+        root,
+        TweenInfo.new(duration, Enum.EasingStyle.Linear, Enum.EasingDirection.Out),
         {CFrame = target}
     )
 
@@ -1486,6 +1485,8 @@ local function TweenTo(target)
     tweenRef.Completed:Connect(function()
         if ActiveTween == tweenRef then
             ActiveTween = nil
+            FarmDestinationTarget = target
+            FarmDestination = target
         end
     end)
 
