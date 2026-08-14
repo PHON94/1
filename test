@@ -1248,51 +1248,159 @@ local function StopFarmTween()
     end
 end
 
-local function TweenTo(cf)
-    local r = GetRoot()
-    if not r or typeof(cf) ~= "CFrame" then return end
+--===========================================================================
+-- PHONGDZ HUB :: MOVEMENT ONLY
+-- Based on the NEW source.txt _tp() model.
+-- DO NOT TOUCH FastAttack / CheckLevel / Quest / BringEnemy.
+--===========================================================================
 
-    local distance = (cf.Position - r.Position).Magnitude
+local FarmMoveAnchor = nil
+local FarmMoveTween = nil
+local FarmMoveConnection = nil
+local FarmMoveTarget = nil
 
-    -- Source vẫn dùng TweenService để bay tới CFrame.
-    -- Khi đã gần điểm farm thì chỉ dừng tween, tuyệt đối không snap
-    -- CFrame liên tục vì snap Y là nguyên nhân gây giật lên/xuống.
-    if distance <= 10 then
-        StopFarmTween()
+local function EnsureFarmMoveAnchor()
+    if FarmMoveAnchor and FarmMoveAnchor.Parent then
+        return FarmMoveAnchor
+    end
 
-        -- Chỉ triệt vận tốc dọc nếu đang rơi. Không đẩy nhân vật lên.
-        local v = r.AssemblyLinearVelocity
-        if v.Y < -1 then
-            r.AssemblyLinearVelocity = Vector3.new(v.X, 0, v.Z)
+    FarmMoveAnchor = Instance.new("Part")
+    FarmMoveAnchor.Name = "PhongdzFarmMoveAnchor"
+    FarmMoveAnchor.Size = Vector3.new(2, 2, 2)
+    FarmMoveAnchor.Transparency = 1
+    FarmMoveAnchor.Anchored = true
+    FarmMoveAnchor.CanCollide = false
+    FarmMoveAnchor.CanTouch = false
+    FarmMoveAnchor.CanQuery = false
+    FarmMoveAnchor.Parent = workspace
+
+    return FarmMoveAnchor
+end
+
+local function StopFarmTween()
+    if FarmMoveTween then
+        pcall(function()
+            FarmMoveTween:Cancel()
+        end)
+        FarmMoveTween = nil
+    end
+end
+
+local function StopFarmMovement()
+    StopFarmTween()
+
+    if FarmMoveConnection then
+        FarmMoveConnection:Disconnect()
+        FarmMoveConnection = nil
+    end
+
+    FarmMoveTarget = nil
+
+    if FarmMoveAnchor then
+        pcall(function()
+            FarmMoveAnchor:Destroy()
+        end)
+        FarmMoveAnchor = nil
+    end
+end
+
+local function StartFarmMovement()
+    local root = GetRoot()
+    if not root then
+        return
+    end
+
+    local anchor = EnsureFarmMoveAnchor()
+
+    if (anchor.Position - root.Position).Magnitude > 6 then
+        anchor.CFrame = root.CFrame
+    end
+
+    if FarmMoveConnection then
+        return
+    end
+
+    FarmMoveConnection = RunService.Heartbeat:Connect(function()
+        if not _G.AutoLevel then
+            StopFarmMovement()
+            return
         end
+
+        local currentRoot = GetRoot()
+
+        if not currentRoot or not anchor.Parent then
+            return
+        end
+
+        local delta = anchor.Position - currentRoot.Position
+        local distance = delta.Magnitude
+
+        -- Source-style anchor following, but without hard snapping every tick.
+        if distance > 1.5 then
+            local alpha = math.clamp(0.16 + distance / 180, 0.16, 0.50)
+
+            currentRoot.CFrame = currentRoot.CFrame:Lerp(
+                CFrame.new(anchor.Position),
+                alpha
+            )
+        end
+
+        -- Only cancel downward drift; never push the player upward.
+        local velocity = currentRoot.AssemblyLinearVelocity
+        if velocity.Y < -3 then
+            currentRoot.AssemblyLinearVelocity = Vector3.new(
+                velocity.X,
+                0,
+                velocity.Z
+            )
+        end
+    end)
+end
+
+local function TweenTo(cf)
+    local root = GetRoot()
+    if not root or typeof(cf) ~= "CFrame" then
         return
     end
 
-    -- Không tạo tween mới nếu tween hiện tại vẫn đang chạy.
-    if ActiveTween then
+    local anchor = EnsureFarmMoveAnchor()
+
+    local distance = (cf.Position - anchor.Position).Magnitude
+
+    -- Same base speed as the NEW source's _tp() implementation.
+    local duration = math.max(distance / 300, 0.12)
+
+    -- Do not rebuild the same tween while it is already running.
+    if FarmMoveTween
+        and FarmMoveTarget
+        and (FarmMoveTarget.Position - cf.Position).Magnitude <= 3
+    then
+        StartFarmMovement()
         return
     end
 
-    -- Giữ đúng cơ chế Tween của source, chỉ giảm tốc để tránh
-    -- rubber-band/giật khi server cập nhật vị trí.
-    local duration = math.clamp(distance / 360, 0.28, 1.10)
+    StopFarmTween()
 
-    local tween = TweenService:Create(
-        r,
-        TweenInfo.new(duration, Enum.EasingStyle.Linear, Enum.EasingDirection.Out),
+    FarmMoveTarget = cf
+
+    FarmMoveTween = TweenService:Create(
+        anchor,
+        TweenInfo.new(duration, Enum.EasingStyle.Linear),
         {CFrame = cf}
     )
 
-    ActiveTween = tween
+    local tweenRef = FarmMoveTween
 
-    tween.Completed:Connect(function()
-        if ActiveTween == tween then
-            ActiveTween = nil
+    tweenRef.Completed:Connect(function()
+        if FarmMoveTween == tweenRef then
+            FarmMoveTween = nil
         end
     end)
 
-    tween:Play()
+    tweenRef:Play()
+    StartFarmMovement()
 end
+
 
 local function FindFarmTool()
     local c = LocalPlayer.Character
@@ -1379,27 +1487,89 @@ local function GetFarmPoint(targetRoot)
     return FarmDestination
 end
 
-local function BringMobs(targetName, centerRoot)
-    if not centerRoot then return end
-    local enemies = workspace:FindFirstChild("Enemies")
-    if not enemies then return end
-    local center = centerRoot.Position
+local BringConnection = nil
+local BringCenter = nil
+local BringName = nil
 
-    for _, mob in ipairs(enemies:GetChildren()) do
-        if mob.Name == targetName then
-            local hum = mob:FindFirstChildOfClass("Humanoid")
-            local rp = mob:FindFirstChild("HumanoidRootPart")
-            if hum and rp and hum.Health > 0 then
-                if (rp.Position - center).Magnitude <= 220 then
-                    pcall(function()
-                        rp.CanCollide = false
-                        rp.CFrame = CFrame.new(center)
-                    end)
+local function StopBringMobs()
+    if BringConnection then
+        BringConnection:Disconnect()
+        BringConnection = nil
+    end
+    BringCenter = nil
+    BringName = nil
+end
+
+local function StartBringMobs(targetName, centerRoot)
+    if not centerRoot or not centerRoot.Parent then
+        return
+    end
+
+    local enemies = workspace:FindFirstChild("Enemies")
+    if not enemies then
+        return
+    end
+
+    -- Reuse the same heartbeat worker instead of recreating a connection
+    -- every Farm tick. This avoids mob positions oscillating.
+    if BringConnection and BringCenter == centerRoot and BringName == targetName then
+        return
+    end
+
+    StopBringMobs()
+
+    BringCenter = centerRoot
+    BringName = targetName
+
+    BringConnection = RunService.Heartbeat:Connect(function()
+        if not _G.AutoLevel then
+            StopBringMobs()
+            return
+        end
+
+        local center = BringCenter
+        if not center or not center.Parent then
+            StopBringMobs()
+            return
+        end
+
+        local currentEnemies = workspace:FindFirstChild("Enemies")
+        if not currentEnemies then
+            return
+        end
+
+        local centerPos = center.Position
+
+        for _, mob in ipairs(currentEnemies:GetChildren()) do
+            if mob.Name == BringName then
+                local hum = mob:FindFirstChildOfClass("Humanoid")
+                local root = mob:FindFirstChild("HumanoidRootPart")
+
+                if hum and root and hum.Health > 0 then
+                    local distance = (root.Position - centerPos).Magnitude
+
+                    -- Keep only nearby quest mobs. Do not move mobs from
+                    -- another area/server section into the farm.
+                    if distance <= 220 then
+                        pcall(function()
+                            root.AssemblyLinearVelocity = Vector3.zero
+                            root.AssemblyAngularVelocity = Vector3.zero
+
+                            -- Match the source's intended "gom quái" behavior:
+                            -- place each target at the same center point.
+                            root.CFrame = CFrame.new(
+                                centerPos.X,
+                                root.Position.Y,
+                                centerPos.Z
+                            )
+                        end)
+                    end
                 end
             end
         end
-    end
+    end)
 end
+
 
 local function FastAttack()
     if not ResolveAttackRemotes() then return end
@@ -1509,94 +1679,41 @@ local function RestoreFarmGravity()
     GravityRoot = nil
 end
 
--- NO GRAVITY — MOVEMENT ONLY
--- Không đụng Fast Attack / CheckLevel / Quest / BringMobs.
--- Khi Farm ON: nhân vật không bị kéo rơi xuống.
--- Khi Farm OFF: trả physics bình thường.
-local GravityConnection = nil
-local GravityHumanoid = nil
-
-local function RestoreFarmGravity()
-    if GravityConnection then
-        GravityConnection:Disconnect()
-        GravityConnection = nil
-    end
-
-    if GravityHumanoid and GravityHumanoid.Parent then
-        pcall(function()
-            GravityHumanoid.PlatformStand = false
-            GravityHumanoid.AutoRotate = true
-            GravityHumanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
-        end)
-    end
-
-    GravityHumanoid = nil
-end
-
 local function DisableFarmGravity()
-    local character = LocalPlayer.Character
-    local humanoid = character and character:FindFirstChildOfClass("Humanoid")
     local root = GetRoot()
+    if not root then return end
 
-    if not humanoid or not root then
-        return
-    end
-
-    if GravityConnection and GravityHumanoid == humanoid then
+    if GravityRoot == root and GravityForce and GravityForce.Parent then
+        -- Keep exact anti-gravity force updated for the current assembly mass.
+        GravityForce.Force = Vector3.new(0, root.AssemblyMass * workspace.Gravity, 0)
         return
     end
 
     RestoreFarmGravity()
-    GravityHumanoid = humanoid
+    GravityRoot = root
 
-    -- Physics state removes the normal Humanoid falling behavior.
-    pcall(function()
-        humanoid.AutoRotate = true
-        humanoid:ChangeState(Enum.HumanoidStateType.Physics)
-    end)
+    GravityAttachment = Instance.new("Attachment")
+    GravityAttachment.Name = "PhongdzFarmNoGravityAttachment"
+    GravityAttachment.Parent = root
 
-    GravityConnection = RunService.Heartbeat:Connect(function()
-        if not _G.AutoLevel then
-            return
-        end
-
-        local currentCharacter = LocalPlayer.Character
-        local currentHumanoid = currentCharacter
-            and currentCharacter:FindFirstChildOfClass("Humanoid")
-        local currentRoot = GetRoot()
-
-        if not currentHumanoid or not currentRoot then
-            return
-        end
-
-        -- Respawn/replacement recovery.
-        if currentHumanoid ~= GravityHumanoid then
-            RestoreFarmGravity()
-            DisableFarmGravity()
-            return
-        end
-
-        -- Never pull upward. Only cancel downward drift.
-        local velocity = currentRoot.AssemblyLinearVelocity
-
-        if velocity.Y < -2 then
-            currentRoot.AssemblyLinearVelocity = Vector3.new(
-                velocity.X,
-                0,
-                velocity.Z
-            )
-        end
-    end)
+    GravityForce = Instance.new("VectorForce")
+    GravityForce.Name = "PhongdzFarmNoGravity"
+    GravityForce.Attachment0 = GravityAttachment
+    GravityForce.RelativeTo = Enum.ActuatorRelativeTo.World
+    GravityForce.ApplyAtCenterOfMass = true
+    GravityForce.Force = Vector3.new(0, root.AssemblyMass * workspace.Gravity, 0)
+    GravityForce.Parent = root
 end
 
 local function RunFarm()
     if not _G.AutoLevel then
         RestoreFarmGravity()
-        StopFarmTween()
+        StopFarmMovement()
         return
     end
 
     DisableFarmGravity()
+    StartFarmMovement()
     CheckLevel()
     if not NameMon or not NameQuest or not CFrameQ then return end
 
@@ -1726,7 +1843,7 @@ local function RunFarm()
                 return
             end
 
-            BringMobs(NameMon, rp)
+            StartBringMobs(NameMon, rp)
 
             -- Attack only after a tool is actually equipped.
             local equippedTool = EquipFarmWeapon()
@@ -2441,6 +2558,7 @@ end)
 
 
 LocalPlayer.CharacterAdded:Connect(function()
+    StopFarmMovement()
     RestoreFarmGravity()
 
     if _G.AutoLevel then
@@ -2467,7 +2585,9 @@ task.spawn(function()
                 task.wait(0.045)
             end
         else
+            StopBringMobs()
             RestoreFarmGravity()
+            StopFarmMovement()
             task.wait(0.12)
         end
     end
