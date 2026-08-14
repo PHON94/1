@@ -330,7 +330,7 @@ local Title = Instance.new("TextLabel")
 Title.Position = UDim2.fromOffset(18, 7)
 Title.Size = UDim2.fromOffset(300, 25)
 Title.BackgroundTransparency = 1
-Title.Text = "PHONGDZ HUB  v1.6"
+Title.Text = "PHONGDZ HUB  v1.8"
 Title.Font = Enum.Font.GothamBlack
 Title.TextSize = 19
 Title.TextColor3 = Color3.fromRGB(255, 211, 65)
@@ -1280,7 +1280,73 @@ local function restoreMenu()
 end
 
 Min.Activated:Connect(minimizeMenu)
-Launcher.Activated:Connect(restoreMenu)
+-- Allow the minimized launcher itself to be dragged.
+-- A click without movement still restores the menu.
+local launcherDragging = false
+local launcherMoved = false
+local launcherDragStart = Vector2.zero
+local launcherOrigin = Vector2.zero
+
+Launcher.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
+
+        launcherDragging = true
+        launcherMoved = false
+        launcherDragStart = input.Position
+        launcherOrigin = Vector2.new(
+            Launcher.Position.X.Offset,
+            Launcher.Position.Y.Offset
+        )
+    end
+end)
+
+Launcher.InputChanged:Connect(function(input)
+    if not launcherDragging then
+        return
+    end
+
+    if input.UserInputType == Enum.UserInputType.MouseMovement
+        or input.UserInputType == Enum.UserInputType.Touch then
+
+        local delta = input.Position - launcherDragStart
+
+        if math.abs(delta.X) > 3 or math.abs(delta.Y) > 3 then
+            launcherMoved = true
+        end
+
+        local v = viewport()
+        local x = math.clamp(
+            launcherOrigin.X + delta.X,
+            0,
+            math.max(0, v.X - Launcher.AbsoluteSize.X)
+        )
+        local y = math.clamp(
+            launcherOrigin.Y + delta.Y,
+            0,
+            math.max(0, v.Y - Launcher.AbsoluteSize.Y)
+        )
+
+        Launcher.Position = UDim2.fromOffset(x, y)
+    end
+end)
+
+UIS.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
+
+        if launcherDragging and not launcherMoved then
+            restoreMenu()
+        end
+
+        launcherDragging = false
+    end
+end)
+
+Launcher.Activated:Connect(function()
+    -- Intentionally empty: touch/mouse release above handles restore
+    -- versus drag without interfering with the drag state.
+end)
 
 Close.Activated:Connect(function()
     _G.AutoLevel = false
