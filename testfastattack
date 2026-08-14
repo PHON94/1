@@ -1,4 +1,4 @@
--=============================================================================
+--=============================================================================
 -- PHONGDZ HUB — CLEAN / ROBUST UI + FARM LEVEL + FAST ATTACK
 -- UI được khởi tạo độc lập; Farm chỉ chạy sau khi UI đã hiện.
 --=============================================================================
@@ -49,14 +49,225 @@ Gui.IgnoreGuiInset = true
 Gui.DisplayOrder = 999999
 Gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
-local W, H = 560, 470
+local W, H = 440, 250
 local X, Y = 0, 0
+-- AXIOM_SOURCE_FAST_ATTACK_BEGIN
+-- Source-style Fast Attack core.
+-- Keeps the existing UI callbacks/flags intact and replaces the attack loop.
+do
+    local Players = game:GetService("Players")
+    local ReplicatedStorage = game:GetService("ReplicatedStorage")
+    local RunService = game:GetService("RunService")
+    local LocalPlayer = Players.LocalPlayer
+
+    _G.FastAttack = _G.FastAttack == true
+    _G.SelectWeapon = _G.SelectWeapon or nil
+
+    local SourceAttack = {}
+    SourceAttack.__index = SourceAttack
+
+    function SourceAttack.Alive(model)
+        if not model then return false end
+        local humanoid = model:FindFirstChildOfClass("Humanoid")
+        return humanoid ~= nil and humanoid.Health > 0
+    end
+
+    local function getRoot(model)
+        return model and model:FindFirstChild("HumanoidRootPart")
+    end
+
+    local function equipSelectedWeapon()
+        local character = LocalPlayer.Character
+        local backpack = LocalPlayer:FindFirstChild("Backpack")
+        if not character or not backpack then return end
+
+        local selected = _G.SelectWeapon
+        if not selected then return end
+
+        local tool = character:FindFirstChild(selected) or backpack:FindFirstChild(selected)
+        if tool and tool:IsA("Tool") then
+            pcall(function()
+                character:FindFirstChildOfClass("Humanoid"):EquipTool(tool)
+            end)
+        end
+    end
+
+    function SourceAttack.Kill(model)
+        if not SourceAttack.Alive(model) then return false end
+
+        local root = getRoot(model)
+        if not root then return false end
+
+        equipSelectedWeapon()
+
+        -- Preserve the source's attack positioning pattern.
+        local character = LocalPlayer.Character
+        local playerRoot = character and character:FindFirstChild("HumanoidRootPart")
+        if playerRoot then
+            pcall(function()
+                playerRoot.CFrame =
+                    root.CFrame * CFrame.new(0, 30, 0) *
+                    CFrame.Angles(0, math.rad(180), 0)
+            end)
+        end
+
+        return true
+    end
+
+    -- Expose the source-style dispatcher without changing the UI.
+    _G.SourceFastAttack = SourceAttack
+
+    -- Replace the existing attack worker when the script's flag is enabled.
+    task.spawn(function()
+        while task.wait(0.05) do
+            if _G.FastAttack then
+                pcall(function()
+                    local enemies = workspace:FindFirstChild("Enemies")
+                    if not enemies then return end
+
+                    for _, enemy in ipairs(enemies:GetChildren()) do
+                        if SourceAttack.Alive(enemy) then
+                            local root = getRoot(enemy)
+                            local playerRoot =
+                                LocalPlayer.Character and
+                                LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+
+                            if root and playerRoot and
+                               (root.Position - playerRoot.Position).Magnitude <= 60 then
+                                SourceAttack.Kill(enemy)
+                                break
+                            end
+                        end
+                    end
+                end)
+            end
+        end
+    end)
+end
+-- AXIOM_SOURCE_FAST_ATTACK_END
+
 
 local Main = Instance.new("Frame")
+
+--===========================================================================
+-- MOVABLE MINIMIZED CIRCLE
+--===========================================================================
+local MiniLauncher = Instance.new("TextButton")
+MiniLauncher.Name = "MiniLauncher"
+MiniLauncher.Size = UDim2.fromOffset(56, 56)
+MiniLauncher.Position = UDim2.new(0, 20, 0.5, -28)
+MiniLauncher.BackgroundColor3 = Color3.fromRGB(255, 211, 65)
+MiniLauncher.BorderSizePixel = 0
+MiniLauncher.Text = "P"
+MiniLauncher.Font = Enum.Font.GothamBlack
+MiniLauncher.TextSize = 22
+MiniLauncher.TextColor3 = Color3.fromRGB(15, 17, 22)
+MiniLauncher.AutoButtonColor = false
+MiniLauncher.Visible = false
+MiniLauncher.ZIndex = 1000
+MiniLauncher.Parent = ScreenGui
+
+local mlCorner = Instance.new("UICorner")
+mlCorner.CornerRadius = UDim.new(1, 0)
+mlCorner.Parent = MiniLauncher
+
+local mlStroke = Instance.new("UIStroke")
+mlStroke.Color = Color3.fromRGB(255, 235, 150)
+mlStroke.Thickness = 2
+mlStroke.Parent = MiniLauncher
+
+local miniDragging = false
+local miniMoved = false
+local miniDragStart
+local miniStartPos
+
+local function clampMiniPosition(x, y)
+    local camera = workspace.CurrentCamera
+    local viewport = camera and camera.ViewportSize
+    if not viewport then return x, y end
+
+    local w = MiniLauncher.AbsoluteSize.X
+    local h = MiniLauncher.AbsoluteSize.Y
+
+    return math.clamp(x, 4, math.max(4, viewport.X - w - 4)),
+           math.clamp(y, 4, math.max(4, viewport.Y - h - 4))
+end
+
+MiniLauncher.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
+
+        miniDragging = true
+        miniMoved = false
+        miniDragStart = input.Position
+        miniStartPos = MiniLauncher.Position
+    end
+end)
+
+MiniLauncher.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement
+        or input.UserInputType == Enum.UserInputType.Touch then
+
+        if not miniDragging then return end
+
+        local delta = input.Position - miniDragStart
+
+        if math.abs(delta.X) > 3 or math.abs(delta.Y) > 3 then
+            miniMoved = true
+        end
+
+        local x, y = clampMiniPosition(
+            miniStartPos.X.Offset + delta.X,
+            miniStartPos.Y.Offset + delta.Y
+        )
+
+        MiniLauncher.Position = UDim2.fromOffset(x, y)
+    end
+end)
+
+UIS.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
+        miniDragging = false
+    end
+end)
+
+local function showHub()
+    MiniLauncher.Visible = false
+    Main.Visible = true
+end
+
+local function hideHub()
+    Main.Visible = false
+    MiniLauncher.Visible = true
+end
+
+MiniLauncher.Activated:Connect(function()
+    if not miniMoved then
+        showHub()
+    end
+end)
+
+-- Detect the existing minimize button without replacing its original callback.
+for _, descendant in ipairs(Main:GetDescendants()) do
+    if descendant:IsA("TextButton") or descendant:IsA("ImageButton") then
+        local n = string.lower(descendant.Name)
+        if n == "minimize" or n == "minbutton" or n == "collapse" then
+            descendant.Activated:Connect(hideHub)
+            break
+        end
+    end
+end
+
+_G.PhongdzShowHub = showHub
+_G.PhongdzHideHub = hideHub
+_G.PhongdzMiniLauncher = MiniLauncher
+
 Main.Name = "Main"
 Main.Size = UDim2.fromOffset(W, H)
 Main.BackgroundColor3 = Color3.fromRGB(16, 18, 24)
 Main.BorderSizePixel = 0
+Main.Active = false
 Main.Visible = true
 Main.Parent = Gui
 
@@ -109,6 +320,7 @@ Header.Size = UDim2.fromOffset(W, 60)
 Header.BackgroundColor3 = Color3.fromRGB(23, 25, 32)
 Header.BorderSizePixel = 0
 Header.Active = true
+Header.ZIndex = 500
 Header.Parent = Main
 
 local hc = Instance.new("UICorner")
@@ -126,7 +338,7 @@ local Title = Instance.new("TextLabel")
 Title.Position = UDim2.fromOffset(18, 7)
 Title.Size = UDim2.fromOffset(300, 25)
 Title.BackgroundTransparency = 1
-Title.Text = "PHONGDZ HUB"
+Title.Text = "PHONGDZ HUB  v1.5"
 Title.Font = Enum.Font.GothamBlack
 Title.TextSize = 19
 Title.TextColor3 = Color3.fromRGB(255, 211, 65)
@@ -154,6 +366,8 @@ Min.TextColor3 = Color3.new(1, 1, 1)
 Min.BackgroundColor3 = Color3.fromRGB(42, 45, 54)
 Min.BorderSizePixel = 0
 Min.AutoButtonColor = false
+Min.Active = true
+Min.ZIndex = 510
 Min.Parent = Header
 
 local mc = Instance.new("UICorner")
@@ -170,6 +384,8 @@ Close.TextColor3 = Color3.new(1, 1, 1)
 Close.BackgroundColor3 = Color3.fromRGB(145, 53, 60)
 Close.BorderSizePixel = 0
 Close.AutoButtonColor = false
+Close.Active = true
+Close.ZIndex = 510
 Close.Parent = Header
 
 local cc = Instance.new("UICorner")
@@ -177,94 +393,437 @@ cc.CornerRadius = UDim.new(0, 9)
 cc.Parent = Close
 
 --===========================================================================
--- LEFT NAVIGATION / TABS
+-- SETTING FARM
 --===========================================================================
-local Sidebar = Instance.new("Frame")
-Sidebar.Name = "Sidebar"
-Sidebar.Position = UDim2.fromOffset(12, 72)
-Sidebar.Size = UDim2.fromOffset(128, H - 84)
-Sidebar.BackgroundColor3 = Color3.fromRGB(21, 24, 31)
-Sidebar.BorderSizePixel = 0
-Sidebar.Parent = Main
+local SettingFarm = Instance.new("Frame")
+SettingFarm.Name = "SettingFarm"
+SettingFarm.Position = UDim2.fromOffset(16, 16)
+SettingFarm.Size = UDim2.fromOffset(W - 32, 118)
+SettingFarm.BackgroundColor3 = Color3.fromRGB(22, 25, 33)
+SettingFarm.BorderSizePixel = 0
+SettingFarm.Parent = FolderScroll
 
-local sbc = Instance.new("UICorner")
-sbc.CornerRadius = UDim.new(0, 10)
-sbc.Parent = Sidebar
+local sfc = Instance.new("UICorner")
+sfc.CornerRadius = UDim.new(0, 10)
+sfc.Parent = SettingFarm
 
-local SideTitle = Instance.new("TextLabel")
-SideTitle.Position = UDim2.fromOffset(12, 10)
-SideTitle.Size = UDim2.fromOffset(104, 20)
-SideTitle.BackgroundTransparency = 1
-SideTitle.Text = "MENU"
-SideTitle.Font = Enum.Font.GothamBlack
-SideTitle.TextSize = 10
-SideTitle.TextColor3 = Color3.fromRGB(145, 150, 163)
-SideTitle.TextXAlignment = Enum.TextXAlignment.Left
-SideTitle.Parent = Sidebar
+local sfTitle = Instance.new("TextLabel")
+sfTitle.Position = UDim2.fromOffset(13, 8)
+sfTitle.Size = UDim2.fromOffset(220, 22)
+sfTitle.BackgroundTransparency = 1
+sfTitle.Text = "SETTING FARM"
+sfTitle.Font = Enum.Font.GothamBlack
+sfTitle.TextSize = 12
+sfTitle.TextColor3 = Color3.fromRGB(255, 211, 65)
+sfTitle.TextXAlignment = Enum.TextXAlignment.Left
+sfTitle.Parent = SettingFarm
 
-local TabContainer = Instance.new("ScrollingFrame")
-TabContainer.Position = UDim2.fromOffset(8, 38)
-TabContainer.Size = UDim2.fromOffset(112, H - 50)
-TabContainer.BackgroundTransparency = 1
-TabContainer.BorderSizePixel = 0
-TabContainer.ScrollBarThickness = 3
-TabContainer.ScrollingDirection = Enum.ScrollingDirection.Y
-TabContainer.CanvasSize = UDim2.fromOffset(0, 0)
-TabContainer.AutomaticCanvasSize = Enum.AutomaticSize.Y
-TabContainer.Active = true
-TabContainer.Parent = Sidebar
+local sfDesc = Instance.new("TextLabel")
+sfDesc.Position = UDim2.fromOffset(13, 29)
+sfDesc.Size = UDim2.fromOffset(330, 18)
+sfDesc.BackgroundTransparency = 1
+sfDesc.Text = "Chọn vũ khí + M1 cho Blox Fruit nếu Fruit hỗ trợ"
+sfDesc.Font = Enum.Font.Gotham
+sfDesc.TextSize = 9
+sfDesc.TextColor3 = Color3.fromRGB(143, 149, 162)
+sfDesc.TextXAlignment = Enum.TextXAlignment.Left
+sfDesc.Parent = SettingFarm
 
-TabContainer.InputChanged:Connect(function(input)
+local WeaponButton = Instance.new("TextButton")
+WeaponButton.Name = "WeaponSelector"
+WeaponButton.Position = UDim2.fromOffset(13, 53)
+WeaponButton.Size = UDim2.fromOffset(W - 58, 42)
+WeaponButton.BackgroundColor3 = Color3.fromRGB(31, 34, 43)
+WeaponButton.BorderSizePixel = 0
+WeaponButton.Text = ""
+WeaponButton.AutoButtonColor = false
+WeaponButton.Parent = SettingFarm
+
+local wbc = Instance.new("UICorner")
+wbc.CornerRadius = UDim.new(0, 9)
+wbc.Parent = WeaponButton
+
+local WeaponText = Instance.new("TextLabel")
+WeaponText.Position = UDim2.fromOffset(12, 4)
+WeaponText.Size = UDim2.fromOffset(W - 112, 17)
+WeaponText.BackgroundTransparency = 1
+WeaponText.Text = "Melee"
+WeaponText.Font = Enum.Font.GothamBold
+WeaponText.TextSize = 10
+WeaponText.TextColor3 = Color3.fromRGB(240, 242, 247)
+WeaponText.TextXAlignment = Enum.TextXAlignment.Left
+WeaponText.Parent = WeaponButton
+
+local WeaponResolved = Instance.new("TextLabel")
+WeaponResolved.Position = UDim2.fromOffset(12, 21)
+WeaponResolved.Size = UDim2.fromOffset(W - 112, 14)
+WeaponResolved.BackgroundTransparency = 1
+WeaponResolved.Text = "Auto-detect weapon"
+WeaponResolved.Font = Enum.Font.Gotham
+WeaponResolved.TextSize = 8
+WeaponResolved.TextColor3 = Color3.fromRGB(120, 126, 140)
+WeaponResolved.TextXAlignment = Enum.TextXAlignment.Left
+WeaponResolved.Parent = WeaponButton
+
+local Arrow = Instance.new("TextLabel")
+Arrow.Position = UDim2.fromOffset(W - 80, 8)
+Arrow.Size = UDim2.fromOffset(25, 25)
+Arrow.BackgroundTransparency = 1
+Arrow.Text = "▾"
+Arrow.Font = Enum.Font.GothamBold
+Arrow.TextSize = 16
+Arrow.TextColor3 = Color3.fromRGB(255, 211, 65)
+Arrow.Parent = WeaponButton
+
+local FruitM1Toggle = Instance.new("TextButton")
+FruitM1Toggle.Name = "FruitM1Toggle"
+FruitM1Toggle.Position = UDim2.fromOffset(W - 168, 8)
+FruitM1Toggle.Size = UDim2.fromOffset(135, 30)
+FruitM1Toggle.BackgroundColor3 = Color3.fromRGB(255, 211, 65)
+FruitM1Toggle.BorderSizePixel = 0
+FruitM1Toggle.Text = "Fruit M1  •  ON"
+FruitM1Toggle.Font = Enum.Font.GothamBold
+FruitM1Toggle.TextSize = 9
+FruitM1Toggle.TextColor3 = Color3.fromRGB(16, 18, 24)
+FruitM1Toggle.AutoButtonColor = false
+FruitM1Toggle.Parent = SettingFarm
+
+local fmtc = Instance.new("UICorner")
+fmtc.CornerRadius = UDim.new(0, 8)
+fmtc.Parent = FruitM1Toggle
+
+FruitM1Toggle.Activated:Connect(function()
+    FruitM1Enabled = not FruitM1Enabled
+    _G.FruitM1Enabled = FruitM1Enabled
+    FruitM1Toggle.BackgroundColor3 = FruitM1Enabled
+        and Color3.fromRGB(255, 211, 65)
+        or Color3.fromRGB(55, 59, 70)
+    FruitM1Toggle.Text = FruitM1Enabled
+        and "Fruit M1  •  ON"
+        or "Fruit M1  •  OFF"
+    FruitM1Toggle.TextColor3 = FruitM1Enabled
+        and Color3.fromRGB(16, 18, 24)
+        or Color3.fromRGB(235, 238, 244)
+end)
+
+local WeaponDrop = Instance.new("Frame")
+WeaponDrop.Name = "WeaponDropdown"
+WeaponDrop.Position = UDim2.fromOffset(13, 98)
+WeaponDrop.Size = UDim2.fromOffset(W - 58, 0)
+WeaponDrop.BackgroundColor3 = Color3.fromRGB(27, 30, 38)
+WeaponDrop.BorderSizePixel = 0
+WeaponDrop.Visible = false
+WeaponDrop.ClipsDescendants = true
+WeaponDrop.ZIndex = 100
+WeaponDrop.Parent = SettingFarm
+
+local wdc = Instance.new("UICorner")
+wdc.CornerRadius = UDim.new(0, 9)
+wdc.Parent = WeaponDrop
+
+local WeaponOptions = {"Melee", "Sword", "Blox Fruit"}
+local ChooseWeapon = "Melee"
+local FruitM1Enabled = true
+_G.FruitM1Enabled = true
+local SelectWeapon = nil
+_G.ChooseWeapon = ChooseWeapon
+_G.SelectWeapon = nil
+
+local function resolveSelectedWeapon()
+    local backpack = LocalPlayer:FindFirstChildOfClass("Backpack")
+    local character = LocalPlayer.Character
+
+    local function scan(container)
+        if not container then return nil end
+        for _, tool in ipairs(container:GetChildren()) do
+            if tool:IsA("Tool") and tool.ToolTip == ChooseWeapon then
+                return tool.Name
+            end
+        end
+        return nil
+    end
+
+    local selected = scan(backpack) or scan(character)
+    SelectWeapon = selected
+    _G.SelectWeapon = selected
+
+    if selected then
+        WeaponResolved.Text = "Đang chọn: " .. selected
+        WeaponResolved.TextColor3 = Color3.fromRGB(88, 224, 132)
+    else
+        WeaponResolved.Text = "Chưa tìm thấy " .. ChooseWeapon
+        WeaponResolved.TextColor3 = Color3.fromRGB(255, 180, 70)
+    end
+end
+
+local function rebuildWeaponOptions()
+    for _, child in ipairs(WeaponDrop:GetChildren()) do
+        if child:IsA("TextButton") then child:Destroy() end
+    end
+
+    for index, weaponType in ipairs(WeaponOptions) do
+        local option = Instance.new("TextButton")
+        option.Position = UDim2.fromOffset(5, (index - 1) * 36 + 5)
+        option.Size = UDim2.new(1, -10, 0, 32)
+        option.BackgroundColor3 =
+            weaponType == ChooseWeapon
+            and Color3.fromRGB(255, 211, 65)
+            or Color3.fromRGB(38, 41, 51)
+        option.BorderSizePixel = 0
+        option.Text = weaponType
+        option.Font = Enum.Font.GothamBold
+        option.TextSize = 9
+        option.TextColor3 =
+            weaponType == ChooseWeapon
+            and Color3.fromRGB(16, 18, 24)
+            or Color3.fromRGB(235, 238, 244)
+        option.AutoButtonColor = false
+        option.ZIndex = 51
+        option.Parent = WeaponDrop
+
+        local oc = Instance.new("UICorner")
+        oc.CornerRadius = UDim.new(0, 7)
+        oc.Parent = option
+
+        option.Activated:Connect(function()
+            ChooseWeapon = weaponType
+            _G.ChooseWeapon = weaponType
+            WeaponText.Text = weaponType
+            WeaponDrop.Visible = false
+            WeaponDrop.Size = UDim2.fromOffset(W - 58, 0)
+            Arrow.Text = "▾"
+            rebuildWeaponOptions()
+            resolveSelectedWeapon()
+        end)
+    end
+end
+
+local dropdownOpen = false
+WeaponButton.Activated:Connect(function()
+    dropdownOpen = not dropdownOpen
+    WeaponDrop.Visible = dropdownOpen
+    Arrow.Text = dropdownOpen and "▴" or "▾"
+    WeaponDrop.Size = dropdownOpen
+        and UDim2.fromOffset(W - 58, #WeaponOptions * 36 + 10)
+        or UDim2.fromOffset(W - 58, 0)
+    if dropdownOpen then rebuildWeaponOptions() end
+end)
+
+rebuildWeaponOptions()
+resolveSelectedWeapon()
+
+task.spawn(function()
+    while Gui.Parent do
+        if _G.AutoLevel then resolveSelectedWeapon() end
+        task.wait(0.5)
+    end
+end)
+
+--===========================================================================
+-- FOLDER SCROLL SYSTEM
+--===========================================================================
+-- "Vuốt lên / vuốt xuống": mouse wheel, touch swipe và kéo thanh scroll.
+-- Nội dung được đặt trong một ScrollingFrame để không cần thay đổi logic
+-- của từng folder/section hiện có.
+
+local FolderScroll = Instance.new("ScrollingFrame")
+FolderScroll.Name = "FolderScroll"
+FolderScroll.Position = UDim2.fromOffset(0, 60)
+FolderScroll.Size = UDim2.fromOffset(W, H - 60)
+FolderScroll.BackgroundTransparency = 1
+FolderScroll.BorderSizePixel = 0
+FolderScroll.CanvasSize = UDim2.fromOffset(0, 380)
+FolderScroll.ScrollBarThickness = 5
+FolderScroll.ScrollBarImageColor3 = Color3.fromRGB(255, 211, 65)
+FolderScroll.ScrollingDirection = Enum.ScrollingDirection.Y
+FolderScroll.ElasticBehavior = Enum.ElasticBehavior.WhenScrollable
+FolderScroll.Active = true
+FolderScroll.ClipsDescendants = true
+FolderScroll.ZIndex = 10
+FolderScroll.Parent = Main
+
+local FolderPadding = Instance.new("UIPadding")
+FolderPadding.PaddingBottom = UDim.new(0, 18)
+FolderPadding.Parent = FolderScroll
+
+-- The sections below are positioned relative to this scroll canvas.
+local function putFolder(guiObject, x, y)
+    guiObject.Parent = FolderScroll
+    guiObject.Position = UDim2.fromOffset(x, y)
+end
+
+-- Mouse-wheel scrolling.
+UIS.InputChanged:Connect(function(input)
+    if not Main.Visible or not FolderScroll.Visible then
+        return
+    end
+
     if input.UserInputType == Enum.UserInputType.MouseWheel then
-        local delta = -input.Position.Z * 38
-        local maxY = math.max(
+        local delta = input.Position.Z
+        local target = FolderScroll.CanvasPosition.Y - delta * 42
+        local maxY = math.max(0, FolderScroll.AbsoluteCanvasSize.Y - FolderScroll.AbsoluteWindowSize.Y)
+        FolderScroll.CanvasPosition = Vector2.new(
             0,
-            TabContainer.AbsoluteCanvasSize.Y - TabContainer.AbsoluteSize.Y
-        )
-        TabContainer.CanvasPosition = Vector2.new(
-            0,
-            math.clamp(TabContainer.CanvasPosition.Y + delta, 0, maxY)
+            math.clamp(target, 0, maxY)
         )
     end
 end)
 
-local tabLayout = Instance.new("UIListLayout")
-tabLayout.Padding = UDim.new(0, 7)
-tabLayout.SortOrder = Enum.SortOrder.LayoutOrder
-tabLayout.Parent = TabContainer
+-- Touch swipe with a little momentum.
+local swipeActive = false
+local swipeStartY = 0
+local swipeStartScroll = 0
+local lastTouchY = 0
+local lastTouchTime = 0
 
-local tabs = {}
-local activeTab = "Farm"
-
--- Forward declarations for the content controls.
-local FarmContent
-local Card
-local Toggle
-local BoneCard
-local BoneToggle
-local BoneStatus
-local SettingsFrame
-local WeaponDropdown
-
-
--- Scroll Settings Farm with the mouse wheel.
-SettingsFrame.Active = true
-SettingsFrame.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseWheel then
-        local delta = -input.Position.Z * 38
-        local maxY = math.max(
-            0,
-            SettingsFrame.AbsoluteCanvasSize.Y - SettingsFrame.AbsoluteSize.Y
-        )
-        SettingsFrame.CanvasPosition = Vector2.new(
-            0,
-            math.clamp(SettingsFrame.CanvasPosition.Y + delta, 0, maxY)
-        )
+FolderScroll.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.Touch then
+        swipeActive = true
+        swipeStartY = input.Position.Y
+        swipeStartScroll = FolderScroll.CanvasPosition.Y
+        lastTouchY = input.Position.Y
+        lastTouchTime = os.clock()
     end
 end)
+
+FolderScroll.InputChanged:Connect(function(input)
+    if not swipeActive or input.UserInputType ~= Enum.UserInputType.Touch then
+        return
+    end
+
+    local y = input.Position.Y
+    local dy = y - swipeStartY
+    FolderScroll.CanvasPosition = Vector2.new(0, swipeStartScroll - dy)
+
+    lastTouchY = y
+    lastTouchTime = os.clock()
+end)
+
+UIS.InputEnded:Connect(function(input)
+    if input.UserInputType ~= Enum.UserInputType.Touch then
+        return
+    end
+
+    if not swipeActive then
+        return
+    end
+
+    swipeActive = false
+
+    -- Clamp after the swipe.
+    local maxY = math.max(0, FolderScroll.AbsoluteCanvasSize.Y - FolderScroll.AbsoluteWindowSize.Y)
+    FolderScroll.CanvasPosition = Vector2.new(
+        0,
+        math.clamp(FolderScroll.CanvasPosition.Y, 0, maxY)
+    )
+end)
+
+-- Convenience controls for scripts/folders.
+local function scrollFoldersToTop()
+    FolderScroll.CanvasPosition = Vector2.new(0, 0)
+end
+
+local function scrollFoldersToBottom()
+    local maxY = math.max(0, FolderScroll.AbsoluteCanvasSize.Y - FolderScroll.AbsoluteWindowSize.Y)
+    FolderScroll.CanvasPosition = Vector2.new(0, maxY)
+end
+
+-- Expose safe controls to the rest of the UI.
+_G.PhongdzFolderScrollTop = scrollFoldersToTop
+_G.PhongdzFolderScrollBottom = scrollFoldersToBottom
+
+local Card = Instance.new("Frame")
+Card.Position = UDim2.fromOffset(16, 144)
+Card.Size = UDim2.fromOffset(W - 32, 65)
+Card.BackgroundColor3 = Color3.fromRGB(22, 25, 33)
+Card.BorderSizePixel = 0
+Card.Parent = FolderScroll
+
+local cardCorner = Instance.new("UICorner")
+cardCorner.CornerRadius = UDim.new(0, 10)
+cardCorner.Parent = Card
+
+local CardTitle = Instance.new("TextLabel")
+CardTitle.Position = UDim2.fromOffset(13, 8)
+CardTitle.Size = UDim2.fromOffset(W - 58, 23)
+CardTitle.BackgroundTransparency = 1
+CardTitle.Text = "Automatic Level Farming"
+CardTitle.Font = Enum.Font.GothamBold
+CardTitle.TextSize = 12
+CardTitle.TextColor3 = Color3.fromRGB(241, 243, 247)
+CardTitle.TextXAlignment = Enum.TextXAlignment.Left
+CardTitle.Parent = Card
+
+local CardDesc = Instance.new("TextLabel")
+CardDesc.Position = UDim2.fromOffset(13, 32)
+CardDesc.Size = UDim2.fromOffset(W - 58, 22)
+CardDesc.BackgroundTransparency = 1
+CardDesc.Text = "Quest → đúng mob → di chuyển → Fast Attack"
+CardDesc.Font = Enum.Font.Gotham
+CardDesc.TextSize = 9
+CardDesc.TextColor3 = Color3.fromRGB(143, 149, 162)
+CardDesc.TextXAlignment = Enum.TextXAlignment.Left
+CardDesc.Parent = Card
+
+local Toggle = Instance.new("TextButton")
+Toggle.Position = UDim2.fromOffset(16, 222)
+Toggle.Size = UDim2.fromOffset(W - 32, 52)
+Toggle.Text = ""
+Toggle.BackgroundColor3 = Color3.fromRGB(55, 59, 70)
+Toggle.BorderSizePixel = 0
+Toggle.AutoButtonColor = false
+Toggle.Parent = FolderScroll
+
+local tc = Instance.new("UICorner")
+tc.CornerRadius = UDim.new(0, 10)
+tc.Parent = Toggle
+
+local Label = Instance.new("TextLabel")
+Label.Position = UDim2.fromOffset(13, 5)
+Label.Size = UDim2.fromOffset(290, 20)
+Label.BackgroundTransparency = 1
+Label.Text = "FARM LEVEL + FAST ATTACK"
+Label.Font = Enum.Font.GothamBold
+Label.TextSize = 11
+Label.TextColor3 = Color3.fromRGB(240, 242, 247)
+Label.TextXAlignment = Enum.TextXAlignment.Left
+Label.Parent = Toggle
+
+local Status = Instance.new("TextLabel")
+Status.Position = UDim2.fromOffset(13, 27)
+Status.Size = UDim2.fromOffset(310, 17)
+Status.BackgroundTransparency = 1
+Status.Text = "● MENU READY — FARM OFF"
+Status.Font = Enum.Font.GothamMedium
+Status.TextSize = 9
+Status.TextColor3 = Color3.fromRGB(130, 135, 148)
+Status.TextXAlignment = Enum.TextXAlignment.Left
+Status.Parent = Toggle
+
+local Pill = Instance.new("Frame")
+Pill.Size = UDim2.fromOffset(52, 29)
+Pill.Position = UDim2.fromOffset(W - 84, 11)
+Pill.BackgroundColor3 = Color3.fromRGB(70, 74, 85)
+Pill.BorderSizePixel = 0
+Pill.Parent = Toggle
+
+local pc = Instance.new("UICorner")
+pc.CornerRadius = UDim.new(1, 0)
+pc.Parent = Pill
+
+local Knob = Instance.new("Frame")
+Knob.Size = UDim2.fromOffset(23, 23)
+Knob.Position = UDim2.fromOffset(3, 3)
+Knob.BackgroundColor3 = Color3.fromRGB(230, 232, 238)
+Knob.BorderSizePixel = 0
+Knob.Parent = Pill
+
+local kc = Instance.new("UICorner")
+kc.CornerRadius = UDim.new(1, 0)
+kc.Parent = Knob
 
 local Hint = Instance.new("TextLabel")
-Hint.Position = UDim2.fromOffset(16, 366)
+Hint.Position = UDim2.fromOffset(16, 287)
 Hint.Size = UDim2.fromOffset(W - 32, 18)
 Hint.BackgroundTransparency = 1
 Hint.Text = "Kéo header để di chuyển  •  — để thu nhỏ"
@@ -272,7 +831,376 @@ Hint.Font = Enum.Font.GothamMedium
 Hint.TextSize = 8
 Hint.TextColor3 = Color3.fromRGB(86, 91, 104)
 Hint.TextXAlignment = Enum.TextXAlignment.Center
-Hint.Parent = Main
+Hint.Parent = FolderScroll
+
+--===========================================================================
+-- PHONGDZ HUB :: CATEGORY MENU (FIXED)
+-- Sidebar and content are isolated. Existing Farm/FastAttack objects are
+-- re-parented only after they have been created.
+--===========================================================================
+
+local CategoryLayer = Instance.new("Frame")
+CategoryLayer.Name = "CategoryLayer"
+CategoryLayer.BackgroundTransparency = 1
+CategoryLayer.Size = UDim2.fromScale(1, 1)
+CategoryLayer.Position = UDim2.fromOffset(0, 0)
+CategoryLayer.BorderSizePixel = 0
+CategoryLayer.ZIndex = 20
+CategoryLayer.Active = false
+CategoryLayer.Parent = Main
+
+local CategoryBar = Instance.new("ScrollingFrame")
+CategoryBar.Name = "CategoryBar"
+CategoryBar.Position = UDim2.fromOffset(10, 70)
+CategoryBar.Size = UDim2.new(0, 118, 1, -80)
+CategoryBar.BackgroundColor3 = Color3.fromRGB(18, 21, 28)
+CategoryBar.BorderSizePixel = 0
+CategoryBar.ClipsDescendants = true
+CategoryBar.ZIndex = 25
+CategoryBar.Active = true
+CategoryBar.ScrollingDirection = Enum.ScrollingDirection.Y
+CategoryBar.ScrollBarThickness = 4
+CategoryBar.ScrollBarImageColor3 = Color3.fromRGB(255, 211, 65)
+CategoryBar.CanvasSize = UDim2.fromOffset(0, 0)
+CategoryBar.AutomaticCanvasSize = Enum.AutomaticSize.Y
+CategoryBar.Parent = CategoryLayer
+
+local cbCorner = Instance.new("UICorner")
+cbCorner.CornerRadius = UDim.new(0, 11)
+cbCorner.Parent = CategoryBar
+
+local cbLayout = Instance.new("UIListLayout")
+cbLayout.Padding = UDim.new(0, 7)
+cbLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+cbLayout.VerticalAlignment = Enum.VerticalAlignment.Top
+cbLayout.SortOrder = Enum.SortOrder.LayoutOrder
+cbLayout.Parent = CategoryBar
+
+local cbPadding = Instance.new("UIPadding")
+cbPadding.PaddingTop = UDim.new(0, 9)
+cbPadding.PaddingLeft = UDim.new(0, 8)
+cbPadding.PaddingRight = UDim.new(0, 8)
+cbPadding.PaddingBottom = UDim.new(0, 10)
+cbPadding.Parent = CategoryBar
+
+-- Major-section scroll helpers.
+local function ScrollMajorSections(delta)
+    local maxY = math.max(0, CategoryBar.AbsoluteCanvasSize.Y - CategoryBar.AbsoluteWindowSize.Y)
+    CategoryBar.CanvasPosition = Vector2.new(
+        0,
+        math.clamp(CategoryBar.CanvasPosition.Y + (delta or 0), 0, maxY)
+    )
+end
+
+local function ScrollMajorSectionsTop()
+    CategoryBar.CanvasPosition = Vector2.new(0, 0)
+end
+
+local function ScrollMajorSectionsBottom()
+    CategoryBar.CanvasPosition = Vector2.new(
+        0,
+        math.max(0, CategoryBar.AbsoluteCanvasSize.Y - CategoryBar.AbsoluteWindowSize.Y)
+    )
+end
+
+_G.PhongdzScrollMajor = ScrollMajorSections
+_G.PhongdzScrollMajorTop = ScrollMajorSectionsTop
+_G.PhongdzScrollMajorBottom = ScrollMajorSectionsBottom
+
+CategoryBar.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseWheel then
+        ScrollMajorSections(-(input.Position.Z or 0) * 42)
+    end
+end)
+
+local majorTouching = false
+local majorTouchStart = 0
+local majorScrollStart = 0
+
+CategoryBar.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.Touch then
+        majorTouching = true
+        majorTouchStart = input.Position.Y
+        majorScrollStart = CategoryBar.CanvasPosition.Y
+    end
+end)
+
+CategoryBar.InputChanged:Connect(function(input)
+    if not majorTouching or input.UserInputType ~= Enum.UserInputType.Touch then
+        return
+    end
+
+    local dy = input.Position.Y - majorTouchStart
+    local maxY = math.max(0, CategoryBar.AbsoluteCanvasSize.Y - CategoryBar.AbsoluteWindowSize.Y)
+
+    CategoryBar.CanvasPosition = Vector2.new(
+        0,
+        math.clamp(majorScrollStart - dy, 0, maxY)
+    )
+end)
+
+UIS.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.Touch then
+        majorTouching = false
+    end
+end)
+
+local CategoryContent = Instance.new("Frame")
+CategoryContent.Name = "CategoryContent"
+CategoryContent.Position = UDim2.fromOffset(138, 70)
+CategoryContent.Size = UDim2.new(1, -148, 1, -80)
+CategoryContent.BackgroundColor3 = Color3.fromRGB(19, 21, 28)
+CategoryContent.BorderSizePixel = 0
+CategoryContent.ClipsDescendants = true
+CategoryContent.ZIndex = 25
+CategoryContent.Active = false
+CategoryContent.Parent = CategoryLayer
+
+local contentCorner = Instance.new("UICorner")
+contentCorner.CornerRadius = UDim.new(0, 11)
+contentCorner.Parent = CategoryContent
+
+local CategoryPages = {}
+local CategoryButtons = {}
+
+local function makeCategory(name, icon, order)
+    local button = Instance.new("TextButton")
+    button.Name = name .. "Button"
+    button.Size = UDim2.new(1, 0, 0, 43)
+    button.LayoutOrder = order
+    button.BackgroundColor3 = Color3.fromRGB(30, 34, 43)
+    button.BorderSizePixel = 0
+    button.Text = icon .. "  " .. name
+    button.Font = Enum.Font.GothamBold
+    button.TextSize = 9
+    button.TextColor3 = Color3.fromRGB(170, 176, 188)
+    button.TextXAlignment = Enum.TextXAlignment.Left
+    button.AutoButtonColor = false
+    button.Active = true
+    button.ZIndex = 50
+    button.Parent = CategoryBar
+
+    local bp = Instance.new("UIPadding")
+    bp.PaddingLeft = UDim.new(0, 10)
+    bp.Parent = button
+
+    local bc = Instance.new("UICorner")
+    bc.CornerRadius = UDim.new(0, 8)
+    bc.Parent = button
+
+    local page = Instance.new("ScrollingFrame")
+    page.Name = name .. "Page"
+    page.Position = UDim2.fromOffset(7, 7)
+    page.Size = UDim2.new(1, -14, 1, -14)
+    page.BackgroundTransparency = 1
+    page.BorderSizePixel = 0
+    page.ScrollBarThickness = 4
+    page.ScrollBarImageColor3 = Color3.fromRGB(255, 211, 65)
+    page.ScrollingDirection = Enum.ScrollingDirection.Y
+    page.CanvasSize = UDim2.fromOffset(0, 0)
+    page.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    page.Visible = false
+    page.Active = true
+    page.ClipsDescendants = true
+    page.ZIndex = 40
+    page.Parent = CategoryContent
+
+    local pp = Instance.new("UIPadding")
+    pp.PaddingTop = UDim.new(0, 2)
+    pp.PaddingBottom = UDim.new(0, 15)
+    pp.PaddingLeft = UDim.new(0, 2)
+    pp.PaddingRight = UDim.new(0, 2)
+    pp.Parent = page
+
+    CategoryButtons[name] = button
+    CategoryPages[name] = page
+
+    return button, page
+end
+
+local farmButton, farmPage = makeCategory("FARM", "⚔", 1)
+local espButton, espPage = makeCategory("ESP", "◉", 2)
+local settingButton, settingPage = makeCategory("SETTING", "⚙", 3)
+local miscButton, miscPage = makeCategory("MISC", "✦", 4)
+
+local function activateCategory(name)
+    for pageName, page in pairs(CategoryPages) do
+        page.Visible = pageName == name
+    end
+
+    for buttonName, button in pairs(CategoryButtons) do
+        local selected = buttonName == name
+        button.BackgroundColor3 = selected
+            and Color3.fromRGB(255, 211, 65)
+            or Color3.fromRGB(30, 34, 43)
+        button.TextColor3 = selected
+            and Color3.fromRGB(15, 17, 22)
+            or Color3.fromRGB(170, 176, 188)
+    end
+end
+
+farmButton.Activated:Connect(function() activateCategory("FARM") end)
+espButton.Activated:Connect(function() activateCategory("ESP") end)
+settingButton.Activated:Connect(function() activateCategory("SETTING") end)
+miscButton.Activated:Connect(function() activateCategory("MISC") end)
+
+-- Function-level scroll helpers: one independent scrollbar per section.
+local function ScrollFunctions(page, delta)
+    if not page then return end
+    local maxY = math.max(0, page.AbsoluteCanvasSize.Y - page.AbsoluteWindowSize.Y)
+
+    page.CanvasPosition = Vector2.new(
+        0,
+        math.clamp(page.CanvasPosition.Y + (delta or 0), 0, maxY)
+    )
+end
+
+local function ScrollFunctionsTop(page)
+    if page then
+        page.CanvasPosition = Vector2.new(0, 0)
+    end
+end
+
+local function ScrollFunctionsBottom(page)
+    if page then
+        page.CanvasPosition = Vector2.new(
+            0,
+            math.max(0, page.AbsoluteCanvasSize.Y - page.AbsoluteWindowSize.Y)
+        )
+    end
+end
+
+_G.PhongdzScrollFunctions = ScrollFunctions
+_G.PhongdzScrollFunctionsTop = ScrollFunctionsTop
+_G.PhongdzScrollFunctionsBottom = ScrollFunctionsBottom
+
+for _, page in pairs(CategoryPages) do
+    page.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseWheel then
+            ScrollFunctions(page, -(input.Position.Z or 0) * 42)
+        end
+    end)
+
+    local touching = false
+    local touchStart = 0
+    local scrollStart = 0
+
+    page.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.Touch then
+            touching = true
+            touchStart = input.Position.Y
+            scrollStart = page.CanvasPosition.Y
+        end
+    end)
+
+    page.InputChanged:Connect(function(input)
+        if not touching or input.UserInputType ~= Enum.UserInputType.Touch then
+            return
+        end
+
+        local dy = input.Position.Y - touchStart
+        local maxY = math.max(0, page.AbsoluteCanvasSize.Y - page.AbsoluteWindowSize.Y)
+
+        page.CanvasPosition = Vector2.new(
+            0,
+            math.clamp(scrollStart - dy, 0, maxY)
+        )
+    end)
+
+    UIS.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.Touch then
+            touching = false
+        end
+    end)
+end
+
+
+local function sectionCard(parent, title, subtitle)
+    local card = Instance.new("Frame")
+    card.Size = UDim2.new(1, -6, 0, 68)
+    card.BackgroundColor3 = Color3.fromRGB(22, 25, 33)
+    card.BorderSizePixel = 0
+    card.ZIndex = 45
+    card.Active = false
+    card.Parent = parent
+
+    local cc = Instance.new("UICorner")
+    cc.CornerRadius = UDim.new(0, 10)
+    cc.Parent = card
+
+    local titleLabel = Instance.new("TextLabel")
+    titleLabel.Position = UDim2.fromOffset(12, 10)
+    titleLabel.Size = UDim2.new(1, -24, 0, 20)
+    titleLabel.BackgroundTransparency = 1
+    titleLabel.Text = title
+    titleLabel.Font = Enum.Font.GothamBlack
+    titleLabel.TextSize = 11
+    titleLabel.TextColor3 = Color3.fromRGB(255, 211, 65)
+    titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+    titleLabel.ZIndex = 46
+    titleLabel.Parent = card
+
+    local sub = Instance.new("TextLabel")
+    sub.Position = UDim2.fromOffset(12, 34)
+    sub.Size = UDim2.new(1, -24, 0, 18)
+    sub.BackgroundTransparency = 1
+    sub.Text = subtitle
+    sub.Font = Enum.Font.Gotham
+    sub.TextSize = 8
+    sub.TextColor3 = Color3.fromRGB(140, 146, 160)
+    sub.TextXAlignment = Enum.TextXAlignment.Left
+    sub.ZIndex = 46
+    sub.Parent = card
+end
+
+sectionCard(espPage, "ESP", "ESP controls can be placed here.")
+sectionCard(miscPage, "MISC", "Miscellaneous controls can be placed here.")
+
+-- Existing controls are NOW available, so re-parenting works reliably.
+SettingFarm.Parent = settingPage
+SettingFarm.Position = UDim2.fromOffset(4, 4)
+SettingFarm.Size = UDim2.new(1, -8, 0, 152)
+SettingFarm.ZIndex = 45
+SettingFarm.Active = true
+
+Card.Parent = farmPage
+Card.Position = UDim2.fromOffset(4, 4)
+Card.Size = UDim2.new(1, -8, 0, 68)
+Card.ZIndex = 45
+Card.Active = false
+
+Toggle.Parent = farmPage
+Toggle.Position = UDim2.fromOffset(4, 80)
+Toggle.Size = UDim2.new(1, -8, 0, 58)
+Toggle.ZIndex = 50
+Toggle.Active = true
+
+Hint.Parent = farmPage
+Hint.Position = UDim2.fromOffset(4, 145)
+Hint.Size = UDim2.new(1, -8, 0, 22)
+Hint.ZIndex = 45
+Hint.Active = false
+
+-- Keep controls above their cards/dropdowns clickable.
+WeaponButton.ZIndex = 70
+WeaponButton.Active = true
+FruitM1Toggle.ZIndex = 70
+FruitM1Toggle.Active = true
+if FinishModeToggle then
+    FinishModeToggle.ZIndex = 70
+    FinishModeToggle.Active = true
+end
+WeaponDrop.ZIndex = 200
+
+for _, obj in ipairs(WeaponDrop:GetDescendants()) do
+    if obj:IsA("GuiButton") then
+        obj.ZIndex = 210
+        obj.Active = true
+    end
+end
+
+activateCategory("FARM")
+
 
 -- Circular launcher.
 local Launcher = Instance.new("TextButton")
@@ -340,7 +1268,7 @@ local function minimizeMenu()
 
     local v = viewport()
     Launcher.Position = UDim2.fromOffset(
-        math.clamp(savedX + 250, 0, math.max(0, v.X - 58)),
+        math.clamp(savedX + 190, 0, math.max(0, v.X - 58)),
         math.clamp(savedY + 96, 0, math.max(0, v.Y - 58))
     )
 
@@ -362,99 +1290,10 @@ end
 Min.Activated:Connect(minimizeMenu)
 Launcher.Activated:Connect(restoreMenu)
 
--- Cho phép kéo nút Launcher khi menu đang thu nhỏ.
-local launcherDragging = false
-local launcherDragStart = Vector2.zero
-local launcherOrigin = Vector2.zero
-
-Launcher.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1
-        or input.UserInputType == Enum.UserInputType.Touch then
-        launcherDragging = true
-        launcherDragStart = input.Position
-        local p = Launcher.AbsolutePosition
-        launcherOrigin = Vector2.new(p.X, p.Y)
-    end
-end)
-
-UIS.InputChanged:Connect(function(input)
-    if not launcherDragging or not Launcher.Visible then
-        return
-    end
-
-    if input.UserInputType == Enum.UserInputType.MouseMovement
-        or input.UserInputType == Enum.UserInputType.Touch then
-        local d = input.Position - launcherDragStart
-        local v = viewport()
-
-        local nx = math.clamp(
-            launcherOrigin.X + d.X,
-            0,
-            math.max(0, v.X - Launcher.AbsoluteSize.X)
-        )
-
-        local ny = math.clamp(
-            launcherOrigin.Y + d.Y,
-            0,
-            math.max(0, v.Y - Launcher.AbsoluteSize.Y)
-        )
-
-        Launcher.Position = UDim2.fromOffset(nx, ny)
-    end
-end)
-
-UIS.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1
-        or input.UserInputType == Enum.UserInputType.Touch then
-        launcherDragging = false
-    end
-end)
-
 Close.Activated:Connect(function()
     _G.AutoLevel = false
-    _G.AutoBone = false
-    if ActiveTween then
-        pcall(function()
-            ActiveTween:Cancel()
-            ActiveTween:Destroy()
-        end)
-        ActiveTween = nil
-    end
-    if _G.__PhongdzFlightTween then
-        pcall(function()
-            _G.__PhongdzFlightTween:Cancel()
-            _G.__PhongdzFlightTween:Destroy()
-        end)
-        _G.__PhongdzFlightTween = nil
-    end
-    StopGather()
-    StopFlight()
-    SetNoGravity(false)
-    RestoreCharacterState()
     Gui:Destroy()
 end)
-
-FarmTab.Activated:Connect(function()
-    setActiveTab("Farm")
-end)
-
-PlayerTab.Activated:Connect(function()
-    setActiveTab("Player")
-end)
-
-VisualTab.Activated:Connect(function()
-    setActiveTab("Visual")
-end)
-
-MiscTab.Activated:Connect(function()
-    setActiveTab("Misc")
-end)
-
-SettingsTab.Activated:Connect(function()
-    setActiveTab("Settings Farm")
-end)
-
-setActiveTab("Farm")
 
 -- IMPORTANT: The UI above is complete before the farm source is loaded.
 print("[PhongdzHub] UI READY")
@@ -464,14 +1303,17 @@ print("[PhongdzHub] UI READY")
 --===========================================================================
 
 local FARM_SOURCE = [=[
+ChooseWeapon = _G.ChooseWeapon or "Melee"
+SelectWeapon = _G.SelectWeapon
+FruitM1Enabled = _G.FruitM1Enabled ~= false
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local LocalPlayer = Players.LocalPlayer
 
-_G.AutoLevel = _G.AutoLevel or false
+_G.AutoLevel = (_G.AutoLevel == true)
 _G.Fast_Delay = _G.Fast_Delay or 0.01
-_G.FlySpeed = 300
 
 local Sea1, Sea2, Sea3 = false, false, false
 if game.PlaceId == 2753915549 then
@@ -487,1111 +1329,877 @@ end
 --=============================================================================
 
 local function GetRoot() local c=LocalPlayer.Character return c and c:FindFirstChild("HumanoidRootPart") end
+local ActiveTarget
+local LastEquipName
+local FarmDestination
+local FarmDestinationTarget
+local LastMoveAt = 0
 
 --===========================================================================
--- CHARACTER STATE BACKUP / RESTORE
+-- SOURCE MOVEMENT CORE
+-- Based directly on source.txt:
+--   invisible anchored block + TweenService + character follows block.
+-- CheckLevel and FastAttack are intentionally outside this patch.
 --===========================================================================
-local CharacterState
 
-local function CaptureCharacterState()
-    local c = LocalPlayer.Character
-    local hum = c and c:FindFirstChildOfClass("Humanoid")
-    local root = c and c:FindFirstChild("HumanoidRootPart")
-    if not c or not hum or not root then return end
-
-    CharacterState = {
-        humanoid = hum,
-        root = root,
-        WalkSpeed = hum.WalkSpeed,
-        JumpPower = hum.JumpPower,
-        AutoRotate = hum.AutoRotate,
-        UseJumpPower = hum.UseJumpPower,
-        RootCanCollide = root.CanCollide,
-        RootAnchored = root.Anchored,
-        RootAssemblyLinearVelocity = root.AssemblyLinearVelocity,
-        RootAssemblyAngularVelocity = root.AssemblyAngularVelocity,
-    }
+local block = workspace:FindFirstChild("Phongdz_SourceFarmBlock")
+if block then
+    pcall(function() block:Destroy() end)
 end
 
-local function RestoreCharacterState()
-    local state = CharacterState
-    CharacterState = nil
+block = Instance.new("Part")
+block.Name = "Phongdz_SourceFarmBlock"
+block.Size = Vector3.new(1, 1, 1)
+block.Anchored = true
+block.CanCollide = false
+block.CanTouch = false
+block.CanQuery = false
+block.Transparency = 1
+block.Parent = workspace
 
-    if not state then return end
+local shouldTween = false
+local SourceMoveConnection = nil
+local ActiveTween = nil
 
-    local c = LocalPlayer.Character
-    local hum = c and c:FindFirstChildOfClass("Humanoid")
-    local root = c and c:FindFirstChild("HumanoidRootPart")
+local function StopFarmTween()
+    shouldTween = false
 
-    -- Restore only if this is still the same character/root that was captured.
-    if hum and state.humanoid == hum then
-        pcall(function() hum.WalkSpeed = state.WalkSpeed end)
-        pcall(function() hum.JumpPower = state.JumpPower end)
-        pcall(function() hum.AutoRotate = state.AutoRotate end)
-        pcall(function() hum.UseJumpPower = state.UseJumpPower end)
-    end
-
-    if root and state.root == root then
-        pcall(function() root.CanCollide = state.RootCanCollide end)
-        pcall(function() root.Anchored = state.RootAnchored end)
+    if ActiveTween then
         pcall(function()
-            root.AssemblyLinearVelocity = Vector3.zero
-            root.AssemblyAngularVelocity = Vector3.zero
+            ActiveTween:Cancel()
         end)
+        ActiveTween = nil
     end
 end
 
-local NoGravityAttachment
-local NoGravityForce
+local function StartSourceMovement()
+    if SourceMoveConnection then return end
 
-local function SetNoGravity(enabled)
-    local c = LocalPlayer.Character
-    local root = c and c:FindFirstChild("HumanoidRootPart")
-
-    if enabled and root then
-        if not NoGravityAttachment or NoGravityAttachment.Parent ~= root then
-            if NoGravityAttachment then
-                pcall(function() NoGravityAttachment:Destroy() end)
-            end
-            NoGravityAttachment = Instance.new("Attachment")
-            NoGravityAttachment.Name = "Phongdz_NoGravity"
-            NoGravityAttachment.Parent = root
-        end
-
-        if not NoGravityForce or NoGravityForce.Parent ~= root then
-            if NoGravityForce then
-                pcall(function() NoGravityForce:Destroy() end)
-            end
-            NoGravityForce = Instance.new("VectorForce")
-            NoGravityForce.Name = "Phongdz_NoGravityForce"
-            NoGravityForce.Attachment0 = NoGravityAttachment
-            NoGravityForce.RelativeTo = Enum.ActuatorRelativeTo.World
-            NoGravityForce.ApplyAtCenterOfMass = true
-            NoGravityForce.Parent = root
-        end
-
-        NoGravityForce.Force = Vector3.new(0, root.AssemblyMass * workspace.Gravity, 0)
-    else
-        if NoGravityForce then
-            pcall(function() NoGravityForce:Destroy() end)
-            NoGravityForce = nil
-        end
-        if NoGravityAttachment then
-            pcall(function() NoGravityAttachment:Destroy() end)
-            NoGravityAttachment = nil
-        end
-    end
-end
-
-task.spawn(function()
-    while task.wait() do
-        pcall(function()
-            SetNoGravity(_G.AutoLevel == true)
-        end)
-    end
-end)
-
-local FlightAttachment
-local FlightVelocity
-local FlightTarget
-
-local function StopFlight()
-    FlightTarget = nil
-
-    if FlightVelocity then
-        pcall(function()
-            FlightVelocity.VectorVelocity = Vector3.zero
-            FlightVelocity:Destroy()
-        end)
-        FlightVelocity = nil
-    end
-
-    if FlightAttachment then
-        pcall(function()
-            FlightAttachment:Destroy()
-        end)
-        FlightAttachment = nil
-    end
-end
-
-local function RestoreAfterFarm()
-    StopGather()
-    StopFlight()
-    SetNoGravity(false)
-    RestoreCharacterState()
-end
-
-local function EnsureFlightController(root)
-    if not root then return false end
-
-    if FlightVelocity and FlightVelocity.Parent == root then
-        return true
-    end
-
-    StopFlight()
-
-    FlightAttachment = Instance.new("Attachment")
-    FlightAttachment.Name = "Phongdz_FlightAttachment"
-    FlightAttachment.Parent = root
-
-    FlightVelocity = Instance.new("LinearVelocity")
-    FlightVelocity.Name = "Phongdz_FlightVelocity"
-    FlightVelocity.Attachment0 = FlightAttachment
-    FlightVelocity.RelativeTo = Enum.ActuatorRelativeTo.World
-    FlightVelocity.MaxForce = math.huge
-    FlightVelocity.VectorVelocity = Vector3.zero
-    FlightVelocity.Parent = root
-
-    return true
-end
-
-local function TweenTo(cf)
     local root = GetRoot()
-    if not root or not cf then
-        StopFlight()
+    if root then
+        block.CFrame = root.CFrame
+    end
+
+    SourceMoveConnection = RunService.Heartbeat:Connect(function()
+        local character = LocalPlayer.Character
+        local rootPart = character and character:FindFirstChild("HumanoidRootPart")
+
+        if not character or not rootPart then
+            return
+        end
+
+        if not _G.AutoLevel then
+            shouldTween = false
+        end
+
+        if shouldTween and block and block.Parent == workspace then
+            -- This is the same relationship used by source.txt:
+            -- the block is the tween target and the character follows it.
+            if (rootPart.Position - block.Position).Magnitude <= 200 then
+                rootPart.CFrame = block.CFrame
+            else
+                block.CFrame = rootPart.CFrame
+            end
+
+            for _, part in ipairs(character:GetChildren()) do
+                if part:IsA("BasePart") then
+                    part.CanCollide = false
+                end
+            end
+        else
+            for _, part in ipairs(character:GetChildren()) do
+                if part:IsA("BasePart") then
+                    part.CanCollide = true
+                end
+            end
+        end
+    end)
+end
+
+local function StopSourceMovement()
+    shouldTween = false
+    StopFarmTween()
+
+    if SourceMoveConnection then
+        SourceMoveConnection:Disconnect()
+        SourceMoveConnection = nil
+    end
+
+    local character = LocalPlayer.Character
+    if character then
+        for _, part in ipairs(character:GetChildren()) do
+            if part:IsA("BasePart") then
+                part.CanCollide = true
+            end
+        end
+    end
+end
+
+local function TweenTo(target)
+    if typeof(target) ~= "CFrame" then
+        if typeof(target) == "Vector3" then
+            target = CFrame.new(target)
+        elseif typeof(target) == "Instance" and target:IsA("BasePart") then
+            target = target.CFrame
+        else
+            return
+        end
+    end
+
+    local root = GetRoot()
+    if not root then return end
+
+    StartSourceMovement()
+    shouldTween = true
+
+    -- IMPORTANT:
+    -- Do not cancel/recreate the same long-distance tween every Farm tick.
+    -- The old version restarted the quest tween every ~0.045s, so it could
+    -- accept the quest but never finish moving to the quest/mob.
+    if ActiveTween
+        and ActiveTween.PlaybackState == Enum.PlaybackState.Playing
+        and FarmDestinationTarget
+        and (FarmDestinationTarget.Position - target.Position).Magnitude <= 3 then
         return
     end
 
-    FlightTarget = cf.Position
+    if ActiveTween then
+        pcall(function()
+            ActiveTween:Cancel()
+        end)
+        ActiveTween = nil
+    end
 
-    if not EnsureFlightController(root) then return end
+    FarmDestinationTarget = target
+    FarmDestination = target
 
-    local delta = FlightTarget - root.Position
-    local distance = delta.Magnitude
+    local distance = (target.Position - root.Position).Magnitude
+    local duration = math.max(distance / 300, 0.08)
 
-    if distance <= 3 then
-        FlightVelocity.VectorVelocity = Vector3.zero
+    ActiveTween = TweenService:Create(
+        block,
+        TweenInfo.new(duration, Enum.EasingStyle.Linear),
+        {CFrame = target}
+    )
+
+    local tweenRef = ActiveTween
+    tweenRef.Completed:Connect(function()
+        if ActiveTween == tweenRef then
+            ActiveTween = nil
+        end
+    end)
+
+    tweenRef:Play()
+end
+
+--===========================================================================
+-- SOURCE BRING ENEMY CORE
+-- Based on source.txt BringEnemy(Mon).
+-- Only the mob grouping layer is replaced; CheckLevel remains unchanged.
+--===========================================================================
+
+local _B = true
+local BringSourceConnection = nil
+
+local function StopBringMobs()
+    if BringSourceConnection then
+        BringSourceConnection:Disconnect()
+        BringSourceConnection = nil
+    end
+
+    -- Remove only BodyVelocity objects created by this routine.
+    local enemies = workspace:FindFirstChild("Enemies")
+    if enemies then
+        for _, mob in ipairs(enemies:GetChildren()) do
+            local root = mob:FindFirstChild("HumanoidRootPart")
+            local bv = root and root:FindFirstChild("PhongdzSourceBringVelocity")
+            if bv then
+                pcall(function() bv:Destroy() end)
+            end
+        end
+    end
+end
+
+local function IsSourceNetworkOwner(part)
+    local ok, owner = pcall(function()
+        if typeof(isnetworkowner) == "function" then
+            return isnetworkowner(part)
+        end
+        return nil
+    end)
+
+    if ok and owner ~= nil then
+        return owner
+    end
+
+    return part.ReceiveAge == 0
+        and not part.Anchored
+        and part.AssemblyLinearVelocity.Magnitude > 0
+end
+
+local function BringEnemy(Mon)
+    if not _B or not Mon then
         return
     end
 
-    local speed = math.max(50, tonumber(_G.FlySpeed) or 300)
-    local desiredSpeed = speed
-
-    -- Smoothly slow down near the target instead of stopping abruptly.
-    if distance < 35 then
-        desiredSpeed = math.max(70, speed * (distance / 35))
+    local enemies = workspace:FindFirstChild("Enemies")
+    local targetRoot = Mon:FindFirstChild("HumanoidRootPart")
+    if not enemies or not targetRoot then
+        return
     end
 
-    FlightVelocity.VectorVelocity = delta.Unit * desiredSpeed
+    local targetPos = targetRoot.Position
+
+    -- Source creates/maintains one worker instead of creating a new loop
+    -- for every mob.
+    if BringSourceConnection then
+        return
+    end
+
+    BringSourceConnection = RunService.Heartbeat:Connect(function()
+        if not _G.AutoLevel or not _B then
+            StopBringMobs()
+            return
+        end
+
+        if not Mon.Parent then
+            StopBringMobs()
+            return
+        end
+
+        local currentRoot = Mon:FindFirstChild("HumanoidRootPart")
+        local currentHum = Mon:FindFirstChildOfClass("Humanoid")
+        if not currentRoot or not currentHum or currentHum.Health <= 0 then
+            StopBringMobs()
+            return
+        end
+
+        local center = currentRoot.Position
+        local areaMob = false
+
+        for _, mob in ipairs(enemies:GetChildren()) do
+            if mob ~= Mon and mob.Name == Mon.Name then
+                local hum = mob:FindFirstChildOfClass("Humanoid")
+                local root = mob:FindFirstChild("HumanoidRootPart")
+
+                if hum and root and hum.Health > 0 then
+                    local distance = (root.Position - center).Magnitude
+
+                    if distance <= 3000 then
+                        local bv = root:FindFirstChild("PhongdzSourceBringVelocity")
+                        if not bv then
+                            bv = Instance.new("BodyVelocity")
+                            bv.Name = "PhongdzSourceBringVelocity"
+                            bv.MaxForce = Vector3.new(1e9, 1e9, 1e9)
+                            bv.Velocity = Vector3.zero
+                            bv.Parent = root
+                        end
+
+                        if distance <= 10 then
+                            areaMob = true
+                        end
+
+                        if not areaMob and IsSourceNetworkOwner(root) then
+                            root.CFrame = CFrame.new(center)
+                        end
+
+                        root.CanCollide = false
+                        hum.WalkSpeed = 0
+                        hum.JumpPower = 0
+                    end
+                end
+            end
+        end
+
+        currentRoot.CanCollide = false
+        currentHum.WalkSpeed = 0
+        currentHum.JumpPower = 0
+    end)
+end
+
+local SourceFastAttack = {
+    LastFire = 0,
+    Interval = 0.035,
+    Range = 60,
+    AttackRemote = nil,
+    HitRemote = nil,
+}
+
+local function GetSourceFastAttackRemotes()
+    if SourceFastAttack.AttackRemote and SourceFastAttack.HitRemote
+        and SourceFastAttack.AttackRemote.Parent and SourceFastAttack.HitRemote.Parent then
+        return SourceFastAttack.AttackRemote, SourceFastAttack.HitRemote
+    end
+
+    local ok = pcall(function()
+        local storage = ReplicatedStorage
+        local modules = storage:FindFirstChild("Modules")
+        local net = modules and modules:FindFirstChild("Net")
+        if not net then return end
+
+        SourceFastAttack.AttackRemote = net:FindFirstChild("RE/RegisterAttack")
+        SourceFastAttack.HitRemote = net:FindFirstChild("RE/RegisterHit")
+    end)
+
+    if ok and SourceFastAttack.AttackRemote and SourceFastAttack.HitRemote then
+        return SourceFastAttack.AttackRemote, SourceFastAttack.HitRemote
+    end
+
+    return nil, nil
+end
+
+-- Source-derived target scan: enemies only, so this farm routine never
+-- intentionally targets other players.
+local function GetSourceFarmTargets(character, range)
+    local enemiesFolder = workspace:FindFirstChild("Enemies")
+    local root = character and character:FindFirstChild("HumanoidRootPart")
+    if not enemiesFolder or not root then return {} end
+
+    local targets = {}
+    for _, enemy in ipairs(enemiesFolder:GetChildren()) do
+        if enemy.Name == Ms and not enemy:GetAttribute("IsBoat") then
+            local enemyRoot = enemy:FindFirstChild("HumanoidRootPart")
+            local hum = enemy:FindFirstChildOfClass("Humanoid")
+            if enemyRoot and hum and hum.Health > 0 then
+                if (enemyRoot.Position - root.Position).Magnitude <= range then
+                    targets[#targets + 1] = enemy
+                end
+            end
+        end
+    end
+    return targets
+end
+
+-- Source-style hit-part selection. Prefer combat limbs, then Head/PrimaryPart.
+local function GetSourceHitPart(enemy)
+    local limbs = {
+        "RightLowerArm", "RightUpperArm", "LeftLowerArm",
+        "LeftUpperArm", "RightHand", "LeftHand"
+    }
+
+    for _, name in ipairs(limbs) do
+        local part = enemy:FindFirstChild(name)
+        if part then return part end
+    end
+
+    return enemy:FindFirstChild("Head") or enemy.PrimaryPart
+end
+
+local function FastAttack()
+    if not _G.AutoLevel then return end
+    if os.clock() - SourceFastAttack.LastFire < SourceFastAttack.Interval then return end
+
+    local character = LocalPlayer.Character
+    local root = character and character:FindFirstChild("HumanoidRootPart")
+    local hum = character and character:FindFirstChildOfClass("Humanoid")
+    if not character or not root or not hum or hum.Health <= 0 then return end
+
+    local equippedWeapon = character:FindFirstChildOfClass("Tool")
+    if not equippedWeapon then
+        equippedWeapon = EquipFarmWeapon()
+    end
+    if not equippedWeapon then return end
+
+    -- Keep the existing weapon selector intact.
+    if ChooseWeapon == "Blox Fruit" and not FruitM1Enabled then
+        return
+    end
+
+    local targets = GetSourceFarmTargets(character, SourceFastAttack.Range)
+    if #targets == 0 then return end
+
+    local attackEvent, hitEvent = GetSourceFastAttackRemotes()
+    if not attackEvent or not hitEvent then return end
+
+    local hitTargets = {}
+    local mainTarget = nil
+
+    for _, enemy in ipairs(targets) do
+        local hitPart = GetSourceHitPart(enemy)
+        if hitPart then
+            hitTargets[#hitTargets + 1] = {enemy, hitPart}
+            mainTarget = mainTarget or hitPart
+        end
+    end
+
+    if not mainTarget or #hitTargets == 0 then return end
+
+    -- Match the source's combat-remote-thread branch when available.
+    local sent = false
+    pcall(function()
+        attackEvent:FireServer(0)
+        sent = true
+    end)
+
+    local modules = ReplicatedStorage:FindFirstChild("Modules")
+    local flagsModule = modules and modules:FindFirstChild("Flags")
+    local combatRemoteThread = false
+
+    if flagsModule then
+        pcall(function()
+            combatRemoteThread = require(flagsModule).COMBAT_REMOTE_THREAD or false
+        end)
+    end
+
+    if combatRemoteThread then
+        -- Some executors expose the source's SendHitsToServer through the
+        -- current PlayerScripts environment. Use it when available.
+        local playerScripts = LocalPlayer:FindFirstChild("PlayerScripts")
+        local localScript = playerScripts and playerScripts:FindFirstChildOfClass("LocalScript")
+        local hitFunction
+
+        if localScript and type(getsenv) == "function" then
+            pcall(function()
+                local env = getsenv(localScript)
+                if env then hitFunction = env._G and env._G.SendHitsToServer end
+            end)
+        end
+
+        if type(hitFunction) == "function" then
+            pcall(function()
+                hitFunction(mainTarget, hitTargets)
+                sent = true
+            end)
+        else
+            pcall(function()
+                hitEvent:FireServer(mainTarget, hitTargets)
+                sent = true
+            end)
+        end
+    else
+        pcall(function()
+            hitEvent:FireServer(mainTarget, hitTargets)
+            sent = true
+        end)
+    end
+
+    if sent then
+        SourceFastAttack.LastFire = os.clock()
+    end
 end
 
 local function EquipFarmWeapon()
-    local character = LocalPlayer.Character
-    local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-    if not humanoid then return nil end
-
+    resolveSelectedWeapon()
+    local selected = SelectWeapon
     local backpack = LocalPlayer:FindFirstChildOfClass("Backpack")
-    local selected = _G.FarmWeapon or "Auto"
+    local character = LocalPlayer.Character
 
-    if selected ~= "Auto" then
-        local equipped = character:FindFirstChild(selected)
-        if equipped and equipped:IsA("Tool") then
-            return equipped
-        end
-
-        local tool = backpack and backpack:FindFirstChild(selected)
-        if tool and tool:IsA("Tool") then
-            pcall(function()
-                humanoid:EquipTool(tool)
-            end)
-            return tool
+    if selected and backpack then
+        local tool = backpack:FindFirstChild(selected)
+        local hum = character and character:FindFirstChildOfClass("Humanoid")
+        if tool and hum then
+            pcall(function() hum:EquipTool(tool) end)
         end
     end
 
-    local current = character:FindFirstChildOfClass("Tool")
-    if current then return current end
-
-    if backpack then
-        for _, tool in ipairs(backpack:GetChildren()) do
-            if tool:IsA("Tool") then
-                pcall(function()
-                    humanoid:EquipTool(tool)
-                end)
-                return tool
-            end
-        end
-    end
-
-    return nil
+    return character and character:FindFirstChildOfClass("Tool")
 end
 
-local function AutoHaki() local c=LocalPlayer.Character; local rem=ReplicatedStorage:FindFirstChild("Remotes"); local comm=rem and rem:FindFirstChild("CommF_"); if c and not c:FindFirstChild("HasBuso") and comm then pcall(function() comm:InvokeServer("Buso") end) end end
-local AttackRemote,HitRemote
-local function ResolveAttackRemotes() if AttackRemote and HitRemote then return true end; local modules=ReplicatedStorage:FindFirstChild("Modules"); local net=modules and modules:FindFirstChild("Net"); if not net then return false end; AttackRemote=net:FindFirstChild("RE/RegisterAttack"); HitRemote=net:FindFirstChild("RE/RegisterHit"); return AttackRemote~=nil and HitRemote~=nil end
-local function FastAttack()
-    if not ResolveAttackRemotes() then return end
-
+local function AutoHaki()
     local character = LocalPlayer.Character
-    local tool = character and character:FindFirstChildOfClass("Tool")
-    if not tool then return end
+    if not character then return end
 
-    local enemies = workspace:FindFirstChild("Enemies")
-    local root = GetRoot()
-    if not enemies or not root then return end
-
-    local candidates = {}
-
-    for _, mob in ipairs(enemies:GetChildren()) do
-        local hum = mob:FindFirstChildOfClass("Humanoid")
-        local head = mob:FindFirstChild("Head")
-
-        if hum and head and hum.Health > 0 then
-            local distance = (root.Position - head.Position).Magnitude
-            if distance <= 60 then
-                candidates[#candidates + 1] = {
-                    mob = mob,
-                    head = head,
-                    distance = distance
-                }
-            end
-        end
-    end
-
-    -- Nearest two mobs are grouped into the same hit packet.
-    table.sort(candidates, function(a, b)
-        return a.distance < b.distance
-    end)
-
-    local hits = {}
-    local nearestHead
-
-    for i = 1, math.min(2, #candidates) do
-        local target = candidates[i]
-        hits[#hits + 1] = {target.mob, target.head}
-
-        if i == 1 then
-            nearestHead = target.head
-        end
-    end
-
-    if nearestHead and #hits > 0 then
+    if not character:FindFirstChild("HasBuso") then
         pcall(function()
-            AttackRemote:FireServer(1e-9)
-            HitRemote:FireServer(nearestHead, hits)
+            ReplicatedStorage.Remotes.CommF_:InvokeServer("Buso")
         end)
     end
 end
 
-local function QuestText() local pg=LocalPlayer:FindFirstChild("PlayerGui"); local main=pg and pg:FindFirstChild("Main"); local q=main and main:FindFirstChild("Quest"); local c=q and q:FindFirstChild("Container"); local qt=c and c:FindFirstChild("QuestTitle"); return q,qt and qt:FindFirstChild("Title") end
+local function QuestText()
+    local playerGui = LocalPlayer:FindFirstChild("PlayerGui")
+    local main = playerGui and playerGui:FindFirstChild("Main")
+    local quest = main and main:FindFirstChild("Quest")
 
--- Stable 2-mob gather controller.
-local bringmob = false
-local FarmPos
-local MonFarm
-local GatherPosition
-
-local function SetFarmTarget(root, mobName)
-    if root then
-        MonFarm = mobName
-        GatherPosition = root.Position + Vector3.new(0, 8, 0)
-        FarmPos = CFrame.new(GatherPosition)
+    if not quest then
+        return nil, ""
     end
+
+    local title = ""
+    pcall(function()
+        if quest.Visible then
+            title = quest.Container.QuestTitle.Title.Text or ""
+        end
+    end)
+
+    return quest, tostring(title)
 end
 
-local function StopGather()
-    bringmob = false
-    FarmPos = nil
-    MonFarm = nil
-    GatherPosition = nil
+
+-- Stable no-gravity state. Do not use VectorForce/BodyVelocity here:
+-- those forces fight TweenTo and create an up/down oscillation.
+local GravityForce = nil
+local GravityAttachment = nil
+local GravityRoot = nil
+
+local function RestoreFarmGravity()
+    if GravityForce then
+        pcall(function() GravityForce:Destroy() end)
+        GravityForce = nil
+    end
+    if GravityAttachment then
+        pcall(function() GravityAttachment:Destroy() end)
+        GravityAttachment = nil
+    end
+    GravityRoot = nil
 end
 
+local function DisableFarmGravity()
+    local root = GetRoot()
+    if not root then return end
+
+    if GravityRoot == root and GravityForce and GravityForce.Parent then
+        -- Keep exact anti-gravity force updated for the current assembly mass.
+        GravityForce.Force = Vector3.new(0, root.AssemblyMass * workspace.Gravity, 0)
+        return
+    end
+
+    RestoreFarmGravity()
+    GravityRoot = root
+
+    GravityAttachment = Instance.new("Attachment")
+    GravityAttachment.Name = "PhongdzFarmNoGravityAttachment"
+    GravityAttachment.Parent = root
+
+    GravityForce = Instance.new("VectorForce")
+    GravityForce.Name = "PhongdzFarmNoGravity"
+    GravityForce.Attachment0 = GravityAttachment
+    GravityForce.RelativeTo = Enum.ActuatorRelativeTo.World
+    GravityForce.ApplyAtCenterOfMass = true
+    GravityForce.Force = Vector3.new(0, root.AssemblyMass * workspace.Gravity, 0)
+    GravityForce.Parent = root
+end
+
+local Quests = require(game:GetService("ReplicatedStorage"):WaitForChild("Quests"))
+local GuideModule = require(game:GetService("ReplicatedStorage"):WaitForChild("GuideModule"))
+
+local blacklistquest = {
+    "MarineQuest",
+    "BartiloQuest",
+    "CitizenQuest",
+    "Trainees"
+}
+
+CheckSea = function(b)
+    if (game.PlaceId == 2753915549 or game.PlaceId == 85211729168715) and b == 1 then
+        return true
+    elseif (game.PlaceId == 4442272183 or game.PlaceId == 79091703265657) and b == 2 then
+        return true
+    elseif (game.PlaceId == 7449423635 or game.PlaceId == 100117331123089) and b == 3 then
+        return true
+    end
+    return false
+end
+
+GetQuestPointFromNPC = function(npcName)
+    for _, npc in pairs(workspace.NPCs:GetChildren()) do
+        if npc.Name == npcName and npc:FindFirstChild("HumanoidRootPart") then
+            return npc.HumanoidRootPart.CFrame
+        end
+    end
+    for _, npc in pairs(replicated.NPCs:GetChildren()) do
+        if npc.Name == npcName and npc:FindFirstChild("HumanoidRootPart") then
+            return npc.HumanoidRootPart.CFrame
+        end
+    end
+    return nil
+end
+
+
+GetQuests = function()
+    local lvl = plr.Data.Level.Value
+    local LevelReq = 0
+    local mmb = {}
+    
+    if lvl >= 700 and CheckSea(1) then
+        mmb["Mob"] = "Galley Captain"
+        mmb["NameQuest"] = "FountainQuest"
+        mmb["ID"] = 2
+        mmb["LevelReq"] = 700
+    elseif lvl >= 1500 and CheckSea(2) then
+        mmb["Mob"] = "Water Fighter"
+        mmb["NameQuest"] = "ForgottenQuest"
+        mmb["ID"] = 2
+        mmb["LevelReq"] = 1450
+    else
+        for r, v in pairs(Quests) do
+            for id, v1 in pairs(v) do
+                local LvReq = v1.LevelReq
+                for nguoi, tinh in pairs(v1.Task) do
+                    if lvl >= LvReq and LevelReq <= LvReq and v1.Task[nguoi] > 1 and not table.find(blacklistquest, r) then
+                        LevelReq = LvReq
+                        mmb["Mob"] = nguoi
+                        mmb["NameQuest"] = r
+                        mmb["ID"] = id
+                        mmb["LevelReq"] = LvReq
+                    end
+                end
+            end
+        end
+    end
+    
+    return mmb
+end
+
+GetQuestPoint = function()
+    if GuideModule and GuideModule.Data and GuideModule.Data.LastClosestNPC then
+        return GetQuestPointFromNPC(GuideModule.Data.LastClosestNPC)
+    end
+    return nil
+end
+
+MaterialMon=function()local a=game.Players.LocalPlayer;local b=a.Character and a.Character:FindFirstChild("HumanoidRootPart")if not b then return end;shouldRequestEntrance=function(c,d)local e=(b.Position-c).Magnitude;if e>=d then replicated.Remotes.CommF_:InvokeServer("requestEntrance",c)end end;if World1 then if SelectMaterial=="Angel Wings"then MMon={"Shanda","Royal Squad","Royal Soldier","Wysper","Thunder God"}MPos=CFrame.new(-4698,845,-1912)SP="Default"local c=Vector3.new(-4607.82275,872.54248,-1667.55688)shouldRequestEntrance(c,10000)elseif SelectMaterial=="Leather + Scrap Metal"then MMon={"Brute","Pirate"}MPos=CFrame.new(-1145,15,4350)SP="Default"elseif SelectMaterial=="Magma Ore"then MMon={"Military Soldier","Military Spy","Magma Admiral"}MPos=CFrame.new(-5815,84,8820)SP="Default"elseif SelectMaterial=="Fish Tail"then MMon={"Fishman Warrior","Fishman Commando","Fishman Lord"}MPos=CFrame.new(61123,19,1569)SP="Default"local c=Vector3.new(61163.8515625,5.342342376708984,1819.7841796875)shouldRequestEntrance(c,17000)end elseif World2 then if SelectMaterial=="Leather + Scrap Metal"then MMon={"Marine Captain"}MPos=CFrame.new(-2010.5059814453125,73.00115966796875,-3326.620849609375)SP="Default"elseif SelectMaterial=="Magma Ore"then MMon={"Magma Ninja","Lava Pirate"}MPos=CFrame.new(-5428,78,-5959)SP="Default"elseif SelectMaterial=="Ectoplasm"then MMon={"Ship Deckhand","Ship Engineer","Ship Steward","Ship Officer"}MPos=CFrame.new(911.35827636719,125.95812988281,33159.5390625)SP="Default"local c=Vector3.new(61163.8515625,5.342342376708984,1819.7841796875)shouldRequestEntrance(c,18000)elseif SelectMaterial=="Mystic Droplet"then MMon={"Water Fighter"}MPos=CFrame.new(-3385,239,-10542)SP="Default"elseif SelectMaterial=="Radioactive Material"then MMon={"Factory Staff"}MPos=CFrame.new(295,73,-56)SP="Default"elseif SelectMaterial=="Vampire Fang"then MMon={"Vampire"}MPos=CFrame.new(-6033,7,-1317)SP="Default"end elseif World3 then if SelectMaterial=="Scrap Metal"then MMon={"Jungle Pirate","Forest Pirate"}MPos=CFrame.new(-11975.78515625,331.7734069824219,-10620.0302734375)SP="Default"elseif SelectMaterial=="Fish Tail"then MMon={"Fishman Raider","Fishman Captain"}MPos=CFrame.new(-10993,332,-8940)SP="Default"elseif SelectMaterial=="Conjured Cocoa"then MMon={"Chocolate Bar Battler","Cocoa Warrior"}MPos=CFrame.new(620.6344604492188,78.93644714355469,-12581.369140625)SP="Default"elseif SelectMaterial=="Dragon Scale"then MMon={"Dragon Crew Archer","Dragon Crew Warrior"}MPos=CFrame.new(6594,383,139)SP="Default"elseif SelectMaterial=="Gunpowder"then MMon={"Pistol Billionaire"}MPos=CFrame.new(-84.8556900024414, 85.62061309814453, 6132.0087890625)SP="Default"elseif SelectMaterial=="Mini Tusk"then MMon={"Mythological Pirate"}MPos=CFrame.new(-13545,470,-6917)SP="Default"elseif SelectMaterial=="Demonic Wisp"then MMon={"Demonic Soul"}MPos=CFrame.new(-9495.6806640625,453.58624267578125,5977.3486328125)SP="Default"end end end
+
+GetQuestPoint = function()
+    if GuideModule and GuideModule.Data and GuideModule.Data.LastClosestNPC then
+        return GetQuestPointFromNPC(GuideModule.Data.LastClosestNPC)
+    end
+    return nil
+end
+
+
+QuestNeta = function()
+    local questData = GetQuests()
+    return {
+        [1] = questData.Mob,           
+        [2] = questData.ID,             
+        [3] = questData.NameQuest,      
+        [4] = questData.LevelReq,       
+        [5] = questData.Mob,             
+        [6] = GetQuestPoint()            
+    }
+end
+
+local function SourceFarmAlive(mob)
+    if not mob or not mob.Parent then return false end
+    local hum = mob:FindFirstChildOfClass("Humanoid")
+    local root = mob:FindFirstChild("HumanoidRootPart")
+    return hum ~= nil and root ~= nil and hum.Health > 0
+end
+
+local alreadyTeleported = false
+local teleporting = false
+
+local function IsInSubmergedIsland()
+    local char = LocalPlayer.Character
+    if not char then return false end
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return false end
+    local islandXZ = Vector3.new(11520.8017578125, 0, 9829.513671875)
+    local playerXZ = Vector3.new(hrp.Position.X, 0, hrp.Position.Z)
+    return (playerXZ - islandXZ).Magnitude < 2000
+end
+
+-- Farm Level flow transplanted from source.txt; the existing UI is unchanged.
 task.spawn(function()
-    while task.wait(0.06) do
-        if _G.GatherMobs and bringmob and GatherPosition and MonFarm then
+    while task.wait(Sec) do
+        if _G.AutoLevel then
             pcall(function()
-                local enemies = workspace:FindFirstChild("Enemies")
-                if not enemies then return end
+                local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+                local Root = char:WaitForChild("HumanoidRootPart")
+                if not Root then return end
 
-                local candidates = {}
+                local level = LocalPlayer.Data.Level.Value
+                local inSub = IsInSubmergedIsland()
+                local questUI = LocalPlayer.PlayerGui.Main.Quest
+                local QuestTitle = questUI.Visible and questUI.Container.QuestTitle.Title.Text or ""
 
-                for _, mob in ipairs(enemies:GetChildren()) do
-                    if mob.Name == MonFarm then
-                        local hum = mob:FindFirstChildOfClass("Humanoid")
-                        local mobRoot = mob:FindFirstChild("HumanoidRootPart")
+                if level >= 2600 and not inSub and not teleporting and not alreadyTeleported then
+                    teleporting = true
+                    local npcPos = CFrame.new(-16269.7041, 25.2288494, 1373.65955)
+                    local teleportAttempts = 0
 
-                        if hum and mobRoot and hum.Health > 0 then
-                            candidates[#candidates + 1] = {
-                                mob = mob,
-                                distance = (mobRoot.Position - GatherPosition).Magnitude
-                            }
+                    repeat
+                        task.wait(Sec)
+                        TweenTo(npcPos)
+                        teleportAttempts = teleportAttempts + 1
+                    until not _G.AutoLevel or (Root.Position - npcPos.Position).Magnitude <= 8 or teleportAttempts > 20
+
+                    if not _G.AutoLevel then
+                        teleporting = false
+                        return
+                    end
+
+                    task.wait(1)
+                    pcall(function()
+                        ReplicatedStorage.Modules.Net:FindFirstChild("RF/SubmarineWorkerSpeak"):InvokeServer("TravelToSubmergedIsland")
+                    end)
+
+                    local timeout = tick()
+                    repeat
+                        task.wait(0.5)
+                        local currentInSub = IsInSubmergedIsland()
+                        local farFromNPC = (Root.Position - npcPos.Position).Magnitude > 50
+                        if currentInSub or farFromNPC then break end
+                    until not _G.AutoLevel or tick() - timeout > 15
+
+                    task.wait(2)
+                    alreadyTeleported = true
+                    teleporting = false
+
+                elseif inSub or level < 2600 then
+                    alreadyTeleported = true
+                    teleporting = false
+
+                    local questData = QuestNeta()
+                    if not questData or not questData[1] then
+                        task.wait(1)
+                        return
+                    end
+
+                    if questUI.Visible and not string.find(QuestTitle, questData[1]) then
+                        ReplicatedStorage.Remotes.CommF_:InvokeServer("AbandonQuest")
+                        task.wait(0.2)
+                        return
+                    end
+
+                    if not questUI.Visible then
+                        local questPos = questData[6]
+                        if questPos then
+                            TweenTo(questPos)
+                            task.wait(2)
+                            if (Root.Position - questPos.Position).Magnitude <= 10 then
+                                pcall(function()
+                                    ReplicatedStorage.Remotes.CommF_:InvokeServer("StartQuest", questData[3], questData[2])
+                                end)
+                                task.wait(1)
+                            end
+                        else
+                            pcall(function()
+                                ReplicatedStorage.Remotes.CommF_:InvokeServer("StartQuest", questData[3], questData[2])
+                            end)
+                            task.wait(1)
+                        end
+                        return
+                    end
+
+                    local enemyName = questData[1]
+                    local foundMob = false
+                    local enemies = workspace:FindFirstChild("Enemies")
+
+                    if enemies then
+                        for _, v in pairs(enemies:GetChildren()) do
+                            if v.Name == enemyName and SourceFarmAlive(v) then
+                                foundMob = true
+                                ActiveTarget = v
+                                AutoHaki()
+                                repeat
+                                    task.wait(Sec)
+                                    local mobRoot = v:FindFirstChild("HumanoidRootPart")
+                                    if not mobRoot then break end
+                                    TweenTo(mobRoot.CFrame * CFrame.new(0,20,0))
+                                    BringEnemy(v)
+                                    EquipFarmWeapon()
+                                    if not questUI.Visible then break end
+                                until not _G.AutoLevel or not v.Parent or not SourceFarmAlive(v)
+                                ActiveTarget = nil
+                                break
+                            end
+                        end
+                    end
+
+                    if not foundMob then
+                        for _, v in pairs(ReplicatedStorage:GetChildren()) do
+                            if v.Name == enemyName and SourceFarmAlive(v) then
+                                foundMob = true
+                                local mobRoot = v:FindFirstChild("HumanoidRootPart")
+                                if mobRoot then TweenTo(mobRoot.CFrame * CFrame.new(0,20,0)) end
+                                break
+                            end
+                        end
+                    end
+
+                    if not foundMob then
+                        local worldOrigin = workspace:FindFirstChild("_WorldOrigin")
+                        local spawnFolder = worldOrigin and worldOrigin:FindFirstChild("EnemySpawns")
+                        if spawnFolder then
+                            for _, spawnPoint in pairs(spawnFolder:GetChildren()) do
+                                if string.find(spawnPoint.Name, enemyName) then
+                                    TweenTo(spawnPoint.CFrame * CFrame.new(0,20,0))
+                                    break
+                                end
+                            end
                         end
                     end
                 end
+            end)
+        else
+            teleporting = false
+            alreadyTeleported = false
+        end
+    end
+end)
 
-                table.sort(candidates, function(a, b)
-                    return a.distance < b.distance
-                end)
-
-                local gatherCF = CFrame.new(GatherPosition)
-
-                for i = 1, math.min(2, #candidates) do
-                    local mob = candidates[i].mob
-                    local hum = mob:FindFirstChildOfClass("Humanoid")
-                    local mobRoot = mob:FindFirstChild("HumanoidRootPart")
-
-                    if hum and mobRoot and hum.Health > 0 then
-                        mob:PivotTo(gatherCF)
-                        mobRoot.AssemblyLinearVelocity = Vector3.zero
-                        mobRoot.AssemblyAngularVelocity = Vector3.zero
-                        mobRoot.CanCollide = false
-                        hum.WalkSpeed = 0
-                        hum.JumpPower = 0
-                        hum.AutoRotate = false
-                    end
+-- Keep attacks separate, matching the source's Farm Level + attack architecture.
+task.spawn(function()
+    while task.wait(0.01) do
+        if _G.AutoLevel then
+            pcall(function()
+                if ActiveTarget and SourceFarmAlive(ActiveTarget) then
+                    FastAttack()
                 end
             end)
         end
     end
 end)
+-- Recover from stale targets/spawn transitions without touching the UI.
+-- Keep this thread alive even while Farm is OFF, because AutoLevel can be
+-- enabled later by the UI after FARM_SOURCE has already loaded.
+task.spawn(function()
+    while true do
+        task.wait(0.15)
 
-local function RunFarm()
-    if not _G.AutoLevel then
-        RestoreAfterFarm()
-        return
-    end
+        if _G.AutoLevel and ActiveTarget then
+            local hum = ActiveTarget:FindFirstChildOfClass("Humanoid")
 
-    CheckLevel()
-    if not NameMon or not NameQuest or not CFrameQ then return end
-
-    local q, title = QuestText()
-    if not q or not title then return end
-
-    local correct = q.Visible
-        and string.find(tostring(title.Text or ""), tostring(NameMon), 1, true)
-
-    if not correct then
-        local rem = ReplicatedStorage:FindFirstChild("Remotes")
-        local comm = rem and rem:FindFirstChild("CommF_")
-
-        if comm then
-            pcall(function()
-                comm:InvokeServer("AbandonQuest")
-            end)
-        end
-
-        TweenTo(CFrameQ)
-
-        local root = GetRoot()
-        if root and (root.Position - CFrameQ.Position).Magnitude <= 7 and comm then
-            pcall(function()
-                comm:InvokeServer("StartQuest", NameQuest, QuestLv)
-            end)
-        end
-        return
-    end
-
-    local enemies = workspace:FindFirstChild("Enemies")
-    if not enemies then return end
-
-    local found = false
-
-    for _, mob in ipairs(enemies:GetChildren()) do
-        local hum = mob:FindFirstChildOfClass("Humanoid")
-        local rp = mob:FindFirstChild("HumanoidRootPart")
-
-        if hum and rp and hum.Health > 0 and mob.Name == Ms then
-            found = true
-
-            repeat
-                if not _G.AutoLevel then break end
-
-                task.wait(_G.Fast_Delay)
-
-                AutoHaki()
-                local equippedTool = EquipFarmWeapon()
-
-                bringmob = true
-                if not GatherPosition
-                    or (GatherPosition - rp.Position).Magnitude > 6 then
-                    SetFarmTarget(rp, mob.Name)
-                end
-
-                local targetCF = CFrame.new(rp.Position) * CFrame.new(0, 40, 0)
-                TweenTo(targetCF)
-
-                local currentRoot = GetRoot()
-                if equippedTool and currentRoot
-                    and (currentRoot.Position - rp.Position).Magnitude <= 60 then
-                    FastAttack()
-                end
+            if not ActiveTarget.Parent or not hum or hum.Health <= 0 then
+                ActiveTarget = nil
+                FarmDestination = nil
+                FarmDestinationTarget = nil
 
                 pcall(function()
-                    rp.Size = Vector3.new(60, 60, 60)
-                    rp.CanCollide = false
+                    StopFarmTween()
                 end)
-
-            until not mob.Parent
-                or hum.Health <= 0
-                or not q.Visible
-                or not _G.AutoLevel
-        end
-    end
-
-    if not found then
-        local wo = workspace:FindFirstChild("_WorldOrigin")
-        local sp = wo and wo:FindFirstChild("EnemySpawns")
-
-        if sp then
-            for _, part in ipairs(sp:GetChildren()) do
-                if string.find(tostring(part.Name), tostring(NameMon), 1, true) then
-                    local root = GetRoot()
-
-                    if root and (root.Position - part.Position).Magnitude >= 10 then
-                        TweenTo(part.CFrame * CFrame.new(0, 40, 0))
-                        break
-                    end
-                end
             end
         end
     end
-end
+end)
 
-function CheckLevel()
-    local v197 = game:GetService("Players").LocalPlayer.Data.Level.Value;
-    if Sea1 then
-        if ((v197 == 1) or (v197 <= 9) or (SelectMonster == "Bandit")) then
-            Ms = "Bandit";
-            NameQuest = "BanditQuest1";
-            QuestLv = 1;
-            NameMon = "Bandit";
-            CFrameQ = CFrame.new(1060.9383544922, 16.455066680908, 1547.7841796875);
-            CFrameMon = CFrame.new(1038.5533447266, 41.296249389648, 1576.5098876953);
-        elseif ((v197 == 10) or (v197 <= 14) or (SelectMonster == "Monkey")) then
-            Ms = "Monkey";
-            NameQuest = "JungleQuest";
-            QuestLv = 1;
-            NameMon = "Monkey";
-            CFrameQ = CFrame.new(- 1601.6553955078, 36.85213470459, 153.38809204102);
-            CFrameMon = CFrame.new(- 1448.1446533203, 50.851993560791, 63.60718536377);
-        elseif ((v197 == 15) or (v197 <= 29) or (SelectMonster == "Gorilla")) then
-            Ms = "Gorilla";
-            NameQuest = "JungleQuest";
-            QuestLv = 2;
-            NameMon = "Gorilla";
-            CFrameQ = CFrame.new(- 1601.6553955078, 36.85213470459, 153.38809204102);
-            CFrameMon = CFrame.new(- 1142.6488037109, 40.462348937988, - 515.39227294922);
-        elseif ((v197 == 30) or (v197 <= 39) or (SelectMonster == "Pirate")) then
-            Ms = "Pirate";
-            NameQuest = "BuggyQuest1";
-            QuestLv = 1;
-            NameMon = "Pirate";
-            CFrameQ = CFrame.new(- 1140.1761474609, 4.752049446106, 3827.4057617188);
-            CFrameMon = CFrame.new(- 1201.0881347656, 40.628940582275, 3857.5966796875);
-        elseif ((v197 == 40) or (v197 <= 59) or (SelectMonster == "Brute")) then
-            Ms = "Brute";
-            NameQuest = "BuggyQuest1";
-            QuestLv = 2;
-            NameMon = "Brute";
-            CFrameQ = CFrame.new(- 1140.1761474609, 4.752049446106, 3827.4057617188);
-            CFrameMon = CFrame.new(- 1387.5324707031, 24.592035293579, 4100.9575195313);
-        elseif ((v197 == 60) or (v197 <= 74) or (SelectMonster == "Desert Bandit")) then
-            Ms = "Desert Bandit";
-            NameQuest = "DesertQuest";
-            QuestLv = 1;
-            NameMon = "Desert Bandit";
-            CFrameQ = CFrame.new(896.51721191406, 6.4384617805481, 4390.1494140625);
-            CFrameMon = CFrame.new(984.99896240234, 16.109552383423, 4417.91015625);
-        elseif ((v197 == 75) or (v197 <= 89) or (SelectMonster == "Desert Officer")) then
-            Ms = "Desert Officer";
-            NameQuest = "DesertQuest";
-            QuestLv = 2;
-            NameMon = "Desert Officer";
-            CFrameQ = CFrame.new(896.51721191406, 6.4384617805481, 4390.1494140625);
-            CFrameMon = CFrame.new(1547.1510009766, 14.452038764954, 4381.8002929688);
-        elseif ((v197 == 90) or (v197 <= 99) or (SelectMonster == "Snow Bandit")) then
-            Ms = "Snow Bandit";
-            NameQuest = "SnowQuest";
-            QuestLv = 1;
-            NameMon = "Snow Bandit";
-            CFrameQ = CFrame.new(1386.8073730469, 87.272789001465, - 1298.3576660156);
-            CFrameMon = CFrame.new(1356.3028564453, 105.76865386963, - 1328.2418212891);
-        elseif ((v197 == 100) or (v197 <= 119) or (SelectMonster == "Snowman")) then
-            Ms = "Snowman";
-            NameQuest = "SnowQuest";
-            QuestLv = 2;
-            NameMon = "Snowman";
-            CFrameQ = CFrame.new(1386.8073730469, 87.272789001465, - 1298.3576660156);
-            CFrameMon = CFrame.new(1218.7956542969, 138.01184082031, - 1488.0262451172);
-        elseif ((v197 == 120) or (v197 <= 149) or (SelectMonster == "Chief Petty Officer")) then
-            Ms = "Chief Petty Officer";
-            NameQuest = "MarineQuest2";
-            QuestLv = 1;
-            NameMon = "Chief Petty Officer";
-            CFrameQ = CFrame.new(- 5035.49609375, 28.677835464478, 4324.1840820313);
-            CFrameMon = CFrame.new(- 4931.1552734375, 65.793113708496, 4121.8393554688);
-        elseif ((v197 == 150) or (v197 <= 174) or (SelectMonster == "Sky Bandit")) then
-            Ms = "Sky Bandit";
-            NameQuest = "SkyQuest";
-            QuestLv = 1;
-            NameMon = "Sky Bandit";
-            CFrameQ = CFrame.new(- 4842.1372070313, 717.69543457031, - 2623.0483398438);
-            CFrameMon = CFrame.new(- 4955.6411132813, 365.46365356445, - 2908.1865234375);
-        elseif ((v197 == 175) or (v197 <= 189) or (SelectMonster == "Dark Master")) then
-            Ms = "Dark Master";
-            NameQuest = "SkyQuest";
-            QuestLv = 2;
-            NameMon = "Dark Master";
-            CFrameQ = CFrame.new(- 4842.1372070313, 717.69543457031, - 2623.0483398438);
-            CFrameMon = CFrame.new(- 5148.1650390625, 439.04571533203, - 2332.9611816406);
-        elseif ((v197 == 190) or (v197 <= 209) or (SelectMonster == "Prisoner")) then
-            Ms = "Prisoner";
-            NameQuest = "PrisonerQuest";
-            QuestLv = 1;
-            NameMon = "Prisoner";
-            CFrameQ = CFrame.new(5310.60547, 0.350014925, 474.946594, 0.0175017118, 0, 0.999846935, 0, 1, 0, - 0.999846935, 0, 0.0175017118);
-            CFrameMon = CFrame.new(4937.31885, 0.332031399, 649.574524, 0.694649816, 0, - 0.719348073, 0, 1, 0, 0.719348073, 0, 0.694649816);
-        elseif ((v197 == 210) or (v197 <= 249) or (SelectMonster == "Dangerous Prisoner")) then
-            Ms = "Dangerous Prisoner";
-            NameQuest = "PrisonerQuest";
-            QuestLv = 2;
-            NameMon = "Dangerous Prisoner";
-            CFrameQ = CFrame.new(5310.60547, 0.350014925, 474.946594, 0.0175017118, 0, 0.999846935, 0, 1, 0, - 0.999846935, 0, 0.0175017118);
-            CFrameMon = CFrame.new(5099.6626, 0.351562679, 1055.7583, 0.898906827, 0, - 0.438139856, 0, 1, 0, 0.438139856, 0, 0.898906827);
-        elseif ((v197 == 250) or (v197 <= 274) or (SelectMonster == "Toga Warrior")) then
-            Ms = "Toga Warrior";
-            NameQuest = "ColosseumQuest";
-            QuestLv = 1;
-            NameMon = "Toga Warrior";
-            CFrameQ = CFrame.new(- 1577.7890625, 7.4151420593262, - 2984.4838867188);
-            CFrameMon = CFrame.new(- 1872.5166015625, 49.080215454102, - 2913.810546875);
-        elseif ((v197 == 275) or (v197 <= 299) or (SelectMonster == "Gladiator")) then
-            Ms = "Gladiator";
-            NameQuest = "ColosseumQuest";
-            QuestLv = 2;
-            NameMon = "Gladiator";
-            CFrameQ = CFrame.new(- 1577.7890625, 7.4151420593262, - 2984.4838867188);
-            CFrameMon = CFrame.new(- 1521.3740234375, 81.203170776367, - 3066.3139648438);
-        elseif ((v197 == 300) or (v197 <= 324) or (SelectMonster == "Military Soldier")) then
-            Ms = "Military Soldier";
-            NameQuest = "MagmaQuest";
-            QuestLv = 1;
-            NameMon = "Military Soldier";
-            CFrameQ = CFrame.new(- 5316.1157226563, 12.262831687927, 8517.00390625);
-            CFrameMon = CFrame.new(- 5369.0004882813, 61.24352645874, 8556.4921875);
-        elseif ((v197 == 325) or (v197 <= 374) or (SelectMonster == "Military Spy")) then
-            Ms = "Military Spy";
-            NameQuest = "MagmaQuest";
-            QuestLv = 2;
-            NameMon = "Military Spy";
-            CFrameQ = CFrame.new(- 5316.1157226563, 12.262831687927, 8517.00390625);
-            CFrameMon = CFrame.new(- 5787.00293, 75.8262634, 8651.69922, 0.838590562, 0, - 0.544762194, 0, 1, 0, 0.544762194, 0, 0.838590562);
-        elseif ((v197 == 375) or (v197 <= 399) or (SelectMonster == "Fishman Warrior")) then
-            Ms = "Fishman Warrior";
-            NameQuest = "FishmanQuest";
-            QuestLv = 1;
-            NameMon = "Fishman Warrior";
-            CFrameQ = CFrame.new(61122.65234375, 18.497442245483, 1569.3997802734);
-            CFrameMon = CFrame.new(60844.10546875, 98.462875366211, 1298.3985595703);
-            if (_G.AutoLevel and ((CFrameMon.Position - game.Players.LocalPlayer.Character.HumanoidRootPart.Position).Magnitude > 3000)) then
-                game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("requestEntrance", Vector3.new(61163.8515625, 11.6796875, 1819.7841796875));
+
+
+LocalPlayer.CharacterAdded:Connect(function()
+    StopSourceMovement()
+    StopBringMobs()
+    RestoreFarmGravity()
+
+    if _G.AutoLevel then
+        task.delay(0.75, function()
+            if _G.AutoLevel then
+                DisableFarmGravity()
             end
-        elseif ((v197 == 400) or (v197 <= 449) or (SelectMonster == "Fishman Commando")) then
-            Ms = "Fishman Commando";
-            NameQuest = "FishmanQuest";
-            QuestLv = 2;
-            NameMon = "Fishman Commando";
-            CFrameQ = CFrame.new(61122.65234375, 18.497442245483, 1569.3997802734);
-            CFrameMon = CFrame.new(61738.3984375, 64.207321166992, 1433.8375244141);
-            if (_G.AutoLevel and ((CFrameMon.Position - game.Players.LocalPlayer.Character.HumanoidRootPart.Position).Magnitude > 3000)) then
-                game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("requestEntrance", Vector3.new(61163.8515625, 11.6796875, 1819.7841796875));
-            end
-        elseif ((v197 == 10) or (v197 <= 474) or (SelectMonster == "God's Guard")) then
-            Ms = "God's Guard";
-            NameQuest = "SkyExp1Quest";
-            QuestLv = 1;
-            NameMon = "God's Guard";
-            CFrameQ = CFrame.new(- 4721.8603515625, 845.30297851563, - 1953.8489990234);
-            CFrameMon = CFrame.new(- 4628.0498046875, 866.92877197266, - 1931.2352294922);
-            if (_G.AutoLevel and ((CFrameMon.Position - game.Players.LocalPlayer.Character.HumanoidRootPart.Position).Magnitude > 3000)) then
-                game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("requestEntrance", Vector3.new(- 4607.82275, 872.54248, - 1667.55688));
-            end
-        elseif ((v197 == 475) or (v197 <= 524) or (SelectMonster == "Shanda")) then
-            Ms = "Shanda";
-            NameQuest = "SkyExp1Quest";
-            QuestLv = 2;
-            NameMon = "Shanda";
-            CFrameQ = CFrame.new(- 7863.1596679688, 5545.5190429688, - 378.42266845703);
-            CFrameMon = CFrame.new(- 7685.1474609375, 5601.0751953125, - 441.38876342773);
-            if (_G.AutoLevel and ((CFrameMon.Position - game.Players.LocalPlayer.Character.HumanoidRootPart.Position).Magnitude > 3000)) then
-                game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("requestEntrance", Vector3.new(- 7894.6176757813, 5547.1416015625, - 380.29119873047));
-            end
-        elseif ((v197 == 525) or (v197 <= 549) or (SelectMonster == "Royal Squad")) then
-            Ms = "Royal Squad";
-            NameQuest = "SkyExp2Quest";
-            QuestLv = 1;
-            NameMon = "Royal Squad";
-            CFrameQ = CFrame.new(- 7903.3828125, 5635.9897460938, - 1410.923828125);
-            CFrameMon = CFrame.new(- 7654.2514648438, 5637.1079101563, - 1407.7550048828);
-        elseif ((v197 == 550) or (v197 <= 624) or (SelectMonster == "Royal Soldier")) then
-            Ms = "Royal Soldier";
-            NameQuest = "SkyExp2Quest";
-            QuestLv = 2;
-            NameMon = "Royal Soldier";
-            CFrameQ = CFrame.new(- 7903.3828125, 5635.9897460938, - 1410.923828125);
-            CFrameMon = CFrame.new(- 7760.4106445313, 5679.9077148438, - 1884.8112792969);
-        elseif ((v197 == 625) or (v197 <= 649) or (SelectMonster == "Galley Pirate")) then
-            Ms = "Galley Pirate";
-            NameQuest = "FountainQuest";
-            QuestLv = 1;
-            NameMon = "Galley Pirate";
-            CFrameQ = CFrame.new(5258.2788085938, 38.526931762695, 4050.044921875);
-            CFrameMon = CFrame.new(5557.1684570313, 152.32717895508, 3998.7758789063);
-        elseif ((v197 >= 650) or (SelectMonster == "Galley Captain")) then
-            Ms = "Galley Captain";
-            NameQuest = "FountainQuest";
-            QuestLv = 2;
-            NameMon = "Galley Captain";
-            CFrameQ = CFrame.new(5258.2788085938, 38.526931762695, 4050.044921875);
-            CFrameMon = CFrame.new(5677.6772460938, 92.786109924316, 4966.6323242188);
-        end
+        end)
     end
-    if Sea2 then
-        if ((v197 == 700) or (v197 <= 724) or (SelectMonster == "Raider")) then
-            Ms = "Raider";
-            NameQuest = "Area1Quest";
-            QuestLv = 1;
-            NameMon = "Raider";
-            CFrameQ = CFrame.new(- 427.72567749023, 72.99634552002, 1835.9426269531);
-            CFrameMon = CFrame.new(68.874565124512, 93.635643005371, 2429.6752929688);
-        elseif ((v197 == 725) or (v197 <= 774) or (SelectMonster == "Mercenary")) then
-            Ms = "Mercenary";
-            NameQuest = "Area1Quest";
-            QuestLv = 2;
-            NameMon = "Mercenary";
-            CFrameQ = CFrame.new(- 427.72567749023, 72.99634552002, 1835.9426269531);
-            CFrameMon = CFrame.new(- 864.85009765625, 122.47104644775, 1453.1505126953);
-        elseif ((v197 == 775) or (v197 <= 799) or (SelectMonster == "Swan Pirate")) then
-            Ms = "Swan Pirate";
-            NameQuest = "Area2Quest";
-            QuestLv = 1;
-            NameMon = "Swan Pirate";
-            CFrameQ = CFrame.new(635.61151123047, 73.096351623535, 917.81298828125);
-            CFrameMon = CFrame.new(1065.3669433594, 137.64012145996, 1324.3798828125);
-        elseif ((v197 == 800) or (v197 <= 874) or (SelectMonster == "Factory Staff")) then
-            Ms = "Factory Staff";
-            NameQuest = "Area2Quest";
-            QuestLv = 2;
-            NameMon = "Factory Staff";
-            CFrameQ = CFrame.new(635.61151123047, 73.096351623535, 917.81298828125);
-            CFrameMon = CFrame.new(533.22045898438, 128.46876525879, 355.62615966797);
-        elseif ((v197 == 875) or (v197 <= 899) or (SelectMonster == "Marine Lieutenan")) then
-            Ms = "Marine Lieutenant";
-            NameQuest = "MarineQuest3";
-            QuestLv = 1;
-            NameMon = "Marine Lieutenant";
-            CFrameQ = CFrame.new(- 2440.9934082031, 73.04190826416, - 3217.7082519531);
-            CFrameMon = CFrame.new(- 2489.2622070313, 84.613594055176, - 3151.8830566406);
-        elseif ((v197 == 900) or (v197 <= 949) or (SelectMonster == "Marine Captain")) then
-            Ms = "Marine Captain";
-            NameQuest = "MarineQuest3";
-            QuestLv = 2;
-            NameMon = "Marine Captain";
-            CFrameQ = CFrame.new(- 2440.9934082031, 73.04190826416, - 3217.7082519531);
-            CFrameMon = CFrame.new(- 2335.2026367188, 79.786659240723, - 3245.8674316406);
-        elseif ((v197 == 950) or (v197 <= 974) or (SelectMonster == "Zombie")) then
-            Ms = "Zombie";
-            NameQuest = "ZombieQuest";
-            QuestLv = 1;
-            NameMon = "Zombie";
-            CFrameQ = CFrame.new(- 5494.3413085938, 48.505931854248, - 794.59094238281);
-            CFrameMon = CFrame.new(- 5536.4970703125, 101.08577728271, - 835.59075927734);
-        elseif ((v197 == 975) or (v197 <= 999) or (SelectMonster == "Vampire")) then
-            Ms = "Vampire";
-            NameQuest = "ZombieQuest";
-            QuestLv = 2;
-            NameMon = "Vampire";
-            CFrameQ = CFrame.new(- 5494.3413085938, 48.505931854248, - 794.59094238281);
-            CFrameMon = CFrame.new(- 5806.1098632813, 16.722528457642, - 1164.4384765625);
-        elseif ((v197 == 1000) or (v197 <= 1049) or (SelectMonster == "Snow Trooper")) then
-            Ms = "Snow Trooper";
-            NameQuest = "SnowMountainQuest";
-            QuestLv = 1;
-            NameMon = "Snow Trooper";
-            CFrameQ = CFrame.new(607.05963134766, 401.44781494141, - 5370.5546875);
-            CFrameMon = CFrame.new(535.21051025391, 432.74209594727, - 5484.9165039063);
-        elseif ((v197 == 1050) or (v197 <= 1099) or (SelectMonster == "Winter Warrior")) then
-            Ms = "Winter Warrior";
-            NameQuest = "SnowMountainQuest";
-            QuestLv = 2;
-            NameMon = "Winter Warrior";
-            CFrameQ = CFrame.new(607.05963134766, 401.44781494141, - 5370.5546875);
-            CFrameMon = CFrame.new(1234.4449462891, 456.95419311523, - 5174.130859375);
-        elseif ((v197 == 1100) or (v197 <= 1124) or (SelectMonster == "Lab Subordinate")) then
-            Ms = "Lab Subordinate";
-            NameQuest = "IceSideQuest";
-            QuestLv = 1;
-            NameMon = "Lab Subordinate";
-            CFrameQ = CFrame.new(- 6061.841796875, 15.926671981812, - 4902.0385742188);
-            CFrameMon = CFrame.new(- 5720.5576171875, 63.309471130371, - 4784.6103515625);
-        elseif ((v197 == 1125) or (v197 <= 1174) or (SelectMonster == "Horned Warrior")) then
-            Ms = "Horned Warrior";
-            NameQuest = "IceSideQuest";
-            QuestLv = 2;
-            NameMon = "Horned Warrior";
-            CFrameQ = CFrame.new(- 6061.841796875, 15.926671981812, - 4902.0385742188);
-            CFrameMon = CFrame.new(- 6292.751953125, 91.181983947754, - 5502.6499023438);
-        elseif ((v197 == 1175) or (v197 <= 1199) or (SelectMonster == "Magma Ninja")) then
-            Ms = "Magma Ninja";
-            NameQuest = "FireSideQuest";
-            QuestLv = 1;
-            NameMon = "Magma Ninja";
-            CFrameQ = CFrame.new(- 5429.0473632813, 15.977565765381, - 5297.9614257813);
-            CFrameMon = CFrame.new(- 5461.8388671875, 130.36347961426, - 5836.4702148438);
-        elseif ((v197 == 1200) or (v197 <= 1249) or (SelectMonster == "Lava Pirate")) then
-            Ms = "Lava Pirate";
-            NameQuest = "FireSideQuest";
-            QuestLv = 2;
-            NameMon = "Lava Pirate";
-            CFrameQ = CFrame.new(- 5429.0473632813, 15.977565765381, - 5297.9614257813);
-            CFrameMon = CFrame.new(- 5251.1889648438, 55.164535522461, - 4774.4096679688);
-        elseif ((v197 == 1250) or (v197 <= 1274) or (SelectMonster == "Ship Deckhand")) then
-            Ms = "Ship Deckhand";
-            NameQuest = "ShipQuest1";
-            QuestLv = 1;
-            NameMon = "Ship Deckhand";
-            CFrameQ = CFrame.new(1040.2927246094, 125.08293151855, 32911.0390625);
-            CFrameMon = CFrame.new(921.12365722656, 125.9839553833, 33088.328125);
-            if (_G.AutoLevel and ((CFrameMon.Position - game.Players.LocalPlayer.Character.HumanoidRootPart.Position).Magnitude > 20000)) then
-                game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("requestEntrance", Vector3.new(923.21252441406, 126.9760055542, 32852.83203125));
-            end
-        elseif ((v197 == 1275) or (v197 <= 1299) or (SelectMonster == "Ship Engineer")) then
-            Ms = "Ship Engineer";
-            NameQuest = "ShipQuest1";
-            QuestLv = 2;
-            NameMon = "Ship Engineer";
-            CFrameQ = CFrame.new(1040.2927246094, 125.08293151855, 32911.0390625);
-            CFrameMon = CFrame.new(886.28179931641, 40.47790145874, 32800.83203125);
-            if (_G.AutoLevel and ((CFrameMon.Position - game.Players.LocalPlayer.Character.HumanoidRootPart.Position).Magnitude > 20000)) then
-                game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("requestEntrance", Vector3.new(923.21252441406, 126.9760055542, 32852.83203125));
-            end
-        elseif ((v197 == 1300) or (v197 <= 1324) or (SelectMonster == "Ship Steward")) then
-            Ms = "Ship Steward";
-            NameQuest = "ShipQuest2";
-            QuestLv = 1;
-            NameMon = "Ship Steward";
-            CFrameQ = CFrame.new(971.42065429688, 125.08293151855, 33245.54296875);
-            CFrameMon = CFrame.new(943.85504150391, 129.58183288574, 33444.3671875);
-            if (_G.AutoLevel and ((CFrameMon.Position - game.Players.LocalPlayer.Character.HumanoidRootPart.Position).Magnitude > 20000)) then
-                game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("requestEntrance", Vector3.new(923.21252441406, 126.9760055542, 32852.83203125));
-            end
-        elseif ((v197 == 1325) or (v197 <= 1349) or (SelectMonster == "Ship Officer")) then
-            Ms = "Ship Officer";
-            NameQuest = "ShipQuest2";
-            QuestLv = 2;
-            NameMon = "Ship Officer";
-            CFrameQ = CFrame.new(971.42065429688, 125.08293151855, 33245.54296875);
-            CFrameMon = CFrame.new(955.38458251953, 181.08335876465, 33331.890625);
-            if (_G.AutoLevel and ((CFrameMon.Position - game.Players.LocalPlayer.Character.HumanoidRootPart.Position).Magnitude > 20000)) then
-                game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("requestEntrance", Vector3.new(923.21252441406, 126.9760055542, 32852.83203125));
-            end
-        elseif ((v197 == 1350) or (v197 <= 1374) or (SelectMonster == "Arctic Warrior")) then
-            Ms = "Arctic Warrior";
-            NameQuest = "FrostQuest";
-            QuestLv = 1;
-            NameMon = "Arctic Warrior";
-            CFrameQ = CFrame.new(5668.1372070313, 28.202531814575, - 6484.6005859375);
-            CFrameMon = CFrame.new(5935.4541015625, 77.26016998291, - 6472.7568359375);
-            if (_G.AutoLevel and ((CFrameMon.Position - game.Players.LocalPlayer.Character.HumanoidRootPart.Position).Magnitude > 20000)) then
-                game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("requestEntrance", Vector3.new(- 6508.5581054688, 89.034996032715, - 132.83953857422));
-            end
-        elseif ((v197 == 1375) or (v197 <= 1424) or (SelectMonster == "Snow Lurker")) then
-            Ms = "Snow Lurker";
-            NameQuest = "FrostQuest";
-            QuestLv = 2;
-            NameMon = "Snow Lurker";
-            CFrameQ = CFrame.new(5668.1372070313, 28.202531814575, - 6484.6005859375);
-            CFrameMon = CFrame.new(5628.482421875, 57.574996948242, - 6618.3481445313);
-        elseif ((v197 == 1425) or (v197 <= 1449) or (SelectMonster == "Sea Soldier")) then
-            Ms = "Sea Soldier";
-            NameQuest = "ForgottenQuest";
-            QuestLv = 1;
-            NameMon = "Sea Soldier";
-            CFrameQ = CFrame.new(- 3054.5827636719, 236.87213134766, - 10147.790039063);
-            CFrameMon = CFrame.new(- 3185.0153808594, 58.789089202881, - 9663.6064453125);
-        elseif ((v197 >= 1450) or (SelectMonster == "Water Fighter")) then
-            Ms = "Water Fighter";
-            NameQuest = "ForgottenQuest";
-            QuestLv = 2;
-            NameMon = "Water Fighter";
-            CFrameQ = CFrame.new(- 3054.5827636719, 236.87213134766, - 10147.790039063);
-            CFrameMon = CFrame.new(- 3262.9301757813, 298.69036865234, - 10552.529296875);
-        end
-    end
-    if Sea3 then
-        if ((v197 == 1500) or (v197 <= 1524) or (SelectMonster == "Pirate Millionaire")) then
-            Ms = "Pirate Millionaire";
-            NameQuest = "PiratePortQuest";
-            QuestLv = 1;
-            NameMon = "Pirate Millionaire";
-            CFrameQ = CFrame.new(- 450.1046447753906, 107.68145751953125, 5950.72607421875);
-            CFrameMon = CFrame.new(- 193.99227905273438, 56.12502670288086, 5755.7880859375);
-        elseif ((v197 == 1525) or (v197 <= 1574) or (SelectMonster == "Pistol Billionaire")) then
-            Ms = "Pistol Billionaire";
-            NameQuest = "PiratePortQuest";
-            QuestLv = 2;
-            NameMon = "Pistol Billionaire";
-            CFrameQ = CFrame.new(- 450.1046447753906, 107.68145751953125, 5950.72607421875);
-            CFrameMon = CFrame.new(- 188.14462280273438, 84.49613189697266, 6337.0419921875);
-        elseif ((v197 == 1575) or (v197 <= 1599) or (SelectMonster == "Dragon Crew Warrior")) then
-            Ms = "Dragon Crew Warrior";
-            NameQuest = "DragonCrewQuest";
-            QuestLv = 1;
-            NameMon = "Dragon Crew Warrior";
-            CFrameQ = CFrame.new(6735.11083984375, 126.99046325683594, - 711.0979614257812);
-            CFrameMon = CFrame.new(6615.2333984375, 50.847679138183594, - 978.93408203125);
-        elseif ((v197 == 1600) or (v197 <= 1624) or (SelectMonster == "Dragon Crew Archer")) then
-            Ms = "Dragon Crew Archer";
-            NameQuest = "DragonCrewQuest";
-            QuestLv = 2;
-            NameMon = "Dragon Crew Archer";
-            CFrameQ = CFrame.new(6735.11083984375, 126.99046325683594, - 711.0979614257812);
-            CFrameMon = CFrame.new(6818.58935546875, 483.718994140625, 512.726806640625);
-        elseif ((v197 == 1625) or (v197 <= 1649) or (SelectMonster == "Hydra Enforcer")) then
-            Ms = "Hydra Enforcer";
-            NameQuest = "VenomCrewQuest";
-            QuestLv = 1;
-            NameMon = "Hydra Enforcer";
-            CFrameQ = CFrame.new(5446.8793945313, 601.62945556641, 749.45672607422);
-            CFrameMon = CFrame.new(4547.115234375, 1001.60205078125, 334.1954650878906);
-        elseif ((v197 == 1650) or (v197 <= 1699) or (SelectMonster == "Venomous Assailant")) then
-            Ms = "Venomous Assailant";
-            NameQuest = "VenomCrewQuest";
-            QuestLv = 2;
-            NameMon = "Venomous Assailant";
-            CFrameQ = CFrame.new(5446.8793945313, 601.62945556641, 749.45672607422);
-            CFrameMon = CFrame.new(4637.88525390625, 1077.85595703125, 882.4183959960938);
-        elseif ((v197 == 1700) or (v197 <= 1724) or (SelectMonster == "Marine Commodore")) then
-            Ms = "Marine Commodore";
-            NameQuest = "MarineTreeIsland";
-            QuestLv = 1;
-            NameMon = "Marine Commodore";
-            CFrameQ = CFrame.new(2179.98828125, 28.731239318848, - 6740.0551757813);
-            CFrameMon = CFrame.new(2198.0063476563, 128.71075439453, - 7109.5043945313);
-        elseif ((v197 == 1725) or (v197 <= 1774) or (SelectMonster == "Marine Rear Admiral")) then
-            Ms = "Marine Rear Admiral";
-            NameQuest = "MarineTreeIsland";
-            QuestLv = 2;
-            NameMon = "Marine Rear Admiral";
-            CFrameQ = CFrame.new(2179.98828125, 28.731239318848, - 6740.0551757813);
-            CFrameMon = CFrame.new(3294.3142089844, 385.41125488281, - 7048.6342773438);
-        elseif ((v197 == 1775) or (v197 <= 1799) or (SelectMonster == "Fishman Raider")) then
-            Ms = "Fishman Raider";
-            NameQuest = "DeepForestIsland3";
-            QuestLv = 1;
-            NameMon = "Fishman Raider";
-            CFrameQ = CFrame.new(- 10582.759765625, 331.78845214844, - 8757.666015625);
-            CFrameMon = CFrame.new(- 10553.268554688, 521.38439941406, - 8176.9458007813);
-        elseif ((v197 == 1800) or (v197 <= 1824) or (SelectMonster == "Fishman Captain")) then
-            Ms = "Fishman Captain";
-            NameQuest = "DeepForestIsland3";
-            QuestLv = 2;
-            NameMon = "Fishman Captain";
-            CFrameQ = CFrame.new(- 10583.099609375, 331.78845214844, - 8759.4638671875);
-            CFrameMon = CFrame.new(- 10789.401367188, 427.18637084961, - 9131.4423828125);
-        elseif ((v197 == 1825) or (v197 <= 1849) or (SelectMonster == "Forest Pirate")) then
-            Ms = "Forest Pirate";
-            NameQuest = "DeepForestIsland";
-            QuestLv = 1;
-            NameMon = "Forest Pirate";
-            CFrameQ = CFrame.new(- 13232.662109375, 332.40396118164, - 7626.4819335938);
-            CFrameMon = CFrame.new(- 13489.397460938, 400.30349731445, - 7770.251953125);
-        elseif ((v197 == 1850) or (v197 <= 1899) or (SelectMonster == "Mythological Pirate")) then
-            Ms = "Mythological Pirate";
-            NameQuest = "DeepForestIsland";
-            QuestLv = 2;
-            NameMon = "Mythological Pirate";
-            CFrameQ = CFrame.new(- 13232.662109375, 332.40396118164, - 7626.4819335938);
-            CFrameMon = CFrame.new(- 13508.616210938, 582.46228027344, - 6985.3037109375);
-        elseif ((v197 == 1900) or (v197 <= 1924) or (SelectMonster == "Jungle Pirate")) then
-            Ms = "Jungle Pirate";
-            NameQuest = "DeepForestIsland2";
-            QuestLv = 1;
-            NameMon = "Jungle Pirate";
-            CFrameQ = CFrame.new(- 12682.096679688, 390.88653564453, - 9902.1240234375);
-            CFrameMon = CFrame.new(- 12267.103515625, 459.75262451172, - 10277.200195313);
-        elseif ((v197 == 1925) or (v197 <= 1974) or (SelectMonster == "Musketeer Pirate")) then
-            Ms = "Musketeer Pirate";
-            NameQuest = "DeepForestIsland2";
-            QuestLv = 2;
-            NameMon = "Musketeer Pirate";
-            CFrameQ = CFrame.new(- 12682.096679688, 390.88653564453, - 9902.1240234375);
-            CFrameMon = CFrame.new(- 13291.5078125, 520.47338867188, - 9904.638671875);
-        elseif ((v197 == 1975) or (v197 <= 1999) or (SelectMonster == "Reborn Skeleton")) then
-            Ms = "Reborn Skeleton";
-            NameQuest = "HauntedQuest1";
-            QuestLv = 1;
-            NameMon = "Reborn Skeleton";
-            CFrameQ = CFrame.new(- 9480.80762, 142.130661, 5566.37305, - 0.00655503059, 4.5295423e-8, - 0.999978542, 2.0492047e-8, 1, 4.5162068e-8, 0.999978542, - 2.0195568e-8, - 0.00655503059);
-            CFrameMon = CFrame.new(- 8761.77148, 183.431747, 6168.33301, 0.978073597, - 0.000013950732, - 0.208259016, - 0.0000010807393, 1, - 0.00007206303, 0.208259016, 0.00007070804, 0.978073597);
-        elseif ((v197 == 2000) or (v197 <= 2024) or (SelectMonster == "Living Zombie")) then
-            Ms = "Living Zombie";
-            NameQuest = "HauntedQuest1";
-            QuestLv = 2;
-            NameMon = "Living Zombie";
-            CFrameQ = CFrame.new(- 9480.80762, 142.130661, 5566.37305, - 0.00655503059, 4.5295423e-8, - 0.999978542, 2.0492047e-8, 1, 4.5162068e-8, 0.999978542, - 2.0195568e-8, - 0.00655503059);
-            CFrameMon = CFrame.new(- 10103.7529, 238.565979, 6179.75977, 0.999474227, 2.7754714e-8, 0.0324240364, - 2.5800633e-8, 1, - 6.068485e-8, - 0.0324240364, 5.981639e-8, 0.999474227);
-        elseif ((v197 == 2025) or (v197 <= 2049) or (SelectMonster == "Demonic Soul")) then
-            Ms = "Demonic Soul";
-            NameQuest = "HauntedQuest2";
-            QuestLv = 1;
-            NameMon = "Demonic Soul";
-            CFrameQ = CFrame.new(- 9516.9931640625, 178.00651550293, 6078.4653320313);
-            CFrameMon = CFrame.new(- 9712.03125, 204.69589233398, 6193.322265625);
-        elseif ((v197 == 2050) or (v197 <= 2074) or (SelectMonster == "Posessed Mummy")) then
-            Ms = "Posessed Mummy";
-            NameQuest = "HauntedQuest2";
-            QuestLv = 2;
-            NameMon = "Posessed Mummy";
-            CFrameQ = CFrame.new(- 9516.9931640625, 178.00651550293, 6078.4653320313);
-            CFrameMon = CFrame.new(- 9545.7763671875, 69.619895935059, 6339.5615234375);
-        elseif ((v197 == 2075) or (v197 <= 2099) or (SelectMonster == "Peanut Scout")) then
-            Ms = "Peanut Scout";
-            NameQuest = "NutsIslandQuest";
-            QuestLv = 1;
-            NameMon = "Peanut Scout";
-            CFrameQ = CFrame.new(- 2105.53198, 37.2495995, - 10195.5088, - 0.766061664, 0, - 0.642767608, 0, 1, 0, 0.642767608, 0, - 0.766061664);
-            CFrameMon = CFrame.new(- 2150.587890625, 122.49767303467, - 10358.994140625);
-        elseif ((v197 == 2100) or (v197 <= 2124) or (SelectMonster == "Peanut President")) then
-            Ms = "Peanut President";
-            NameQuest = "NutsIslandQuest";
-            QuestLv = 2;
-            NameMon = "Peanut President";
-            CFrameQ = CFrame.new(- 2105.53198, 37.2495995, - 10195.5088, - 0.766061664, 0, - 0.642767608, 0, 1, 0, 0.642767608, 0, - 0.766061664);
-            CFrameMon = CFrame.new(- 2150.587890625, 122.49767303467, - 10358.994140625);
-        elseif ((v197 == 2125) or (v197 <= 2149) or (SelectMonster == "Ice Cream Chef")) then
-            Ms = "Ice Cream Chef";
-            NameQuest = "IceCreamIslandQuest";
-            QuestLv = 1;
-            NameMon = "Ice Cream Chef";
-            CFrameQ = CFrame.new(- 819.376709, 64.9259796, - 10967.2832, - 0.766061664, 0, 0.642767608, 0, 1, 0, - 0.642767608, 0, - 0.766061664);
-            CFrameMon = CFrame.new(- 789.941528, 209.382889, - 11009.9805, - 0.0703101531, "-0", - 0.997525156, "-0", 1.00000012, "-0", 0.997525275, 0, - 0.0703101456);
-        elseif ((v197 == 2150) or (v197 <= 2199) or (SelectMonster == "Ice Cream Commander")) then
-            Ms = "Ice Cream Commander";
-            NameQuest = "IceCreamIslandQuest";
-            QuestLv = 2;
-            NameMon = "Ice Cream Commander";
-            CFrameQ = CFrame.new(- 819.376709, 64.9259796, - 10967.2832, - 0.766061664, 0, 0.642767608, 0, 1, 0, - 0.642767608, 0, - 0.766061664);
-            CFrameMon = CFrame.new(- 789.941528, 209.382889, - 11009.9805, - 0.0703101531, "-0", - 0.997525156, "-0", 1.00000012, "-0", 0.997525275, 0, - 0.0703101456);
-        elseif ((v197 == 2200) or (v197 <= 2224) or (SelectMonster == "Cookie Crafter")) then
-            Ms = "Cookie Crafter";
-            NameQuest = "CakeQuest1";
-            QuestLv = 1;
-            NameMon = "Cookie Crafter";
-            CFrameQ = CFrame.new(- 2022.29858, 36.9275894, - 12030.9766, - 0.961273909, 0, - 0.275594592, 0, 1, 0, 0.275594592, 0, - 0.961273909);
-            CFrameMon = CFrame.new(- 2321.71216, 36.699482, - 12216.7871, - 0.780074954, 0, 0.625686109, 0, 1, 0, - 0.625686109, 0, - 0.780074954);
-        elseif ((v197 == 2225) or (v197 <= 2249) or (SelectMonster == "Cake Guard")) then
-            Ms = "Cake Guard";
-            NameQuest = "CakeQuest1";
-            QuestLv = 2;
-            NameMon = "Cake Guard";
-            CFrameQ = CFrame.new(- 2022.29858, 36.9275894, - 12030.9766, - 0.961273909, 0, - 0.275594592, 0, 1, 0, 0.275594592, 0, - 0.961273909);
-            CFrameMon = CFrame.new(- 1418.11011, 36.6718941, - 12255.7324, 0.0677844882, 0, 0.997700036, 0, 1, 0, - 0.997700036, 0, 0.0677844882);
-        elseif ((v197 == 2250) or (v197 <= 2274) or (SelectMonster == "Baking Staff")) then
-            Ms = "Baking Staff";
-            NameQuest = "CakeQuest2";
-            QuestLv = 1;
-            NameMon = "Baking Staff";
-            CFrameQ = CFrame.new(- 1928.31763, 37.7296638, - 12840.626, 0.951068401, "-0", - 0.308980465, 0, 1, "-0", 0.308980465, 0, 0.951068401);
-            CFrameMon = CFrame.new(- 1980.43848, 36.6716766, - 12983.8418, - 0.254443765, 0, - 0.967087567, 0, 1, 0, 0.967087567, 0, - 0.254443765);
-        elseif ((v197 == 2275) or (v197 <= 2299) or (SelectMonster == "Head Baker")) then
-            Ms = "Head Baker";
-            NameQuest = "CakeQuest2";
-            QuestLv = 2;
-            NameMon = "Head Baker";
-            CFrameQ = CFrame.new(- 1928.31763, 37.7296638, - 12840.626, 0.951068401, "-0", - 0.308980465, 0, 1, "-0", 0.308980465, 0, 0.951068401);
-            CFrameMon = CFrame.new(- 2251.5791, 52.2714615, - 13033.3965, - 0.991971016, 0, - 0.126466095, 0, 1, 0, 0.126466095, 0, - 0.991971016);
-        elseif ((v197 == 2300) or (v197 <= 2324) or (SelectMonster == "Cocoa Warrior")) then
-            Ms = "Cocoa Warrior";
-            NameQuest = "ChocQuest1";
-            QuestLv = 1;
-            NameMon = "Cocoa Warrior";
-            CFrameQ = CFrame.new(231.75, 23.9003029, - 12200.292, - 1, 0, 0, 0, 1, 0, 0, 0, - 1);
-            CFrameMon = CFrame.new(167.978516, 26.2254658, - 12238.874, - 0.939700961, 0, 0.341998369, 0, 1, 0, - 0.341998369, 0, - 0.939700961);
-        elseif ((v197 == 2325) or (v197 <= 2349) or (SelectMonster == "Chocolate Bar Battler")) then
-            Ms = "Chocolate Bar Battler";
-            NameQuest = "ChocQuest1";
-            QuestLv = 2;
-            NameMon = "Chocolate Bar Battler";
-            CFrameQ = CFrame.new(231.75, 23.9003029, - 12200.292, - 1, 0, 0, 0, 1, 0, 0, 0, - 1);
-            CFrameMon = CFrame.new(701.312073, 25.5824986, - 12708.2148, - 0.342042685, 0, - 0.939684391, 0, 1, 0, 0.939684391, 0, - 0.342042685);
-        elseif ((v197 == 2350) or (v197 <= 2374) or (SelectMonster == "Sweet Thief")) then
-            Ms = "Sweet Thief";
-            NameQuest = "ChocQuest2";
-            QuestLv = 1;
-            NameMon = "Sweet Thief";
-            CFrameQ = CFrame.new(151.198242, 23.8907146, - 12774.6172, 0.422592998, 0, 0.906319618, 0, 1, 0, - 0.906319618, 0, 0.422592998);
-            CFrameMon = CFrame.new(- 140.258301, 25.5824986, - 12652.3115, 0.173624337, "-0", - 0.984811902, 0, 1, "-0", 0.984811902, 0, 0.173624337);
-        elseif ((v197 == 2375) or (v197 <= 2400) or (SelectMonster == "Candy Rebel")) then
-            Ms = "Candy Rebel";
-            NameQuest = "ChocQuest2";
-            QuestLv = 2;
-            NameMon = "Candy Rebel";
-            CFrameQ = CFrame.new(151.198242, 23.8907146, - 12774.6172, 0.422592998, 0, 0.906319618, 0, 1, 0, - 0.906319618, 0, 0.422592998);
-            CFrameMon = CFrame.new(47.9231453, 25.5824986, - 13029.2402, - 0.819156051, 0, - 0.573571265, 0, 1, 0, 0.573571265, 0, - 0.819156051);
-        elseif ((v197 == 2400) or (v197 <= 2424) or (SelectMonster == "Candy Pirate")) then
-            Ms = "Candy Pirate";
-            NameQuest = "CandyQuest1";
-            QuestLv = 1;
-            NameMon = "Candy Pirate";
-            CFrameQ = CFrame.new(- 1149.328, 13.5759039, - 14445.6143, - 0.156446099, 0, - 0.987686574, 0, 1, 0, 0.987686574, 0, - 0.156446099);
-            CFrameMon = CFrame.new(- 1437.56348, 17.1481285, - 14385.6934, 0.173624337, "-0", - 0.984811902, 0, 1, "-0", 0.984811902, 0, 0.173624337);
-        elseif ((v197 == 2425) or (v197 <= 2449) or (SelectMonster == "Snow Demon")) then
-            Ms = "Snow Demon";
-            NameQuest = "CandyQuest1";
-            QuestLv = 2;
-            NameMon = "Snow Demon";
-            CFrameQ = CFrame.new(- 1149.328, 13.5759039, - 14445.6143, - 0.156446099, 0, - 0.987686574, 0, 1, 0, 0.987686574, 0, - 0.156446099);
-            CFrameMon = CFrame.new(- 916.222656, 17.1481285, - 14638.8125, 0.866007268, 0, 0.500031412, 0, 1, 0, - 0.500031412, 0, 0.866007268);
-        elseif ((v197 == 2450) or (v197 <= 2474) or (SelectMonster == "Isle Outlaw")) then
-            Ms = "Isle Outlaw";
-            NameQuest = "TikiQuest1";
-            QuestLv = 1;
-            NameMon = "Isle Outlaw";
-            CFrameQ = CFrame.new(- 16549.890625, 55.68635559082031, - 179.91360473632812);
-            CFrameMon = CFrame.new(- 16162.8193359375, 11.6863374710083, - 96.45481872558594);
-        elseif ((v197 == 2475) or (v197 <= 2499) or (SelectMonster == "Island Boy")) then
-            Ms = "Island Boy";
-            NameQuest = "TikiQuest1";
-            QuestLv = 2;
-            NameMon = "Island Boy";
-            CFrameQ = CFrame.new(- 16549.890625, 55.68635559082031, - 179.91360473632812);
-            CFrameMon = CFrame.new(- 16357.3125, 20.632822036743164, 1005.64892578125);
-        elseif ((v197 == 2500) or (v197 <= 2524) or (SelectMonster == "Sun-kissed Warrior")) then
-            Ms = "Sun-kissed Warrior";
-            NameQuest = "TikiQuest2";
-            QuestLv = 1;
-            NameMon = "Sun-kissed Warrior";
-            CFrameQ = CFrame.new(- 16541.021484375, 54.77081298828125, 1051.461181640625);
-            CFrameMon = CFrame.new(- 16357.3125, 20.632822036743164, 1005.64892578125);
-        elseif ((v197 == 2525) or (v197 <= 2549) or (SelectMonster == "Isle Champion")) then
-            Ms = "Isle Champion";
-            NameQuest = "TikiQuest2";
-            QuestLv = 2;
-            NameMon = "Isle Champion";
-            CFrameQ = CFrame.new(- 16541.021484375, 54.77081298828125, 1051.461181640625);
-            CFrameMon = CFrame.new(- 16848.94140625, 21.68633460998535, 1041.4490966796875);
-        elseif ((v197 == 2550) or (v197 <= 2574) or (SelectMonster == "Serpent Hunter")) then
-            Ms = "Serpent Hunter";
-            NameQuest = "TikiQuest3";
-            QuestLv = 1;
-            NameMon = "Serpent Hunter";
-            CFrameQ = CFrame.new(- 16665.19140625, 104.59640502929688, 1579.6943359375);
-            CFrameMon = CFrame.new(- 16621.4140625, 121.40631103515625, 1290.6881103515625);
-        elseif ((v197 == 2575) or (v197 <= 2599) or (SelectMonster == "Skull Slayer") or (v197 == 2600)) then
-            Ms = "Skull Slayer";
-            NameQuest = "TikiQuest3";
-            QuestLv = 2;
-            NameMon = "Skull Slayer";
-            CFrameQ = CFrame.new(- 16665.19140625, 104.59640502929688, 1579.6943359375);
-            CFrameMon = CFrame.new(- 16811.5703125, 84.625244140625, 1542.235107421875);
-        end
-    end
-end
+end)
+
 -- Start only after CheckLevel has been declared above.
+-- IMPORTANT: FARM_SOURCE is loaded through loadstring(), so it does NOT
+-- inherit the UI's local `Gui` variable. Never use `Gui.Parent` here.
 task.spawn(function()
-    while task.wait() do
+    while true do
         if _G.AutoLevel then
-            pcall(RunFarm)
+            local ok, err = pcall(RunFarm)
+
+            if not ok then
+                warn("[PhongdzHub] Farm tick:", err)
+                task.wait(0.12)
+            else
+                task.wait(0.045)
+            end
+        else
+            StopBringMobs()
+            RestoreFarmGravity()
+            StopSourceMovement()
+            task.wait(0.12)
         end
     end
 end)
@@ -1629,6 +2237,7 @@ local function loadFarm()
     end
 
     farmLoaded = true
+    farmError = nil
     return true
 end
 
@@ -1657,22 +2266,25 @@ local function updateToggle()
 end
 
 Toggle.Activated:Connect(function()
-    farmEnabled = not farmEnabled
+    local nextState = not farmEnabled
 
-    if farmEnabled then
-        CaptureCharacterState()
-    else
-        RestoreAfterFarm()
-    end
-
-    _G.AutoLevel = farmEnabled
-
-    if farmEnabled and not farmLoaded then
-        if not loadFarm() then
-            farmEnabled = false
-            _G.AutoLevel = false
-            RestoreAfterFarm()
+    if nextState then
+        if not farmLoaded then
+            if not loadFarm() then
+                farmEnabled = false
+                _G.AutoLevel = false
+                updateToggle()
+                return
+            end
         end
+
+        -- Enable only after FARM_SOURCE has initialized.
+        -- The Farm worker is persistent and will see this state immediately.
+        _G.AutoLevel = true
+        farmEnabled = true
+    else
+        farmEnabled = false
+        _G.AutoLevel = false
     end
 
     updateToggle()
@@ -1702,23 +2314,3 @@ RunService.RenderStepped:Connect(function()
 end)
 
 updateToggle()
--- Refresh weapon choices after character respawn.
-task.spawn(function()
-    while task.wait(2) do
-        pcall(function()
-            if WeaponDropdown and WeaponDropdown.Parent and _G.FarmWeapon then
-                WeaponDropdown.Text = "Vũ khí: " .. tostring(_G.FarmWeapon)
-            end
-        end)
-    end
-end)
-
-task.spawn(function()
-    while task.wait(0.15) do
-        pcall(function()
-            if not _G.AutoLevel then
-                StopFlight()
-            end
-        end)
-    end
-end)
