@@ -100,17 +100,9 @@ do
 
         equipSelectedWeapon()
 
-        -- Preserve the source's attack positioning pattern.
-        local character = LocalPlayer.Character
-        local playerRoot = character and character:FindFirstChild("HumanoidRootPart")
-        if playerRoot then
-            pcall(function()
-                playerRoot.CFrame =
-                    root.CFrame * CFrame.new(0, 30, 0) *
-                    CFrame.Angles(0, math.rad(180), 0)
-            end)
-        end
-
+        -- Movement is owned by Farm Level's TweenTo.
+        -- Do not reposition HumanoidRootPart here: doing so fights the
+        -- farm movement target and causes the character to jerk vertically.
         return true
     end
 
