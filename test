@@ -243,7 +243,7 @@ local Title = Instance.new("TextLabel")
 Title.Position = UDim2.fromOffset(18, 7)
 Title.Size = UDim2.fromOffset(300, 25)
 Title.BackgroundTransparency = 1
-Title.Text = "PHONGDZ HUB  v1.4"
+Title.Text = "PHONGDZ HUB  v1.5"
 Title.Font = Enum.Font.GothamBlack
 Title.TextSize = 19
 Title.TextColor3 = Color3.fromRGB(255, 211, 65)
@@ -1747,6 +1747,113 @@ local function DisableFarmGravity()
     GravityForce.Parent = root
 end
 
+local Quests = require(game:GetService("ReplicatedStorage"):WaitForChild("Quests"))
+local GuideModule = require(game:GetService("ReplicatedStorage"):WaitForChild("GuideModule"))
+
+local blacklistquest = {
+    "MarineQuest",
+    "BartiloQuest",
+    "CitizenQuest",
+    "Trainees"
+}
+
+CheckSea = function(b)
+    if (game.PlaceId == 2753915549 or game.PlaceId == 85211729168715) and b == 1 then
+        return true
+    elseif (game.PlaceId == 4442272183 or game.PlaceId == 79091703265657) and b == 2 then
+        return true
+    elseif (game.PlaceId == 7449423635 or game.PlaceId == 100117331123089) and b == 3 then
+        return true
+    end
+    return false
+end
+
+GetQuestPointFromNPC = function(npcName)
+    for _, npc in pairs(workspace.NPCs:GetChildren()) do
+        if npc.Name == npcName and npc:FindFirstChild("HumanoidRootPart") then
+            return npc.HumanoidRootPart.CFrame
+        end
+    end
+    for _, npc in pairs(replicated.NPCs:GetChildren()) do
+        if npc.Name == npcName and npc:FindFirstChild("HumanoidRootPart") then
+            return npc.HumanoidRootPart.CFrame
+        end
+    end
+    return nil
+end
+
+
+GetQuests = function()
+    local lvl = plr.Data.Level.Value
+    local LevelReq = 0
+    local mmb = {}
+    
+    if lvl >= 700 and CheckSea(1) then
+        mmb["Mob"] = "Galley Captain"
+        mmb["NameQuest"] = "FountainQuest"
+        mmb["ID"] = 2
+        mmb["LevelReq"] = 700
+    elseif lvl >= 1500 and CheckSea(2) then
+        mmb["Mob"] = "Water Fighter"
+        mmb["NameQuest"] = "ForgottenQuest"
+        mmb["ID"] = 2
+        mmb["LevelReq"] = 1450
+    else
+        for r, v in pairs(Quests) do
+            for id, v1 in pairs(v) do
+                local LvReq = v1.LevelReq
+                for nguoi, tinh in pairs(v1.Task) do
+                    if lvl >= LvReq and LevelReq <= LvReq and v1.Task[nguoi] > 1 and not table.find(blacklistquest, r) then
+                        LevelReq = LvReq
+                        mmb["Mob"] = nguoi
+                        mmb["NameQuest"] = r
+                        mmb["ID"] = id
+                        mmb["LevelReq"] = LvReq
+                    end
+                end
+            end
+        end
+    end
+    
+    return mmb
+end
+
+GetQuestPoint = function()
+    if GuideModule and GuideModule.Data and GuideModule.Data.LastClosestNPC then
+        return GetQuestPointFromNPC(GuideModule.Data.LastClosestNPC)
+    end
+    return nil
+end
+
+MaterialMon=function()local a=game.Players.LocalPlayer;local b=a.Character and a.Character:FindFirstChild("HumanoidRootPart")if not b then return end;shouldRequestEntrance=function(c,d)local e=(b.Position-c).Magnitude;if e>=d then replicated.Remotes.CommF_:InvokeServer("requestEntrance",c)end end;if World1 then if SelectMaterial=="Angel Wings"then MMon={"Shanda","Royal Squad","Royal Soldier","Wysper","Thunder God"}MPos=CFrame.new(-4698,845,-1912)SP="Default"local c=Vector3.new(-4607.82275,872.54248,-1667.55688)shouldRequestEntrance(c,10000)elseif SelectMaterial=="Leather + Scrap Metal"then MMon={"Brute","Pirate"}MPos=CFrame.new(-1145,15,4350)SP="Default"elseif SelectMaterial=="Magma Ore"then MMon={"Military Soldier","Military Spy","Magma Admiral"}MPos=CFrame.new(-5815,84,8820)SP="Default"elseif SelectMaterial=="Fish Tail"then MMon={"Fishman Warrior","Fishman Commando","Fishman Lord"}MPos=CFrame.new(61123,19,1569)SP="Default"local c=Vector3.new(61163.8515625,5.342342376708984,1819.7841796875)shouldRequestEntrance(c,17000)end elseif World2 then if SelectMaterial=="Leather + Scrap Metal"then MMon={"Marine Captain"}MPos=CFrame.new(-2010.5059814453125,73.00115966796875,-3326.620849609375)SP="Default"elseif SelectMaterial=="Magma Ore"then MMon={"Magma Ninja","Lava Pirate"}MPos=CFrame.new(-5428,78,-5959)SP="Default"elseif SelectMaterial=="Ectoplasm"then MMon={"Ship Deckhand","Ship Engineer","Ship Steward","Ship Officer"}MPos=CFrame.new(911.35827636719,125.95812988281,33159.5390625)SP="Default"local c=Vector3.new(61163.8515625,5.342342376708984,1819.7841796875)shouldRequestEntrance(c,18000)elseif SelectMaterial=="Mystic Droplet"then MMon={"Water Fighter"}MPos=CFrame.new(-3385,239,-10542)SP="Default"elseif SelectMaterial=="Radioactive Material"then MMon={"Factory Staff"}MPos=CFrame.new(295,73,-56)SP="Default"elseif SelectMaterial=="Vampire Fang"then MMon={"Vampire"}MPos=CFrame.new(-6033,7,-1317)SP="Default"end elseif World3 then if SelectMaterial=="Scrap Metal"then MMon={"Jungle Pirate","Forest Pirate"}MPos=CFrame.new(-11975.78515625,331.7734069824219,-10620.0302734375)SP="Default"elseif SelectMaterial=="Fish Tail"then MMon={"Fishman Raider","Fishman Captain"}MPos=CFrame.new(-10993,332,-8940)SP="Default"elseif SelectMaterial=="Conjured Cocoa"then MMon={"Chocolate Bar Battler","Cocoa Warrior"}MPos=CFrame.new(620.6344604492188,78.93644714355469,-12581.369140625)SP="Default"elseif SelectMaterial=="Dragon Scale"then MMon={"Dragon Crew Archer","Dragon Crew Warrior"}MPos=CFrame.new(6594,383,139)SP="Default"elseif SelectMaterial=="Gunpowder"then MMon={"Pistol Billionaire"}MPos=CFrame.new(-84.8556900024414, 85.62061309814453, 6132.0087890625)SP="Default"elseif SelectMaterial=="Mini Tusk"then MMon={"Mythological Pirate"}MPos=CFrame.new(-13545,470,-6917)SP="Default"elseif SelectMaterial=="Demonic Wisp"then MMon={"Demonic Soul"}MPos=CFrame.new(-9495.6806640625,453.58624267578125,5977.3486328125)SP="Default"end end end
+
+GetQuestPoint = function()
+    if GuideModule and GuideModule.Data and GuideModule.Data.LastClosestNPC then
+        return GetQuestPointFromNPC(GuideModule.Data.LastClosestNPC)
+    end
+    return nil
+end
+
+
+QuestNeta = function()
+    local questData = GetQuests()
+    return {
+        [1] = questData.Mob,           
+        [2] = questData.ID,             
+        [3] = questData.NameQuest,      
+        [4] = questData.LevelReq,       
+        [5] = questData.Mob,             
+        [6] = GetQuestPoint()            
+    }
+end
+
+local function SourceFarmAlive(mob)
+    if not mob or not mob.Parent then return false end
+    local hum = mob:FindFirstChildOfClass("Humanoid")
+    local root = mob:FindFirstChild("HumanoidRootPart")
+    return hum ~= nil and root ~= nil and hum.Health > 0
+end
+
 local function RunFarm()
     if not _G.AutoLevel then
         RestoreFarmGravity()
@@ -1756,174 +1863,136 @@ local function RunFarm()
         return
     end
 
-    CheckLevel()
-
-    if not NameMon or not NameQuest or not CFrameQ then
-        return
-    end
-
     DisableFarmGravity()
     StartSourceMovement()
 
-    local root = GetRoot()
+    local char = LocalPlayer.Character
+    local root = char and char:FindFirstChild("HumanoidRootPart")
     if not root then return end
 
-    -- Exact source-style quest UI check:
-    -- PlayerGui.Main.Quest.Visible
-    local questUI, questTitle = QuestText()
-    if not questUI then
+    -- SOURCE FARM LEVEL: QuestNeta -> quest check -> StartQuest -> mob loop.
+    local questData = QuestNeta()
+    if not questData or not questData[1] then
+        task.wait(0.5)
         return
     end
 
-    -- 1. Wrong quest -> abandon, then the next tick reacquires the correct one.
-    if questUI.Visible and questTitle ~= "" then
-        if not string.find(string.lower(questTitle), string.lower(tostring(NameMon)), 1, true) then
-            pcall(function()
-                ReplicatedStorage.Remotes.CommF_:InvokeServer("AbandonQuest")
-            end)
+    local questUI = LocalPlayer.PlayerGui.Main.Quest
+    local questTitle = questUI.Visible and questUI.Container.QuestTitle.Title.Text or ""
 
-            task.wait(0.2)
-            return
-        end
-    end
-
-    -- 2. No quest -> go to quest NPC, wait until close, then StartQuest.
-    if not questUI.Visible then
-        local distanceToQuest = (root.Position - CFrameQ.Position).Magnitude
-
-        if distanceToQuest > 10 then
-            TweenTo(CFrameQ)
-            return
-        end
-
-        -- Stop any stale movement before requesting the quest.
-        if ActiveTween then
-            pcall(function() ActiveTween:Cancel() end)
-            ActiveTween = nil
-        end
-
-        FarmDestinationTarget = nil
-        FarmDestination = nil
-
+    -- Wrong quest: abandon it exactly like source.
+    if questUI.Visible and not string.find(questTitle, questData[1], 1, true) then
         pcall(function()
-            ReplicatedStorage.Remotes.CommF_:InvokeServer(
-                "StartQuest",
-                NameQuest,
-                QuestLv
-            )
+            ReplicatedStorage.Remotes.CommF_:InvokeServer("AbandonQuest")
         end)
-
-        -- Give the quest UI time to update, matching the source's sequencing.
-        task.wait(0.8)
+        task.wait(0.2)
         return
     end
 
-    -- 3. Quest is active -> find the exact mob selected by CheckLevel.
+    -- No quest: move to the source quest point, then start it.
+    if not questUI.Visible then
+        local questPos = questData[6]
+        if questPos then
+            TweenTo(questPos)
+            task.wait(1.5)
+            root = GetRoot()
+            if root and (root.Position - questPos.Position).Magnitude <= 12 then
+                pcall(function()
+                    ReplicatedStorage.Remotes.CommF_:InvokeServer(
+                        "StartQuest", questData[3], questData[2]
+                    )
+                end)
+                task.wait(0.8)
+            end
+        else
+            -- Fallback to the existing CheckLevel quest CFrame only when
+            -- GuideModule cannot resolve an NPC position.
+            CheckLevel()
+            if CFrameQ then
+                TweenTo(CFrameQ)
+                task.wait(1.5)
+                root = GetRoot()
+                if root and (root.Position - CFrameQ.Position).Magnitude <= 12 then
+                    pcall(function()
+                        ReplicatedStorage.Remotes.CommF_:InvokeServer(
+                            "StartQuest", NameQuest, QuestLv
+                        )
+                    end)
+                    task.wait(0.8)
+                end
+            end
+        end
+        return
+    end
+
+    -- Quest active: source finds the selected quest mob and keeps attacking
+    -- until the mob dies, disappears, the quest disappears, or Farm is off.
+    local enemyName = questData[1]
     local enemies = workspace:FindFirstChild("Enemies")
-    if not enemies then return end
+    local foundMob = false
 
-    local targetMob = nil
+    if enemies then
+        for _, mob in ipairs(enemies:GetChildren()) do
+            if mob.Name == enemyName and SourceFarmAlive(mob) then
+                foundMob = true
+                ActiveTarget = mob
+                AutoHaki()
+                local weapon = EquipFarmWeapon()
 
-    for _, mob in ipairs(enemies:GetChildren()) do
-        if mob.Name == NameMon then
-            local hum = mob:FindFirstChildOfClass("Humanoid")
-            local mobRoot = mob:FindFirstChild("HumanoidRootPart")
+                repeat
+                    task.wait(0.05)
+                    local mobRoot = mob:FindFirstChild("HumanoidRootPart")
+                    local hum = mob:FindFirstChildOfClass("Humanoid")
+                    if not mobRoot or not hum or hum.Health <= 0 then break end
 
-            if hum and mobRoot and hum.Health > 0 then
-                targetMob = mob
+                    -- Keep the source's 20-stud farming position.
+                    TweenTo(mobRoot.CFrame * CFrame.new(0, 20, 0))
+                    BringEnemy(mob)
+
+                    -- Keep PhongdzHub's existing FastAttack implementation.
+                    if weapon and (ChooseWeapon ~= "Blox Fruit" or FruitM1Enabled) then
+                        FastAttack()
+                    end
+
+                    pcall(function()
+                        mobRoot.CanCollide = false
+                        hum.WalkSpeed = 0
+                        hum.JumpPower = 0
+                    end)
+
+                    if not questUI.Visible then break end
+                until not _G.AutoLevel or not mob.Parent or not SourceFarmAlive(mob)
+
+                ActiveTarget = nil
                 break
             end
         end
     end
 
-    -- 4. If the mob exists, keep the farm loop alive until the mob dies
-    -- or the quest disappears. This is the important part the old version
-    -- was missing: it did not maintain a continuous source-style kill loop.
-    if targetMob then
-        ActiveTarget = targetMob
-        AutoHaki()
-        local equippedWeapon = EquipFarmWeapon()
-
-        local hum = targetMob:FindFirstChildOfClass("Humanoid")
-        local mobRoot = targetMob:FindFirstChild("HumanoidRootPart")
-
-        if not hum or not mobRoot then
-            return
-        end
-
-        while _G.AutoLevel
-            and questUI.Parent
-            and questUI.Visible
-            and targetMob.Parent
-            and hum.Health > 0 do
-
-            mobRoot = targetMob:FindFirstChild("HumanoidRootPart")
-            hum = targetMob:FindFirstChildOfClass("Humanoid")
-
-            if not mobRoot or not hum or hum.Health <= 0 then
+    -- Source fallback: replicated mob.
+    if not foundMob then
+        for _, mob in ipairs(ReplicatedStorage:GetChildren()) do
+            if mob.Name == enemyName and SourceFarmAlive(mob) then
+                TweenTo(mob.HumanoidRootPart.CFrame * CFrame.new(0, 20, 0))
                 break
-            end
-
-            -- Source positioning: 20 studs above the mob.
-            local farmCF = mobRoot.CFrame * CFrame.new(0, 20, 0)
-            TweenTo(farmCF)
-
-            -- Keep source BringEnemy behavior.
-            BringEnemy(targetMob)
-
-            -- Keep the source-derived FastAttack.
-            if equippedWeapon and
-               (ChooseWeapon ~= "Blox Fruit" or FruitM1Enabled) then
-                FastAttack()
-            end
-
-            pcall(function()
-                mobRoot.CanCollide = false
-                hum.WalkSpeed = 0
-                hum.JumpPower = 0
-            end)
-
-            task.wait(0.045)
-
-            -- Quest may disappear immediately after the kill.
-            local currentQuest = LocalPlayer.PlayerGui.Main:FindFirstChild("Quest")
-            if not currentQuest or not currentQuest.Visible then
-                break
-            end
-        end
-
-        ActiveTarget = nil
-        FarmDestinationTarget = nil
-        return
-    end
-
-    -- 5. Same source fallbacks: replicated enemy, then EnemySpawns.
-    for _, mob in ipairs(ReplicatedStorage:GetChildren()) do
-        if mob.Name == NameMon then
-            local hum = mob:FindFirstChildOfClass("Humanoid")
-            local mobRoot = mob:FindFirstChild("HumanoidRootPart")
-
-            if hum and mobRoot and hum.Health > 0 then
-                TweenTo(mobRoot.CFrame * CFrame.new(0, 20, 0))
-                return
             end
         end
     end
 
-    local worldOrigin = workspace:FindFirstChild("_WorldOrigin")
-    local spawnFolder = worldOrigin and worldOrigin:FindFirstChild("EnemySpawns")
-
-    if spawnFolder then
-        for _, spawnPoint in ipairs(spawnFolder:GetChildren()) do
-            if string.find(string.lower(tostring(spawnPoint.Name)),
-                           string.lower(tostring(NameMon)), 1, true) then
-                TweenTo(spawnPoint.CFrame * CFrame.new(0, 20, 0))
-                return
+    -- Source fallback: EnemySpawns.
+    if not foundMob then
+        local worldOrigin = workspace:FindFirstChild("_WorldOrigin")
+        local spawnFolder = worldOrigin and worldOrigin:FindFirstChild("EnemySpawns")
+        if spawnFolder then
+            for _, spawnPoint in ipairs(spawnFolder:GetChildren()) do
+                if string.find(spawnPoint.Name, enemyName, 1, true) then
+                    TweenTo(spawnPoint.CFrame * CFrame.new(0, 20, 0))
+                    break
+                end
             end
         end
     end
 end
-
 
 
 function CheckLevel()
