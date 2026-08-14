@@ -330,7 +330,7 @@ local Title = Instance.new("TextLabel")
 Title.Position = UDim2.fromOffset(18, 7)
 Title.Size = UDim2.fromOffset(300, 25)
 Title.BackgroundTransparency = 1
-Title.Text = "PHONGDZ HUB  v2.3"
+Title.Text = "PHONGDZ HUB  v2.4"
 Title.Font = Enum.Font.GothamBlack
 Title.TextSize = 19
 Title.TextColor3 = Color3.fromRGB(255, 211, 65)
@@ -506,8 +506,8 @@ local SelectWeapon = _G.SelectWeapon
 _G.ChooseWP = ChooseWeapon
 
 local function resolveSelectedWeapon()
-    local backpack = plr:FindFirstChildOfClass("Backpack")
-    local character = plr.Character
+    local backpack = LocalPlayer:FindFirstChildOfClass("Backpack")
+    local character = LocalPlayer.Character
     local selected = nil
 
     if backpack then
@@ -545,8 +545,8 @@ end
 -- Source-style automatic weapon selection, driven by the Setting choice.
 local function SourceResolveWeapon()
     local wanted = _G.ChooseWP or ChooseWeapon
-    local backpack = plr:FindFirstChildOfClass("Backpack")
-    local character = plr.Character
+    local backpack = LocalPlayer:FindFirstChildOfClass("Backpack")
+    local character = LocalPlayer.Character
 
     if backpack then
         for _, v in pairs(backpack:GetChildren()) do
@@ -574,8 +574,8 @@ end
 EquipWeapon = function(text)
     if not text then return end
 
-    local character = plr.Character
-    local backpack = plr:FindFirstChildOfClass("Backpack")
+    local character = LocalPlayer.Character
+    local backpack = LocalPlayer:FindFirstChildOfClass("Backpack")
     local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 
     if not humanoid or not backpack then return end
@@ -663,27 +663,6 @@ task.spawn(function()
         if _G.AutoLevel then
             resolveSelectedWeapon()
         end
-    end
-end)
-
-local dropdownOpen = false
-WeaponButton.Activated:Connect(function()
-    dropdownOpen = not dropdownOpen
-    WeaponDrop.Visible = dropdownOpen
-    Arrow.Text = dropdownOpen and "▴" or "▾"
-    WeaponDrop.Size = dropdownOpen
-        and UDim2.fromOffset(W - 58, #WeaponOptions * 36 + 10)
-        or UDim2.fromOffset(W - 58, 0)
-    if dropdownOpen then rebuildWeaponOptions() end
-end)
-
-rebuildWeaponOptions()
-resolveSelectedWeapon()
-
-task.spawn(function()
-    while Gui.Parent do
-        if _G.AutoLevel then resolveSelectedWeapon() end
-        task.wait(0.5)
     end
 end)
 
