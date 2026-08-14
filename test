@@ -243,7 +243,7 @@ local Title = Instance.new("TextLabel")
 Title.Position = UDim2.fromOffset(18, 7)
 Title.Size = UDim2.fromOffset(300, 25)
 Title.BackgroundTransparency = 1
-Title.Text = "PHONGDZ HUB  v1.3"
+Title.Text = "PHONGDZ HUB  v1.4"
 Title.Font = Enum.Font.GothamBlack
 Title.TextSize = 19
 Title.TextColor3 = Color3.fromRGB(255, 211, 65)
@@ -1357,8 +1357,16 @@ local function TweenTo(target)
     StartSourceMovement()
     shouldTween = true
 
-    local distance = (target.Position - root.Position).Magnitude
-    local duration = math.max(distance / 300, 0.08)
+    -- IMPORTANT:
+    -- Do not cancel/recreate the same long-distance tween every Farm tick.
+    -- The old version restarted the quest tween every ~0.045s, so it could
+    -- accept the quest but never finish moving to the quest/mob.
+    if ActiveTween
+        and ActiveTween.PlaybackState == Enum.PlaybackState.Playing
+        and FarmDestinationTarget
+        and (FarmDestinationTarget.Position - target.Position).Magnitude <= 3 then
+        return
+    end
 
     if ActiveTween then
         pcall(function()
@@ -1367,7 +1375,12 @@ local function TweenTo(target)
         ActiveTween = nil
     end
 
-    -- Exact source idea: tween the invisible block, not the character.
+    FarmDestinationTarget = target
+    FarmDestination = target
+
+    local distance = (target.Position - root.Position).Magnitude
+    local duration = math.max(distance / 300, 0.08)
+
     ActiveTween = TweenService:Create(
         block,
         TweenInfo.new(duration, Enum.EasingStyle.Linear),
@@ -1375,7 +1388,6 @@ local function TweenTo(target)
     )
 
     local tweenRef = ActiveTween
-
     tweenRef.Completed:Connect(function()
         if ActiveTween == tweenRef then
             ActiveTween = nil
@@ -1672,29 +1684,22 @@ local function FastAttack()
 end
 
 local function QuestText()
-    local pg = LocalPlayer:FindFirstChild("PlayerGui")
-    local main = pg and pg:FindFirstChild("Main")
-    local q = main and main:FindFirstChild("Quest")
-    local c = q and q:FindFirstChild("Container")
-    local qt = c and c:FindFirstChild("QuestTitle")
-    local title = qt and qt:FindFirstChild("Title")
+    local playerGui = LocalPlayer:FindFirstChild("PlayerGui")
+    local main = playerGui and playerGui:FindFirstChild("Main")
+    local quest = main and main:FindFirstChild("Quest")
 
-    -- Fallback for UI variants that nest the title differently.
-    if not title and q then
-        for _, obj in ipairs(q:GetDescendants()) do
-            if obj:IsA("TextLabel") and string.find(
-                string.lower(obj.Text or ""),
-                string.lower(NameMon or ""),
-                1,
-                true
-            ) then
-                title = obj
-                break
-            end
-        end
+    if not quest then
+        return nil, ""
     end
 
-    return q, title
+    local title = ""
+    pcall(function()
+        if quest.Visible then
+            title = quest.Container.QuestTitle.Title.Text or ""
+        end
+    end)
+
+    return quest, tostring(title)
 end
 
 
@@ -1747,47 +1752,43 @@ local function RunFarm()
         RestoreFarmGravity()
         StopSourceMovement()
         StopBringMobs()
+        ActiveTarget = nil
         return
     end
 
-    -- Keep CheckLevel exactly as it is. The quest/farm flow below follows
-    -- the new source's order: validate quest -> go quest NPC -> StartQuest
-    -- -> find mob -> move above mob -> attack.
-    DisableFarmGravity()
-    StartSourceMovement()
     CheckLevel()
 
     if not NameMon or not NameQuest or not CFrameQ then
         return
     end
 
-    local q, title = QuestText()
+    DisableFarmGravity()
+    StartSourceMovement()
+
     local root = GetRoot()
-    if not root then
+    if not root then return end
+
+    -- Exact source-style quest UI check:
+    -- PlayerGui.Main.Quest.Visible
+    local questUI, questTitle = QuestText()
+    if not questUI then
         return
     end
 
-    local questVisible = q and q.Visible == true
-    local questTitle = title and tostring(title.Text or "") or ""
-
-    -- SOURCE-STYLE QUEST FLOW
-    -- Wrong quest while a quest is open -> abandon once, then reacquire.
-    if questVisible and not string.find(questTitle, tostring(NameMon), 1, true) then
-        local rem = ReplicatedStorage:FindFirstChild("Remotes")
-        local comm = rem and rem:FindFirstChild("CommF_")
-
-        if comm then
+    -- 1. Wrong quest -> abandon, then the next tick reacquires the correct one.
+    if questUI.Visible and questTitle ~= "" then
+        if not string.find(string.lower(questTitle), string.lower(tostring(NameMon)), 1, true) then
             pcall(function()
-                comm:InvokeServer("AbandonQuest")
+                ReplicatedStorage.Remotes.CommF_:InvokeServer("AbandonQuest")
             end)
-        end
 
-        return
+            task.wait(0.2)
+            return
+        end
     end
 
-    -- No quest -> travel to the quest giver and start it only after
-    -- reaching the quest position, matching the source's sequencing.
-    if not questVisible then
+    -- 2. No quest -> go to quest NPC, wait until close, then StartQuest.
+    if not questUI.Visible then
         local distanceToQuest = (root.Position - CFrameQ.Position).Magnitude
 
         if distanceToQuest > 10 then
@@ -1795,101 +1796,129 @@ local function RunFarm()
             return
         end
 
-        local rem = ReplicatedStorage:FindFirstChild("Remotes")
-        local comm = rem and rem:FindFirstChild("CommF_")
-
-        if comm then
-            pcall(function()
-                comm:InvokeServer("StartQuest", NameQuest, QuestLv)
-            end)
+        -- Stop any stale movement before requesting the quest.
+        if ActiveTween then
+            pcall(function() ActiveTween:Cancel() end)
+            ActiveTween = nil
         end
 
+        FarmDestinationTarget = nil
+        FarmDestination = nil
+
+        pcall(function()
+            ReplicatedStorage.Remotes.CommF_:InvokeServer(
+                "StartQuest",
+                NameQuest,
+                QuestLv
+            )
+        end)
+
+        -- Give the quest UI time to update, matching the source's sequencing.
+        task.wait(0.8)
         return
     end
 
-    -- SOURCE-STYLE MOB FLOW
+    -- 3. Quest is active -> find the exact mob selected by CheckLevel.
     local enemies = workspace:FindFirstChild("Enemies")
-    if not enemies then
-        return
-    end
+    if not enemies then return end
 
-    local enemyName = NameMon
-    local foundMob = false
+    local targetMob = nil
 
     for _, mob in ipairs(enemies:GetChildren()) do
-        if mob.Name == enemyName then
+        if mob.Name == NameMon then
             local hum = mob:FindFirstChildOfClass("Humanoid")
             local mobRoot = mob:FindFirstChild("HumanoidRootPart")
 
             if hum and mobRoot and hum.Health > 0 then
-                foundMob = true
-
-                if ActiveTarget ~= mob then
-                    ActiveTarget = mob
-                    FarmDestination = nil
-                    FarmDestinationTarget = nil
-                    StopFarmTween()
-                    StopBringMobs()
-                end
-
-                AutoHaki()
-                local equippedTool = EquipFarmWeapon()
-
-                -- Same source positioning idea: stay above the target.
-                -- TweenTo handles the actual movement; no hard CFrame snap.
-                TweenTo(mobRoot.CFrame * CFrame.new(0, 20, 0))
-
-                if not _G.AutoLevel then
-                    return
-                end
-
-                -- Keep the existing BringEnemy implementation.
-                BringEnemy(mob)
-
-                -- Keep Fast Attack unchanged.
-                if equippedTool and (ChooseWeapon ~= "Blox Fruit" or FruitM1Enabled) then
-                    FastAttack()
-                end
-
-                pcall(function()
-                    mobRoot.CanCollide = false
-                    mobRoot.Size = Vector3.new(60, 60, 60)
-                    hum.WalkSpeed = 0
-                    hum.JumpPower = 0
-                end)
-
+                targetMob = mob
                 break
             end
         end
     end
 
-    -- SOURCE-STYLE REPLICATED ENEMY FALLBACK
-    if not foundMob then
-        for _, mob in ipairs(ReplicatedStorage:GetChildren()) do
-            if mob.Name == enemyName then
-                local hum = mob:FindFirstChildOfClass("Humanoid")
-                local mobRoot = mob:FindFirstChild("HumanoidRootPart")
+    -- 4. If the mob exists, keep the farm loop alive until the mob dies
+    -- or the quest disappears. This is the important part the old version
+    -- was missing: it did not maintain a continuous source-style kill loop.
+    if targetMob then
+        ActiveTarget = targetMob
+        AutoHaki()
+        local equippedWeapon = EquipFarmWeapon()
 
-                if hum and mobRoot and hum.Health > 0 then
-                    foundMob = true
-                    TweenTo(mobRoot.CFrame * CFrame.new(0, 20, 0))
-                    break
-                end
+        local hum = targetMob:FindFirstChildOfClass("Humanoid")
+        local mobRoot = targetMob:FindFirstChild("HumanoidRootPart")
+
+        if not hum or not mobRoot then
+            return
+        end
+
+        while _G.AutoLevel
+            and questUI.Parent
+            and questUI.Visible
+            and targetMob.Parent
+            and hum.Health > 0 do
+
+            mobRoot = targetMob:FindFirstChild("HumanoidRootPart")
+            hum = targetMob:FindFirstChildOfClass("Humanoid")
+
+            if not mobRoot or not hum or hum.Health <= 0 then
+                break
+            end
+
+            -- Source positioning: 20 studs above the mob.
+            local farmCF = mobRoot.CFrame * CFrame.new(0, 20, 0)
+            TweenTo(farmCF)
+
+            -- Keep source BringEnemy behavior.
+            BringEnemy(targetMob)
+
+            -- Keep the source-derived FastAttack.
+            if equippedWeapon and
+               (ChooseWeapon ~= "Blox Fruit" or FruitM1Enabled) then
+                FastAttack()
+            end
+
+            pcall(function()
+                mobRoot.CanCollide = false
+                hum.WalkSpeed = 0
+                hum.JumpPower = 0
+            end)
+
+            task.wait(0.045)
+
+            -- Quest may disappear immediately after the kill.
+            local currentQuest = LocalPlayer.PlayerGui.Main:FindFirstChild("Quest")
+            if not currentQuest or not currentQuest.Visible then
+                break
+            end
+        end
+
+        ActiveTarget = nil
+        FarmDestinationTarget = nil
+        return
+    end
+
+    -- 5. Same source fallbacks: replicated enemy, then EnemySpawns.
+    for _, mob in ipairs(ReplicatedStorage:GetChildren()) do
+        if mob.Name == NameMon then
+            local hum = mob:FindFirstChildOfClass("Humanoid")
+            local mobRoot = mob:FindFirstChild("HumanoidRootPart")
+
+            if hum and mobRoot and hum.Health > 0 then
+                TweenTo(mobRoot.CFrame * CFrame.new(0, 20, 0))
+                return
             end
         end
     end
 
-    -- SOURCE-STYLE SPAWN FALLBACK
-    if not foundMob then
-        local worldOrigin = workspace:FindFirstChild("_WorldOrigin")
-        local spawnFolder = worldOrigin and worldOrigin:FindFirstChild("EnemySpawns")
+    local worldOrigin = workspace:FindFirstChild("_WorldOrigin")
+    local spawnFolder = worldOrigin and worldOrigin:FindFirstChild("EnemySpawns")
 
-        if spawnFolder then
-            for _, spawnPoint in ipairs(spawnFolder:GetChildren()) do
-                if string.find(tostring(spawnPoint.Name), tostring(enemyName), 1, true) then
-                    TweenTo(spawnPoint.CFrame * CFrame.new(0, 20, 0))
-                    break
-                end
+    if spawnFolder then
+        for _, spawnPoint in ipairs(spawnFolder:GetChildren()) do
+            if string.find(string.lower(tostring(spawnPoint.Name)),
+                           string.lower(tostring(NameMon)), 1, true) then
+                TweenTo(spawnPoint.CFrame * CFrame.new(0, 20, 0))
+                return
             end
         end
     end
