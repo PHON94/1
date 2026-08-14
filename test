@@ -1500,8 +1500,27 @@ local function StopBringMobs()
     BringName = nil
 end
 
+--===========================================================================
+-- PHONGDZ HUB :: SOURCE-BASED MOB GROUPING ONLY
+-- Movement/FastAttack/Farm target selection are untouched.
+--===========================================================================
+
+local BringMobsConnection = nil
+local BringMobsCenter = nil
+local BringMobsName = nil
+
+local function StopBringMobs()
+    if BringMobsConnection then
+        BringMobsConnection:Disconnect()
+        BringMobsConnection = nil
+    end
+
+    BringMobsCenter = nil
+    BringMobsName = nil
+end
+
 local function StartBringMobs(targetName, centerRoot)
-    if not centerRoot or not centerRoot.Parent then
+    if not targetName or not centerRoot or not centerRoot.Parent then
         return
     end
 
@@ -1510,24 +1529,26 @@ local function StartBringMobs(targetName, centerRoot)
         return
     end
 
-    -- Reuse the same heartbeat worker instead of recreating a connection
-    -- every Farm tick. This avoids mob positions oscillating.
-    if BringConnection and BringCenter == centerRoot and BringName == targetName then
+    -- Reuse one Heartbeat worker for the current target.
+    if BringMobsConnection
+        and BringMobsCenter == centerRoot
+        and BringMobsName == targetName
+    then
         return
     end
 
     StopBringMobs()
 
-    BringCenter = centerRoot
-    BringName = targetName
+    BringMobsCenter = centerRoot
+    BringMobsName = targetName
 
-    BringConnection = RunService.Heartbeat:Connect(function()
+    BringMobsConnection = RunService.Heartbeat:Connect(function()
         if not _G.AutoLevel then
             StopBringMobs()
             return
         end
 
-        local center = BringCenter
+        local center = BringMobsCenter
         if not center or not center.Parent then
             StopBringMobs()
             return
@@ -1538,30 +1559,38 @@ local function StartBringMobs(targetName, centerRoot)
             return
         end
 
-        local centerPos = center.Position
+        local centerPosition = center.Position
 
         for _, mob in ipairs(currentEnemies:GetChildren()) do
-            if mob.Name == BringName then
-                local hum = mob:FindFirstChildOfClass("Humanoid")
+            if mob.Name == BringMobsName then
+                local humanoid = mob:FindFirstChildOfClass("Humanoid")
                 local root = mob:FindFirstChild("HumanoidRootPart")
 
-                if hum and root and hum.Health > 0 then
-                    local distance = (root.Position - centerPos).Magnitude
+                if humanoid and root and humanoid.Health > 0 then
+                    local offset = root.Position - centerPosition
+                    local horizontalDistance = Vector3.new(
+                        offset.X,
+                        0,
+                        offset.Z
+                    ).Magnitude
 
-                    -- Keep only nearby quest mobs. Do not move mobs from
-                    -- another area/server section into the farm.
-                    if distance <= 220 then
+                    -- Same practical idea as the source grouping:
+                    -- only pull mobs from the current farming area.
+                    if horizontalDistance <= 220 then
+                        local targetPosition = Vector3.new(
+                            centerPosition.X,
+                            root.Position.Y,
+                            centerPosition.Z
+                        )
+
                         pcall(function()
                             root.AssemblyLinearVelocity = Vector3.zero
                             root.AssemblyAngularVelocity = Vector3.zero
 
-                            -- Match the source's intended "gom quái" behavior:
-                            -- place each target at the same center point.
-                            root.CFrame = CFrame.new(
-                                centerPos.X,
-                                root.Position.Y,
-                                centerPos.Z
-                            )
+                            -- Preserve each mob's Y level; group them on X/Z
+                            -- so the Farm movement system remains in control
+                            -- of the player's vertical position.
+                            root.CFrame = CFrame.new(targetPosition)
                         end)
                     end
                 end
