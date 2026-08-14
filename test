@@ -243,7 +243,7 @@ local Title = Instance.new("TextLabel")
 Title.Position = UDim2.fromOffset(18, 7)
 Title.Size = UDim2.fromOffset(300, 25)
 Title.BackgroundTransparency = 1
-Title.Text = "PHONGDZ HUB  v1.1"
+Title.Text = "PHONGDZ HUB  v1.3"
 Title.Font = Enum.Font.GothamBlack
 Title.TextSize = 19
 Title.TextColor3 = Color3.fromRGB(255, 211, 65)
@@ -1510,69 +1510,167 @@ local function BringEnemy(Mon)
     end)
 end
 
-local function FastAttack()
-    if not ResolveAttackRemotes() then return end
-    local enemies = workspace:FindFirstChild("Enemies")
-    local root = GetRoot()
-    if not enemies or not root then return end
+local SourceFastAttack = {
+    LastFire = 0,
+    Interval = 0.035,
+    Range = 60,
+    AttackRemote = nil,
+    HitRemote = nil,
+}
 
-    local bestMob, bestHead, bestDistance
-    local hits = {}
-
-    local preferred = ActiveTarget
-    local preferredHum = preferred and preferred:FindFirstChildOfClass("Humanoid")
-    local preferredHead = preferred and preferred:FindFirstChild("Head")
-    local preferredRoot = preferred and preferred:FindFirstChild("HumanoidRootPart")
-
-    if preferred and preferred.Parent and preferredHum and preferredHead and preferredRoot
-        and preferredHum.Health > 0 and preferred.Name == Ms
-        and (root.Position - preferredRoot.Position).Magnitude <= 90 then
-        bestMob = preferred
-        bestHead = preferredHead
-        bestDistance = (root.Position - preferredHead.Position).Magnitude
+local function GetSourceFastAttackRemotes()
+    if SourceFastAttack.AttackRemote and SourceFastAttack.HitRemote
+        and SourceFastAttack.AttackRemote.Parent and SourceFastAttack.HitRemote.Parent then
+        return SourceFastAttack.AttackRemote, SourceFastAttack.HitRemote
     end
 
-    if not bestMob then
-        for _, mob in ipairs(enemies:GetChildren()) do
-            if mob.Name == Ms then
-                local hum = mob:FindFirstChildOfClass("Humanoid")
-                local head = mob:FindFirstChild("Head")
-                local rp = mob:FindFirstChild("HumanoidRootPart")
-                if hum and head and rp and hum.Health > 0 then
-                    local d = (root.Position - head.Position).Magnitude
-                    if d <= 260 and (not bestDistance or d < bestDistance) then
-                        bestMob, bestHead, bestDistance = mob, head, d
-                    end
-                end
-            end
-        end
-    end
+    local ok = pcall(function()
+        local storage = ReplicatedStorage
+        local modules = storage:FindFirstChild("Modules")
+        local net = modules and modules:FindFirstChild("Net")
+        if not net then return end
 
-    if not bestMob or not bestHead then return end
-    ActiveTarget = bestMob
-
-    local centerRoot = bestMob:FindFirstChild("HumanoidRootPart")
-    if centerRoot then
-        for _, mob in ipairs(enemies:GetChildren()) do
-            if mob.Name == Ms then
-                local hum = mob:FindFirstChildOfClass("Humanoid")
-                local head = mob:FindFirstChild("Head")
-                local rp = mob:FindFirstChild("HumanoidRootPart")
-                if hum and head and rp and hum.Health > 0
-                    and (rp.Position - centerRoot.Position).Magnitude <= 55 then
-                    hits[#hits + 1] = {mob, head}
-                end
-            end
-        end
-    end
-
-    if #hits == 0 then hits[1] = {bestMob, bestHead} end
-
-    pcall(function()
-        AttackRemote:FireServer(1e-9)
-        HitRemote:FireServer(bestHead, hits)
+        SourceFastAttack.AttackRemote = net:FindFirstChild("RE/RegisterAttack")
+        SourceFastAttack.HitRemote = net:FindFirstChild("RE/RegisterHit")
     end)
+
+    if ok and SourceFastAttack.AttackRemote and SourceFastAttack.HitRemote then
+        return SourceFastAttack.AttackRemote, SourceFastAttack.HitRemote
+    end
+
+    return nil, nil
 end
+
+-- Source-derived target scan: enemies only, so this farm routine never
+-- intentionally targets other players.
+local function GetSourceFarmTargets(character, range)
+    local enemiesFolder = workspace:FindFirstChild("Enemies")
+    local root = character and character:FindFirstChild("HumanoidRootPart")
+    if not enemiesFolder or not root then return {} end
+
+    local targets = {}
+    for _, enemy in ipairs(enemiesFolder:GetChildren()) do
+        if enemy.Name == Ms and not enemy:GetAttribute("IsBoat") then
+            local enemyRoot = enemy:FindFirstChild("HumanoidRootPart")
+            local hum = enemy:FindFirstChildOfClass("Humanoid")
+            if enemyRoot and hum and hum.Health > 0 then
+                if (enemyRoot.Position - root.Position).Magnitude <= range then
+                    targets[#targets + 1] = enemy
+                end
+            end
+        end
+    end
+    return targets
+end
+
+-- Source-style hit-part selection. Prefer combat limbs, then Head/PrimaryPart.
+local function GetSourceHitPart(enemy)
+    local limbs = {
+        "RightLowerArm", "RightUpperArm", "LeftLowerArm",
+        "LeftUpperArm", "RightHand", "LeftHand"
+    }
+
+    for _, name in ipairs(limbs) do
+        local part = enemy:FindFirstChild(name)
+        if part then return part end
+    end
+
+    return enemy:FindFirstChild("Head") or enemy.PrimaryPart
+end
+
+local function FastAttack()
+    if not _G.AutoLevel then return end
+    if os.clock() - SourceFastAttack.LastFire < SourceFastAttack.Interval then return end
+
+    local character = LocalPlayer.Character
+    local root = character and character:FindFirstChild("HumanoidRootPart")
+    local hum = character and character:FindFirstChildOfClass("Humanoid")
+    if not character or not root or not hum or hum.Health <= 0 then return end
+
+    local equippedWeapon = character:FindFirstChildOfClass("Tool")
+    if not equippedWeapon then
+        equippedWeapon = EquipFarmWeapon()
+    end
+    if not equippedWeapon then return end
+
+    -- Keep the existing weapon selector intact.
+    if ChooseWeapon == "Blox Fruit" and not FruitM1Enabled then
+        return
+    end
+
+    local targets = GetSourceFarmTargets(character, SourceFastAttack.Range)
+    if #targets == 0 then return end
+
+    local attackEvent, hitEvent = GetSourceFastAttackRemotes()
+    if not attackEvent or not hitEvent then return end
+
+    local hitTargets = {}
+    local mainTarget = nil
+
+    for _, enemy in ipairs(targets) do
+        local hitPart = GetSourceHitPart(enemy)
+        if hitPart then
+            hitTargets[#hitTargets + 1] = {enemy, hitPart}
+            mainTarget = mainTarget or hitPart
+        end
+    end
+
+    if not mainTarget or #hitTargets == 0 then return end
+
+    -- Match the source's combat-remote-thread branch when available.
+    local sent = false
+    pcall(function()
+        attackEvent:FireServer(0)
+        sent = true
+    end)
+
+    local modules = ReplicatedStorage:FindFirstChild("Modules")
+    local flagsModule = modules and modules:FindFirstChild("Flags")
+    local combatRemoteThread = false
+
+    if flagsModule then
+        pcall(function()
+            combatRemoteThread = require(flagsModule).COMBAT_REMOTE_THREAD or false
+        end)
+    end
+
+    if combatRemoteThread then
+        -- Some executors expose the source's SendHitsToServer through the
+        -- current PlayerScripts environment. Use it when available.
+        local playerScripts = LocalPlayer:FindFirstChild("PlayerScripts")
+        local localScript = playerScripts and playerScripts:FindFirstChildOfClass("LocalScript")
+        local hitFunction
+
+        if localScript and type(getsenv) == "function" then
+            pcall(function()
+                local env = getsenv(localScript)
+                if env then hitFunction = env._G and env._G.SendHitsToServer end
+            end)
+        end
+
+        if type(hitFunction) == "function" then
+            pcall(function()
+                hitFunction(mainTarget, hitTargets)
+                sent = true
+            end)
+        else
+            pcall(function()
+                hitEvent:FireServer(mainTarget, hitTargets)
+                sent = true
+            end)
+        end
+    else
+        pcall(function()
+            hitEvent:FireServer(mainTarget, hitTargets)
+            sent = true
+        end)
+    end
+
+    if sent then
+        SourceFastAttack.LastFire = os.clock()
+    end
+end
+
 local function QuestText()
     local pg = LocalPlayer:FindFirstChild("PlayerGui")
     local main = pg and pg:FindFirstChild("Main")
@@ -1648,185 +1746,155 @@ local function RunFarm()
     if not _G.AutoLevel then
         RestoreFarmGravity()
         StopSourceMovement()
+        StopBringMobs()
         return
     end
 
+    -- Keep CheckLevel exactly as it is. The quest/farm flow below follows
+    -- the new source's order: validate quest -> go quest NPC -> StartQuest
+    -- -> find mob -> move above mob -> attack.
     DisableFarmGravity()
     StartSourceMovement()
     CheckLevel()
-    if not NameMon or not NameQuest or not CFrameQ then return end
+
+    if not NameMon or not NameQuest or not CFrameQ then
+        return
+    end
 
     local q, title = QuestText()
+    local root = GetRoot()
+    if not root then
+        return
+    end
 
-    -- Direct server-side quest fallback. This only fires periodically and
-    -- avoids depending entirely on the visual Quest GUI.
-    local now = os.clock()
-    if (not q or not title) and (not _G.__PhongdzLastQuestStart or now - _G.__PhongdzLastQuestStart > 1.25) then
+    local questVisible = q and q.Visible == true
+    local questTitle = title and tostring(title.Text or "") or ""
+
+    -- SOURCE-STYLE QUEST FLOW
+    -- Wrong quest while a quest is open -> abandon once, then reacquire.
+    if questVisible and not string.find(questTitle, tostring(NameMon), 1, true) then
         local rem = ReplicatedStorage:FindFirstChild("Remotes")
         local comm = rem and rem:FindFirstChild("CommF_")
+
+        if comm then
+            pcall(function()
+                comm:InvokeServer("AbandonQuest")
+            end)
+        end
+
+        return
+    end
+
+    -- No quest -> travel to the quest giver and start it only after
+    -- reaching the quest position, matching the source's sequencing.
+    if not questVisible then
+        local distanceToQuest = (root.Position - CFrameQ.Position).Magnitude
+
+        if distanceToQuest > 10 then
+            TweenTo(CFrameQ)
+            return
+        end
+
+        local rem = ReplicatedStorage:FindFirstChild("Remotes")
+        local comm = rem and rem:FindFirstChild("CommF_")
+
         if comm then
             pcall(function()
                 comm:InvokeServer("StartQuest", NameQuest, QuestLv)
             end)
-            _G.__PhongdzLastQuestStart = now
         end
+
+        return
     end
 
-    local correct
-    if q and title then
-        correct = q.Visible and string.find(
-            tostring(title.Text or ""),
-            tostring(NameMon),
-            1,
-            true
-        )
-    else
-        -- Without a Quest GUI, use the direct quest-start cooldown.
-        correct = (
-            _G.__PhongdzLastQuestStart
-            and os.clock() - _G.__PhongdzLastQuestStart < 2.5
-        )
+    -- SOURCE-STYLE MOB FLOW
+    local enemies = workspace:FindFirstChild("Enemies")
+    if not enemies then
+        return
     end
 
-    if not correct then
-        local rem = ReplicatedStorage:FindFirstChild("Remotes")
-        local comm = rem and rem:FindFirstChild("CommF_")
-        local root = GetRoot()
+    local enemyName = NameMon
+    local foundMob = false
 
-        -- If the quest UI is not reliable, avoid repeatedly abandoning it.
-        -- Move to the quest NPC and request the quest at a controlled rate.
-        if comm and root then
-            local nearQuest = (root.Position - CFrameQ.Position).Magnitude <= 10
+    for _, mob in ipairs(enemies:GetChildren()) do
+        if mob.Name == enemyName then
+            local hum = mob:FindFirstChildOfClass("Humanoid")
+            local mobRoot = mob:FindFirstChild("HumanoidRootPart")
 
-            if not nearQuest then
-                TweenTo(CFrameQ)
-            elseif not _G.__PhongdzLastQuestStart
-                or os.clock() - _G.__PhongdzLastQuestStart > 1.25 then
+            if hum and mobRoot and hum.Health > 0 then
+                foundMob = true
+
+                if ActiveTarget ~= mob then
+                    ActiveTarget = mob
+                    FarmDestination = nil
+                    FarmDestinationTarget = nil
+                    StopFarmTween()
+                    StopBringMobs()
+                end
+
+                AutoHaki()
+                local equippedTool = EquipFarmWeapon()
+
+                -- Same source positioning idea: stay above the target.
+                -- TweenTo handles the actual movement; no hard CFrame snap.
+                TweenTo(mobRoot.CFrame * CFrame.new(0, 20, 0))
+
+                if not _G.AutoLevel then
+                    return
+                end
+
+                -- Keep the existing BringEnemy implementation.
+                BringEnemy(mob)
+
+                -- Keep Fast Attack unchanged.
+                if equippedTool and (ChooseWeapon ~= "Blox Fruit" or FruitM1Enabled) then
+                    FastAttack()
+                end
 
                 pcall(function()
-                    comm:InvokeServer("StartQuest", NameQuest, QuestLv)
+                    mobRoot.CanCollide = false
+                    mobRoot.Size = Vector3.new(60, 60, 60)
+                    hum.WalkSpeed = 0
+                    hum.JumpPower = 0
                 end)
 
-                _G.__PhongdzLastQuestStart = os.clock()
+                break
             end
         end
-
-        return
     end
 
-    local enemies = workspace:FindFirstChild("Enemies")
-    local root = GetRoot()
-    if not enemies or not root then return end
-
-    -- Reuse the current target when possible; otherwise acquire nearest mob.
-    local target = ActiveTarget
-    local targetHum = target and target:FindFirstChildOfClass("Humanoid")
-    local targetRoot = target and target:FindFirstChild("HumanoidRootPart")
-
-    if not target
-        or not target.Parent
-        or not targetHum
-        or targetHum.Health <= 0
-        or not targetRoot
-        or target.Name ~= Ms
-        or (root.Position - targetRoot.Position).Magnitude > 180 then
-
-        target = nil
-        local bestDistance
-
-        for _, mob in ipairs(enemies:GetChildren()) do
-            if mob.Name == Ms then
+    -- SOURCE-STYLE REPLICATED ENEMY FALLBACK
+    if not foundMob then
+        for _, mob in ipairs(ReplicatedStorage:GetChildren()) do
+            if mob.Name == enemyName then
                 local hum = mob:FindFirstChildOfClass("Humanoid")
-                local rp = mob:FindFirstChild("HumanoidRootPart")
+                local mobRoot = mob:FindFirstChild("HumanoidRootPart")
 
-                if hum and rp and hum.Health > 0 then
-                    local d = (root.Position - rp.Position).Magnitude
-                    if not bestDistance or d < bestDistance then
-                        target = mob
-                        bestDistance = d
-                    end
+                if hum and mobRoot and hum.Health > 0 then
+                    foundMob = true
+                    TweenTo(mobRoot.CFrame * CFrame.new(0, 20, 0))
+                    break
                 end
             end
         end
-
-        if ActiveTarget ~= target then
-            ActiveTarget = target
-            FarmDestination = nil
-            FarmDestinationTarget = nil
-            StopFarmTween()
-        end
     end
 
-    if target then
-        local hum = target:FindFirstChildOfClass("Humanoid")
-        local rp = target:FindFirstChild("HumanoidRootPart")
+    -- SOURCE-STYLE SPAWN FALLBACK
+    if not foundMob then
+        local worldOrigin = workspace:FindFirstChild("_WorldOrigin")
+        local spawnFolder = worldOrigin and worldOrigin:FindFirstChild("EnemySpawns")
 
-        if hum and rp and hum.Health > 0 then
-            AutoHaki()
-            EquipFarmWeapon()
-
-            local farmPoint = GetFarmPoint(rp)
-
-            -- If the stable destination is already stale by more than 18 studs,
-            -- refresh it once rather than freezing the player on an old point.
-            if farmPoint and (farmPoint.Position - (rp.Position + Vector3.new(0, 42, 0))).Magnitude > 18 then
-                FarmDestination = rp.CFrame * CFrame.new(0, 38, 0)
-                farmPoint = FarmDestination
-            end
-
-            if farmPoint then
-                TweenTo(farmPoint)
-            end
-
-            if not _G.AutoLevel then
-                return
-            end
-
-            BringEnemy(target)
-
-            -- Attack only after a tool is actually equipped.
-            local equippedTool = EquipFarmWeapon()
-            if equippedTool and (ChooseWeapon ~= "Blox Fruit" or FruitM1Enabled) then
-                FastAttack()
-            end
-
-            pcall(function()
-                rp.Size = Vector3.new(60, 60, 60)
-                rp.CanCollide = false
-                -- Do not zero NPC physics every tick; the server can fight it
-                -- and feed the correction back into the farm movement.
-            end)
-        else
-            ActiveTarget = nil
-            FarmDestination = nil
-            FarmDestinationTarget = nil
-            StopFarmTween()
-        end
-        return
-    end
-
-    -- No mob alive: move to the nearest known spawn instead of scanning
-    -- and waiting through the whole enemy folder again.
-    local wo = workspace:FindFirstChild("_WorldOrigin")
-    local sp = wo and wo:FindFirstChild("EnemySpawns")
-    if sp then
-        local bestSpawn, bestDistance
-
-        for _, part in ipairs(sp:GetChildren()) do
-            if string.find(tostring(part.Name), tostring(NameMon), 1, true) then
-                local d = (root.Position - part.Position).Magnitude
-                if not bestDistance or d < bestDistance then
-                    bestSpawn = part
-                    bestDistance = d
+        if spawnFolder then
+            for _, spawnPoint in ipairs(spawnFolder:GetChildren()) do
+                if string.find(tostring(spawnPoint.Name), tostring(enemyName), 1, true) then
+                    TweenTo(spawnPoint.CFrame * CFrame.new(0, 20, 0))
+                    break
                 end
             end
-        end
-
-        if bestSpawn then
-            TweenTo(bestSpawn.CFrame * CFrame.new(0, 40, 0))
         end
     end
 end
+
 
 
 function CheckLevel()
