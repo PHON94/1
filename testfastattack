@@ -1311,6 +1311,9 @@ local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local LocalPlayer = Players.LocalPlayer
+local plr = LocalPlayer
+local replicated = ReplicatedStorage
+local Sec = 0.1
 
 _G.AutoLevel = (_G.AutoLevel == true)
 _G.Fast_Delay = _G.Fast_Delay or 0.01
@@ -1618,6 +1621,8 @@ local function BringEnemy(Mon)
     end)
 end
 
+local EquipFarmWeapon
+
 local SourceFastAttack = {
     LastFire = 0,
     Interval = 0.035,
@@ -1658,7 +1663,7 @@ local function GetSourceFarmTargets(character, range)
 
     local targets = {}
     for _, enemy in ipairs(enemiesFolder:GetChildren()) do
-        if enemy.Name == Ms and not enemy:GetAttribute("IsBoat") then
+        if enemy.Name == (ActiveTarget and ActiveTarget.Name or "") and not enemy:GetAttribute("IsBoat") then
             local enemyRoot = enemy:FindFirstChild("HumanoidRootPart")
             local hum = enemy:FindFirstChildOfClass("Humanoid")
             if enemyRoot and hum and hum.Health > 0 then
@@ -1779,7 +1784,7 @@ local function FastAttack()
     end
 end
 
-local function EquipFarmWeapon()
+EquipFarmWeapon = function()
     resolveSelectedWeapon()
     local selected = SelectWeapon
     local backpack = LocalPlayer:FindFirstChildOfClass("Backpack")
@@ -2182,28 +2187,8 @@ LocalPlayer.CharacterAdded:Connect(function()
     end
 end)
 
--- Start only after CheckLevel has been declared above.
--- IMPORTANT: FARM_SOURCE is loaded through loadstring(), so it does NOT
--- inherit the UI's local `Gui` variable. Never use `Gui.Parent` here.
-task.spawn(function()
-    while true do
-        if _G.AutoLevel then
-            local ok, err = pcall(RunFarm)
+-- FARM_SOURCE ends after its persistent workers are installed.
 
-            if not ok then
-                warn("[PhongdzHub] Farm tick:", err)
-                task.wait(0.12)
-            else
-                task.wait(0.045)
-            end
-        else
-            StopBringMobs()
-            RestoreFarmGravity()
-            StopSourceMovement()
-            task.wait(0.12)
-        end
-    end
-end)
 ]=]
 
 local farmLoaded = false
