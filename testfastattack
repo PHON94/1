@@ -330,7 +330,7 @@ local Title = Instance.new("TextLabel")
 Title.Position = UDim2.fromOffset(18, 7)
 Title.Size = UDim2.fromOffset(300, 25)
 Title.BackgroundTransparency = 1
-Title.Text = "PHONGDZ HUB  v1.7"
+Title.Text = "PHONGDZ HUB  v1.6"
 Title.Font = Enum.Font.GothamBlack
 Title.TextSize = 19
 Title.TextColor3 = Color3.fromRGB(255, 211, 65)
@@ -1617,7 +1617,7 @@ local EquipFarmWeapon
 
 local SourceFastAttack = {
     LastFire = 0,
-    Interval = 0.035,
+    Interval = 0.025,
     Range = 60,
     AttackRemote = nil,
     HitRemote = nil,
