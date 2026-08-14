@@ -330,7 +330,7 @@ local Title = Instance.new("TextLabel")
 Title.Position = UDim2.fromOffset(18, 7)
 Title.Size = UDim2.fromOffset(300, 25)
 Title.BackgroundTransparency = 1
-Title.Text = "PHONGDZ HUB  v1.8"
+Title.Text = "PHONGDZ HUB  v1.9"
 Title.Font = Enum.Font.GothamBlack
 Title.TextSize = 19
 Title.TextColor3 = Color3.fromRGB(255, 211, 65)
@@ -1512,10 +1512,13 @@ local function TweenTo(target)
     shouldTween = true
 
     -- Don't restart an already-running trip to the same destination.
-    if FarmDestinationTarget
-        and (FarmDestinationTarget.Position - target.Position).Magnitude <= 3
-        and ActiveTween
-        and ActiveTween.PlaybackState == Enum.PlaybackState.Playing then
+    -- Farm Level calls TweenTo repeatedly while a mob is alive. Recreating
+    -- the tween every cycle makes HumanoidRootPart repeatedly snap toward
+    -- the newest CFrame, which causes the visible up/down jerk and "rubber
+    -- band" back to the previous position. Let the current trip finish.
+    if ActiveTween and ActiveTween.PlaybackState == Enum.PlaybackState.Playing then
+        FarmDestinationTarget = target
+        FarmDestination = target
         return
     end
 
@@ -1530,7 +1533,7 @@ local function TweenTo(target)
     FarmDestination = target
 
     local distance = (target.Position - root.Position).Magnitude
-    local duration = math.clamp(distance / 300, 0.15, 8)
+    local duration = math.clamp(distance / 250, 0.15, 8)
 
     -- Move the character root directly. The old implementation tweened an
     -- invisible anchor but then reset that anchor to the player's position
@@ -1546,8 +1549,6 @@ local function TweenTo(target)
     tweenRef.Completed:Connect(function()
         if ActiveTween == tweenRef then
             ActiveTween = nil
-            FarmDestinationTarget = target
-            FarmDestination = target
         end
     end)
 
