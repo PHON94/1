@@ -330,7 +330,7 @@ local Title = Instance.new("TextLabel")
 Title.Position = UDim2.fromOffset(18, 7)
 Title.Size = UDim2.fromOffset(300, 25)
 Title.BackgroundTransparency = 1
-Title.Text = "PHONGDZ HUB  v2.4"
+Title.Text = "PHONGDZ HUB  v2.5"
 Title.Font = Enum.Font.GothamBlack
 Title.TextSize = 19
 Title.TextColor3 = Color3.fromRGB(255, 211, 65)
@@ -484,6 +484,27 @@ local fmtc = Instance.new("UICorner")
 fmtc.CornerRadius = UDim.new(0, 7)
 fmtc.Parent = FruitM1Toggle
 
+FruitM1Enabled = _G.FruitM1Enabled == true
+_G.FruitM1Enabled = FruitM1Enabled
+
+local function UpdateFruitM1Button()
+    FruitM1Toggle.Text = FruitM1Enabled and "Blox Fruit M1: ON" or "Blox Fruit M1: OFF"
+    FruitM1Toggle.BackgroundColor3 = FruitM1Enabled
+        and Color3.fromRGB(88, 224, 132)
+        or Color3.fromRGB(31, 34, 43)
+    FruitM1Toggle.TextColor3 = FruitM1Enabled
+        and Color3.fromRGB(16, 18, 24)
+        or Color3.fromRGB(180, 186, 198)
+end
+
+FruitM1Toggle.Activated:Connect(function()
+    FruitM1Enabled = not FruitM1Enabled
+    _G.FruitM1Enabled = FruitM1Enabled
+    UpdateFruitM1Button()
+end)
+
+UpdateFruitM1Button()
+
 local WeaponDrop = Instance.new("Frame")
 WeaponDrop.Name = "WeaponDropdown"
 WeaponDrop.Position = UDim2.fromOffset(13, 98)
@@ -587,17 +608,6 @@ EquipWeapon = function(text)
         end)
     end
 end
-
-task.spawn(function()
-    while task.wait(0.5) do
-        pcall(function()
-            local selected = SourceResolveWeapon()
-            if selected then
-                EquipWeapon(selected)
-            end
-        end)
-    end
-end)
 
 local function rebuildWeaponOptions()
     for _, child in ipairs(WeaponDrop:GetChildren()) do
@@ -1418,7 +1428,7 @@ print("[PhongdzHub] UI READY")
 local FARM_SOURCE = [=[
 ChooseWeapon = _G.ChooseWP or "Melee"
 SelectWeapon = _G.SelectWeapon
-FruitM1Enabled = _G.FruitM1Enabled ~= false
+FruitM1Enabled = _G.FruitM1Enabled == true
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
@@ -1867,7 +1877,54 @@ RunService.Heartbeat:Connect(function()
     pcall(ExecuteSourceHitRegistration)
 end)
 
+RunService.Heartbeat:Connect(function()
+    pcall(function()
+        if _G.AutoLevel then
+            EquipFarmWeapon()
+            ExecuteSourceFruitM1()
+        end
+    end)
+end)
+
+-- Source-style Blox Fruit M1, active only during Farm Level.
+local function ExecuteSourceFruitM1()
+    if not _G.AutoLevel or not FruitM1Enabled then return end
+    if (_G.ChooseWP or ChooseWeapon) ~= "Blox Fruit" then return end
+
+    local character = LocalPlayer.Character
+    if not character then return end
+
+    local tool = character:FindFirstChildOfClass("Tool")
+    if not tool or tool.ToolTip ~= "Blox Fruit" then return end
+
+    local target = ActiveTarget
+    if not target or not target.Parent then return end
+    local humanoid = target:FindFirstChildOfClass("Humanoid")
+    local root = target:FindFirstChild("HumanoidRootPart")
+    if not humanoid or humanoid.Health <= 0 or not root then return end
+
+    local playerRoot = character:FindFirstChild("HumanoidRootPart")
+    if not playerRoot or (playerRoot.Position - root.Position).Magnitude > 80 then return end
+
+    local leftClickRemote = tool:FindFirstChild("LeftClickRemote")
+    if not leftClickRemote then return end
+
+    pcall(function()
+        if typeof(getconnections) == "function" then
+            for _, connection in ipairs(getconnections(tool.Activated)) do
+                if typeof(connection.Function) == "function" then
+                    pcall(function() getupvalues(connection.Function) end)
+                end
+            end
+        end
+        leftClickRemote:FireServer(Vector3.new(0.01, -500, 0.01), 1, true)
+        leftClickRemote:FireServer(false)
+    end)
+end
+
 EquipFarmWeapon = function()
+    if not _G.AutoLevel then return nil end
+
     resolveSelectedWeapon()
     local selected = SelectWeapon or SourceResolveWeapon()
     if selected then
