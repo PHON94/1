@@ -330,7 +330,7 @@ local Title = Instance.new("TextLabel")
 Title.Position = UDim2.fromOffset(18, 7)
 Title.Size = UDim2.fromOffset(300, 25)
 Title.BackgroundTransparency = 1
-Title.Text = "PHONGDZ HUB  v2.7"
+Title.Text = "PHONGDZ HUB  v2.8"
 Title.Font = Enum.Font.GothamBlack
 Title.TextSize = 19
 Title.TextColor3 = Color3.fromRGB(255, 211, 65)
@@ -823,73 +823,164 @@ CardDesc.TextColor3 = Color3.fromRGB(143, 149, 162)
 CardDesc.TextXAlignment = Enum.TextXAlignment.Left
 CardDesc.Parent = Card
 
-local Toggle = Instance.new("TextButton")
-Toggle.Position = UDim2.fromOffset(16, 222)
-Toggle.Size = UDim2.fromOffset(W - 32, 52)
-Toggle.Text = ""
-Toggle.BackgroundColor3 = Color3.fromRGB(55, 59, 70)
-Toggle.BorderSizePixel = 0
-Toggle.AutoButtonColor = false
-Toggle.Parent = FolderScroll
+--===========================================================================
+-- FARM MODE UI
+-- Choose Farm Level / Farm Bones, then press START FARM.
+--===========================================================================
+local FarmMode = _G.FarmMode or "Level"
+local farmEnabled = false
 
-local tc = Instance.new("UICorner")
-tc.CornerRadius = UDim.new(0, 10)
-tc.Parent = Toggle
+local ModeCard = Instance.new("Frame")
+ModeCard.Position = UDim2.fromOffset(4, 80)
+ModeCard.Size = UDim2.new(1, -8, 0, 152)
+ModeCard.BackgroundColor3 = Color3.fromRGB(22, 25, 33)
+ModeCard.BorderSizePixel = 0
+ModeCard.ZIndex = 45
+ModeCard.Parent = farmPage
+local modeCorner = Instance.new("UICorner")
+modeCorner.CornerRadius = UDim.new(0, 10)
+modeCorner.Parent = ModeCard
 
-local Label = Instance.new("TextLabel")
-Label.Position = UDim2.fromOffset(13, 5)
-Label.Size = UDim2.fromOffset(290, 20)
-Label.BackgroundTransparency = 1
-Label.Text = "FARM LEVEL + FAST ATTACK"
-Label.Font = Enum.Font.GothamBold
-Label.TextSize = 11
-Label.TextColor3 = Color3.fromRGB(240, 242, 247)
-Label.TextXAlignment = Enum.TextXAlignment.Left
-Label.Parent = Toggle
+local ModeTitle = Instance.new("TextLabel")
+ModeTitle.Position = UDim2.fromOffset(13, 9)
+ModeTitle.Size = UDim2.new(1, -26, 0, 22)
+ModeTitle.BackgroundTransparency = 1
+ModeTitle.Text = "FARM MODE"
+ModeTitle.Font = Enum.Font.GothamBlack
+ModeTitle.TextSize = 12
+ModeTitle.TextColor3 = Color3.fromRGB(255, 211, 65)
+ModeTitle.TextXAlignment = Enum.TextXAlignment.Left
+ModeTitle.ZIndex = 46
+ModeTitle.Parent = ModeCard
 
-local Status = Instance.new("TextLabel")
-Status.Position = UDim2.fromOffset(13, 27)
-Status.Size = UDim2.fromOffset(310, 17)
-Status.BackgroundTransparency = 1
-Status.Text = "● MENU READY — FARM OFF"
-Status.Font = Enum.Font.GothamMedium
-Status.TextSize = 9
-Status.TextColor3 = Color3.fromRGB(130, 135, 148)
-Status.TextXAlignment = Enum.TextXAlignment.Left
-Status.Parent = Toggle
+local ModeSelector = Instance.new("TextButton")
+ModeSelector.Position = UDim2.fromOffset(13, 38)
+ModeSelector.Size = UDim2.new(1, -26, 0, 42)
+ModeSelector.BackgroundColor3 = Color3.fromRGB(31, 34, 43)
+ModeSelector.BorderSizePixel = 0
+ModeSelector.Text = ""
+ModeSelector.AutoButtonColor = false
+ModeSelector.Active = true
+ModeSelector.ZIndex = 60
+ModeSelector.Parent = ModeCard
+local msc = Instance.new("UICorner")
+msc.CornerRadius = UDim.new(0, 8)
+msc.Parent = ModeSelector
 
-local Pill = Instance.new("Frame")
-Pill.Size = UDim2.fromOffset(52, 29)
-Pill.Position = UDim2.fromOffset(W - 84, 11)
-Pill.BackgroundColor3 = Color3.fromRGB(70, 74, 85)
-Pill.BorderSizePixel = 0
-Pill.Parent = Toggle
+local ModeText = Instance.new("TextLabel")
+ModeText.Position = UDim2.fromOffset(12, 3)
+ModeText.Size = UDim2.new(1, -50, 0, 18)
+ModeText.BackgroundTransparency = 1
+ModeText.Font = Enum.Font.GothamBold
+ModeText.TextSize = 10
+ModeText.TextColor3 = Color3.fromRGB(240, 242, 247)
+ModeText.TextXAlignment = Enum.TextXAlignment.Left
+ModeText.ZIndex = 61
+ModeText.Parent = ModeSelector
 
-local pc = Instance.new("UICorner")
-pc.CornerRadius = UDim.new(1, 0)
-pc.Parent = Pill
+local ModeDesc = Instance.new("TextLabel")
+ModeDesc.Position = UDim2.fromOffset(12, 21)
+ModeDesc.Size = UDim2.new(1, -50, 0, 14)
+ModeDesc.BackgroundTransparency = 1
+ModeDesc.Font = Enum.Font.Gotham
+ModeDesc.TextSize = 8
+ModeDesc.TextColor3 = Color3.fromRGB(130, 135, 148)
+ModeDesc.TextXAlignment = Enum.TextXAlignment.Left
+ModeDesc.ZIndex = 61
+ModeDesc.Parent = ModeSelector
 
-local Knob = Instance.new("Frame")
-Knob.Size = UDim2.fromOffset(23, 23)
-Knob.Position = UDim2.fromOffset(3, 3)
-Knob.BackgroundColor3 = Color3.fromRGB(230, 232, 238)
-Knob.BorderSizePixel = 0
-Knob.Parent = Pill
+local ModeArrow = Instance.new("TextLabel")
+ModeArrow.Size = UDim2.fromOffset(28, 42)
+ModeArrow.Position = UDim2.new(1, -34, 0, 0)
+ModeArrow.BackgroundTransparency = 1
+ModeArrow.Text = "▾"
+ModeArrow.Font = Enum.Font.GothamBold
+ModeArrow.TextSize = 16
+ModeArrow.TextColor3 = Color3.fromRGB(180, 186, 198)
+ModeArrow.ZIndex = 61
+ModeArrow.Parent = ModeSelector
 
-local kc = Instance.new("UICorner")
-kc.CornerRadius = UDim.new(1, 0)
-kc.Parent = Knob
+local ModeDrop = Instance.new("Frame")
+ModeDrop.Position = UDim2.fromOffset(13, 82)
+ModeDrop.Size = UDim2.new(1, -26, 0, 0)
+ModeDrop.BackgroundColor3 = Color3.fromRGB(27, 30, 38)
+ModeDrop.BorderSizePixel = 0
+ModeDrop.Visible = false
+ModeDrop.ClipsDescendants = true
+ModeDrop.ZIndex = 200
+ModeDrop.Parent = ModeCard
+local mdc = Instance.new("UICorner")
+mdc.CornerRadius = UDim.new(0, 8)
+mdc.Parent = ModeDrop
 
-local Hint = Instance.new("TextLabel")
-Hint.Position = UDim2.fromOffset(16, 287)
-Hint.Size = UDim2.fromOffset(W - 32, 18)
-Hint.BackgroundTransparency = 1
-Hint.Text = "Kéo header để di chuyển  •  — để thu nhỏ"
-Hint.Font = Enum.Font.GothamMedium
-Hint.TextSize = 8
-Hint.TextColor3 = Color3.fromRGB(86, 91, 104)
-Hint.TextXAlignment = Enum.TextXAlignment.Center
-Hint.Parent = FolderScroll
+local StartFarm = Instance.new("TextButton")
+StartFarm.Position = UDim2.fromOffset(13, 100)
+StartFarm.Size = UDim2.new(1, -26, 0, 40)
+StartFarm.BackgroundColor3 = Color3.fromRGB(255, 211, 65)
+StartFarm.BorderSizePixel = 0
+StartFarm.Text = "START FARM"
+StartFarm.Font = Enum.Font.GothamBlack
+StartFarm.TextSize = 11
+StartFarm.TextColor3 = Color3.fromRGB(16, 18, 24)
+StartFarm.AutoButtonColor = false
+StartFarm.Active = true
+StartFarm.ZIndex = 70
+StartFarm.Parent = ModeCard
+local sfc = Instance.new("UICorner")
+sfc.CornerRadius = UDim.new(0, 8)
+sfc.Parent = StartFarm
+
+local FarmStatus = Instance.new("TextLabel")
+FarmStatus.Position = UDim2.fromOffset(4, 239)
+FarmStatus.Size = UDim2.new(1, -8, 0, 24)
+FarmStatus.BackgroundTransparency = 1
+FarmStatus.Text = "● READY — FARM OFF"
+FarmStatus.Font = Enum.Font.GothamMedium
+FarmStatus.TextSize = 8
+FarmStatus.TextColor3 = Color3.fromRGB(130, 135, 148)
+FarmStatus.TextXAlignment = Enum.TextXAlignment.Center
+FarmStatus.ZIndex = 45
+FarmStatus.Parent = farmPage
+
+local modeOpen = false
+local function updateFarmModeUI()
+    if FarmMode == "Bone" then
+        ModeText.Text = "Farm Bones"
+        ModeDesc.Text = "Haunted Castle • 4 loại mob Bone"
+    else
+        FarmMode = "Level"
+        ModeText.Text = "Farm Level"
+        ModeDesc.Text = "Quest → đúng mob → di chuyển → Fast Attack"
+    end
+end
+local function rebuildFarmModeDrop()
+    for _, child in ipairs(ModeDrop:GetChildren()) do
+        if child:IsA("GuiButton") then child:Destroy() end
+    end
+    local options={{id="Level",title="Farm Level"},{id="Bone",title="Farm Bones"}}
+    for i,data in ipairs(options) do
+        local b=Instance.new("TextButton")
+        b.Position=UDim2.fromOffset(5,(i-1)*38+5); b.Size=UDim2.new(1,-10,0,34)
+        b.BackgroundColor3=data.id==FarmMode and Color3.fromRGB(255,211,65) or Color3.fromRGB(36,39,49)
+        b.BorderSizePixel=0; b.Text=data.title; b.Font=Enum.Font.GothamBold; b.TextSize=9
+        b.TextColor3=data.id==FarmMode and Color3.fromRGB(16,18,24) or Color3.fromRGB(220,223,230)
+        b.TextXAlignment=Enum.TextXAlignment.Left; b.AutoButtonColor=false; b.Active=true; b.ZIndex=210; b.Parent=ModeDrop
+        local pad=Instance.new("UIPadding"); pad.PaddingLeft=UDim.new(0,10); pad.Parent=b
+        local c=Instance.new("UICorner"); c.CornerRadius=UDim.new(0,6); c.Parent=b
+        b.Activated:Connect(function()
+            if farmEnabled then return end
+            FarmMode=data.id; _G.FarmMode=FarmMode; modeOpen=false; ModeDrop.Visible=false
+            ModeDrop.Size=UDim2.new(1,-26,0,0); ModeArrow.Text="▾"; updateFarmModeUI(); rebuildFarmModeDrop()
+        end)
+    end
+end
+ModeSelector.Activated:Connect(function()
+    if farmEnabled then return end
+    modeOpen=not modeOpen; ModeDrop.Visible=modeOpen; ModeArrow.Text=modeOpen and "▴" or "▾"
+    ModeDrop.Size=modeOpen and UDim2.new(1,-26,0,84) or UDim2.new(1,-26,0,0)
+    if modeOpen then rebuildFarmModeDrop() end
+end)
+updateFarmModeUI(); rebuildFarmModeDrop()
 
 --===========================================================================
 -- PHONGDZ HUB :: CATEGORY MENU (FIXED)
@@ -1520,7 +1611,7 @@ local function StartSourceMovement()
             local primary = character and character.PrimaryPart
             if not character or not primary then return end
 
-            if _G.AutoLevel and shouldTween then
+            if (_G.AutoLevel or _G.AutoFarm_Bone) and shouldTween then
                 if block and block.Parent == workspace then
                     if (primary.Position - block.Position).Magnitude <= 200 then
                         primary.CFrame = block.CFrame
@@ -1889,7 +1980,7 @@ end)
 
 -- Source-style Blox Fruit M1, active only during Farm Level.
 --===========================================================================
--- PHONGDZ HUB v2.7 :: SOURCE BLOX FRUIT SKILL FALLBACK
+-- PHONGDZ HUB  v2.8 :: SOURCE BLOX FRUIT SKILL FALLBACK
 -- Based on source Useskills("Blox Fruit", Z/X/C).
 -- Runs only while Farm Level is ON and Fruit M1 is OFF.
 --===========================================================================
@@ -2329,6 +2420,58 @@ task.spawn(function()
     end
 end)
 
+--===========================================================================
+-- FARM BONES — SOURCE LOGIC
+--===========================================================================
+_G.AutoFarm_Bone = (_G.AutoFarm_Bone == true)
+_G.AcceptQuestB = (_G.AcceptQuestB == true)
+local SourceBoneMobs={"Reborn Skeleton","Living Zombie","Demonic Soul","Possessed Mummy","Posessed Mummy"}
+local function SourceBoneAlive(mob)
+    if not mob or not mob.Parent then return false end
+    local hum=mob:FindFirstChildOfClass("Humanoid"); local root=mob:FindFirstChild("HumanoidRootPart")
+    return hum and root and hum.Health>0
+end
+local function FindSourceBone()
+    local enemies=workspace:FindFirstChild("Enemies"); local playerRoot=GetRoot()
+    if not enemies or not playerRoot then return nil end
+    local best,bestDistance=nil,math.huge
+    for _,mob in ipairs(enemies:GetChildren()) do
+        if table.find(SourceBoneMobs,mob.Name) and SourceBoneAlive(mob) then
+            local mr=mob:FindFirstChild("HumanoidRootPart"); local d=(mr.Position-playerRoot.Position).Magnitude
+            if d<bestDistance then best,bestDistance=mob,d end
+        end
+    end
+    return best
+end
+task.spawn(function()
+    while task.wait(0.5) do
+        if _G.AutoFarm_Bone and _G.FarmMode=="Bone" then
+            pcall(function()
+                local char=LocalPlayer.Character; local root=char and char:FindFirstChild("HumanoidRootPart")
+                if not root then return end
+                local main=LocalPlayer.PlayerGui:FindFirstChild("Main"); local questUI=main and main:FindFirstChild("Quest")
+                local bone=FindSourceBone()
+                if _G.AcceptQuestB and questUI and not questUI.Visible then
+                    local questPos=CFrame.new(-9516.99316,172.01718,6078.46533); TweenTo(questPos)
+                    local timeout=tick()
+                    repeat task.wait(0.15) until not _G.AutoFarm_Bone or (questPos.Position-root.Position).Magnitude<=50 or tick()-timeout>15
+                    if not _G.AutoFarm_Bone then return end
+                    local q={{"StartQuest","HauntedQuest2",2},{"StartQuest","HauntedQuest2",1},{"StartQuest","HauntedQuest1",1},{"StartQuest","HauntedQuest1",2}}
+                    ReplicatedStorage.Remotes.CommF_:InvokeServer(unpack(q[math.random(1,#q)])); task.wait(0.5); return
+                end
+                if bone then
+                    ActiveTarget=bone; AutoHaki()
+                    local mr=bone:FindFirstChild("HumanoidRootPart"); if mr then TweenTo(mr.CFrame*CFrame.new(0,20,0)) end
+                    BringEnemy(bone); EquipFarmWeapon(); ExecuteSourceFastAttack(); SpamFruitSkillsFallback()
+                    pcall(function() Attack.Kill(bone,true) end)
+                else
+                    TweenTo(CFrame.new(-9495.6806640625,453.58624267578125,5977.3486328125))
+                end
+            end)
+        end
+    end
+end)
+
 -- Recover from stale targets/spawn transitions without touching the UI.
 -- Keep this thread alive even while Farm is OFF, because AutoLevel can be
 -- enabled later by the UI after FARM_SOURCE has already loaded.
@@ -2359,9 +2502,9 @@ LocalPlayer.CharacterAdded:Connect(function()
     StopBringMobs()
     RestoreFarmGravity()
 
-    if _G.AutoLevel then
+    if (_G.AutoLevel or _G.AutoFarm_Bone) then
         task.delay(0.75, function()
-            if _G.AutoLevel then
+            if (_G.AutoLevel or _G.AutoFarm_Bone) then
                 DisableFarmGravity()
             end
         end)
