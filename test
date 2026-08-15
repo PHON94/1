@@ -1889,6 +1889,37 @@ RunService.Heartbeat:Connect(function()
 end)
 
 -- Source-style Blox Fruit M1, active only during Farm Level.
+--===========================================================================
+-- PHONGDZ HUB v2.7 :: SOURCE BLOX FRUIT SKILL FALLBACK
+-- Based on source Useskills("Blox Fruit", Z/X/C).
+-- Runs only while Farm Level is ON and Fruit M1 is OFF.
+--===========================================================================
+local vim1 = game:GetService("VirtualInputManager")
+
+local function SourceUseFruitSkill(skill)
+    if not _G.AutoLevel then return end
+    if (_G.ChooseWP or ChooseWeapon) ~= "Blox Fruit" then return end
+    if not skill then return end
+
+    pcall(function()
+        vim1:SendKeyEvent(true, skill, false, game)
+        vim1:SendKeyEvent(false, skill, false, game)
+    end)
+end
+
+local function SpamFruitSkillsFallback()
+    if not _G.AutoLevel then return end
+    if (_G.ChooseWP or ChooseWeapon) ~= "Blox Fruit" then return end
+    if FruitM1Enabled then return end
+
+    -- Source's Blox Fruit skill sequence: Z -> X -> C.
+    SourceUseFruitSkill("Z")
+    task.wait(0.08)
+    SourceUseFruitSkill("X")
+    task.wait(0.08)
+    SourceUseFruitSkill("C")
+end
+
 local function ExecuteSourceFruitM1()
     if not _G.AutoLevel or not FruitM1Enabled then return end
     if (_G.ChooseWP or ChooseWeapon) ~= "Blox Fruit" then return end
@@ -2233,6 +2264,7 @@ task.spawn(function()
                                     TweenTo(mobRoot.CFrame * CFrame.new(0,20,0))
                                     BringEnemy(v)
                                     EquipFarmWeapon()
+                                    SpamFruitSkillsFallback()
                                     if not questUI.Visible then break end
                                 until not _G.AutoLevel or not v.Parent or not SourceFarmAlive(v)
                                 ActiveTarget = nil
