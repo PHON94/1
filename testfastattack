@@ -330,7 +330,7 @@ local Title = Instance.new("TextLabel")
 Title.Position = UDim2.fromOffset(18, 7)
 Title.Size = UDim2.fromOffset(300, 25)
 Title.BackgroundTransparency = 1
-Title.Text = "PHONGDZ HUB  v3.4"
+Title.Text = "PHONGDZ HUB  v3.3"
 Title.Font = Enum.Font.GothamBlack
 Title.TextSize = 19
 Title.TextColor3 = Color3.fromRGB(255, 211, 65)
@@ -1760,7 +1760,7 @@ local function UpdateMaterialToggle()
 end
 
 AutoMaterialToggle.Activated:Connect(function()
- if farmEnabled or MasteryEnabled then return end
+ if farmEnabled then return end
  MaterialEnabled=not MaterialEnabled
  if MaterialEnabled then
   if not farmLoaded or not loadFarm() then MaterialEnabled=false; UpdateMaterialToggle(); return end
@@ -1773,489 +1773,6 @@ AutoMaterialToggle.Activated:Connect(function()
  UpdateMaterialToggle()
 end)
 UpdateMaterialToggle()
-
---===========================================================================
--- FARM MASTERY
--- Source-derived target logic:
---   Cake  -> Cookie Crafter
---   Bone  -> Reborn Skeleton
--- Source Attack.Mas / Attack.Sword / Attack.Masgun behavior is preserved:
---   keep mobs grouped, move above target, and use the selected weapon.
---===========================================================================
-
-local MasteryEnabled = false
-local SelectedMasteryWeapon = _G.PhongdzMasteryWeapon or ""
-_G.PhongdzMasteryWeapon = SelectedMasteryWeapon
-
-local MasteryButton = Instance.new("TextButton")
-MasteryButton.Name = "MasteryWeaponSelector"
-MasteryButton.Position = UDim2.fromOffset(4, 312)
-MasteryButton.Size = UDim2.new(1, -8, 0, 58)
-MasteryButton.BackgroundColor3 = Color3.fromRGB(22, 25, 33)
-MasteryButton.BorderSizePixel = 0
-MasteryButton.Text = ""
-MasteryButton.AutoButtonColor = false
-MasteryButton.ZIndex = 70
-MasteryButton.Active = true
-MasteryButton.Parent = farmPage
-
-local mmc = Instance.new("UICorner")
-mmc.CornerRadius = UDim.new(0, 10)
-mmc.Parent = MasteryButton
-
-local MasteryTitle = Instance.new("TextLabel")
-MasteryTitle.Position = UDim2.fromOffset(13, 7)
-MasteryTitle.Size = UDim2.new(1, -55, 0, 19)
-MasteryTitle.BackgroundTransparency = 1
-MasteryTitle.Text = "SELECT MASTERY WEAPON"
-MasteryTitle.Font = Enum.Font.GothamBlack
-MasteryTitle.TextSize = 10
-MasteryTitle.TextColor3 = Color3.fromRGB(255, 211, 65)
-MasteryTitle.TextXAlignment = Enum.TextXAlignment.Left
-MasteryTitle.Parent = MasteryButton
-
-local MasteryValue = Instance.new("TextLabel")
-MasteryValue.Position = UDim2.fromOffset(13, 29)
-MasteryValue.Size = UDim2.new(1, -65, 0, 21)
-MasteryValue.BackgroundTransparency = 1
-MasteryValue.Text = SelectedMasteryWeapon ~= "" and SelectedMasteryWeapon or "No weapon selected"
-MasteryValue.Font = Enum.Font.GothamBold
-MasteryValue.TextSize = 9
-MasteryValue.TextColor3 = Color3.fromRGB(240, 242, 247)
-MasteryValue.TextXAlignment = Enum.TextXAlignment.Left
-MasteryValue.Parent = MasteryButton
-
-local MasteryArrow = Instance.new("TextLabel")
-MasteryArrow.Size = UDim2.fromOffset(28, 58)
-MasteryArrow.Position = UDim2.new(1, -36, 0, 0)
-MasteryArrow.BackgroundTransparency = 1
-MasteryArrow.Text = "▾"
-MasteryArrow.Font = Enum.Font.GothamBold
-MasteryArrow.TextSize = 16
-MasteryArrow.TextColor3 = Color3.fromRGB(180, 186, 198)
-MasteryArrow.Parent = MasteryButton
-
-local MasteryDrop = Instance.new("Frame")
-MasteryDrop.Name = "MasteryWeaponDropdown"
-MasteryDrop.Position = UDim2.fromOffset(4, 374)
-MasteryDrop.Size = UDim2.new(1, -8, 0, 0)
-MasteryDrop.BackgroundColor3 = Color3.fromRGB(27, 30, 38)
-MasteryDrop.BorderSizePixel = 0
-MasteryDrop.Visible = false
-MasteryDrop.ClipsDescendants = true
-MasteryDrop.ZIndex = 300
-MasteryDrop.Parent = farmPage
-
-local mdc = Instance.new("UICorner")
-mdc.CornerRadius = UDim.new(0, 9)
-mdc.Parent = MasteryDrop
-
-local MasteryDropOpen = false
-
-local function GetMasteryInventory()
-    local result = {}
-    local seen = {}
-
-    local function addTool(name, weaponType, mastery)
-        if not name or name == "" or seen[name] then return end
-        seen[name] = true
-        result[#result + 1] = {
-            Name = name,
-            Type = weaponType or "Weapon",
-            Mastery = tonumber(mastery) or 0,
-        }
-    end
-
-    local ok, inventory = pcall(function()
-        return ReplicatedStorage.Remotes.CommF_:InvokeServer("getInventory")
-    end)
-
-    if ok and type(inventory) == "table" then
-        for _, item in pairs(inventory) do
-            if type(item) == "table" and
-                (item.Type == "Sword" or item.Type == "Gun") then
-                addTool(item.Name, item.Type, item.Mastery)
-            end
-        end
-    end
-
-    local character = LocalPlayer.Character
-    local backpack = LocalPlayer:FindFirstChildOfClass("Backpack")
-
-    local function scan(container)
-        if not container then return end
-        for _, tool in ipairs(container:GetChildren()) do
-            if tool:IsA("Tool") then
-                local tooltip = tool.ToolTip
-                if tooltip == "Sword" or tooltip == "Gun" then
-                    addTool(tool.Name, tooltip, tool:GetAttribute("Mastery"))
-                end
-            end
-        end
-    end
-
-    scan(backpack)
-    scan(character)
-
-    table.sort(result, function(a, b)
-        return a.Name:lower() < b.Name:lower()
-    end)
-
-    return result
-end
-
-local function RefreshMasteryValue()
-    MasteryValue.Text = SelectedMasteryWeapon ~= "" and SelectedMasteryWeapon or "No weapon selected"
-    MasteryArrow.Text = MasteryDropOpen and "▴" or "▾"
-end
-
-local function RebuildMasteryOptions()
-    for _, child in ipairs(MasteryDrop:GetChildren()) do
-        if child:IsA("TextButton") then
-            child:Destroy()
-        end
-    end
-
-    local inventory = GetMasteryInventory()
-
-    if SelectedMasteryWeapon ~= "" then
-        local found = false
-        for _, item in ipairs(inventory) do
-            if item.Name == SelectedMasteryWeapon then
-                found = true
-                break
-            end
-        end
-        if not found then
-            SelectedMasteryWeapon = ""
-            _G.PhongdzMasteryWeapon = ""
-        end
-    end
-
-    if #inventory == 0 then
-        local empty = Instance.new("TextLabel")
-        empty.Size = UDim2.new(1, -10, 0, 34)
-        empty.Position = UDim2.fromOffset(5, 5)
-        empty.BackgroundTransparency = 1
-        empty.Text = "No Sword/Gun found"
-        empty.Font = Enum.Font.GothamMedium
-        empty.TextSize = 9
-        empty.TextColor3 = Color3.fromRGB(150, 155, 168)
-        empty.Parent = MasteryDrop
-    else
-        for index, item in ipairs(inventory) do
-            local option = Instance.new("TextButton")
-            option.Size = UDim2.new(1, -10, 0, 34)
-            option.Position = UDim2.fromOffset(5, (index - 1) * 38 + 5)
-            option.BackgroundColor3 =
-                item.Name == SelectedMasteryWeapon
-                and Color3.fromRGB(48, 53, 66)
-                or Color3.fromRGB(35, 39, 49)
-            option.BorderSizePixel = 0
-            option.Text = item.Name .. "  [" .. item.Type .. " | " .. tostring(item.Mastery) .. "]"
-            option.Font = Enum.Font.GothamMedium
-            option.TextSize = 9
-            option.TextColor3 = Color3.fromRGB(230, 233, 240)
-            option.AutoButtonColor = false
-            option.ZIndex = 310
-            option.Parent = MasteryDrop
-
-            local oc = Instance.new("UICorner")
-            oc.CornerRadius = UDim.new(0, 6)
-            oc.Parent = option
-
-            option.Activated:Connect(function()
-                if MasteryEnabled then return end
-
-                SelectedMasteryWeapon = item.Name
-                _G.PhongdzMasteryWeapon = item.Name
-
-                MasteryDropOpen = false
-                MasteryDrop.Visible = false
-                MasteryDrop.Size = UDim2.new(1, -8, 0, 0)
-
-                RebuildMasteryOptions()
-            end)
-        end
-    end
-
-    RefreshMasteryValue()
-end
-
-MasteryButton.Activated:Connect(function()
-    if MasteryEnabled or farmEnabled then return end
-
-    MasteryDropOpen = not MasteryDropOpen
-    MasteryDrop.Visible = MasteryDropOpen
-
-    if MasteryDropOpen then
-        RebuildMasteryOptions()
-        local count = math.max(1, #GetMasteryInventory())
-        MasteryDrop.Size = UDim2.new(1, -8, 0, math.min(count * 38 + 10, 220))
-    else
-        MasteryDrop.Size = UDim2.new(1, -8, 0, 0)
-    end
-
-    RefreshMasteryValue()
-end)
-
-RebuildMasteryOptions()
-
-local AutoMasteryToggle = Instance.new("TextButton")
-AutoMasteryToggle.Name = "AutoFarmMastery"
-AutoMasteryToggle.Position = UDim2.fromOffset(4, 378)
-AutoMasteryToggle.Size = UDim2.new(1, -8, 0, 58)
-AutoMasteryToggle.BackgroundColor3 = Color3.fromRGB(55, 59, 70)
-AutoMasteryToggle.BorderSizePixel = 0
-AutoMasteryToggle.Text = ""
-AutoMasteryToggle.AutoButtonColor = false
-AutoMasteryToggle.ZIndex = 80
-AutoMasteryToggle.Active = true
-AutoMasteryToggle.Parent = farmPage
-
-local amc2 = Instance.new("UICorner")
-amc2.CornerRadius = UDim.new(0, 10)
-amc2.Parent = AutoMasteryToggle
-
-local AutoMasteryLabel = Instance.new("TextLabel")
-AutoMasteryLabel.Position = UDim2.fromOffset(13, 6)
-AutoMasteryLabel.Size = UDim2.new(1, -90, 0, 20)
-AutoMasteryLabel.BackgroundTransparency = 1
-AutoMasteryLabel.Text = "AUTO FARM MASTERY"
-AutoMasteryLabel.Font = Enum.Font.GothamBold
-AutoMasteryLabel.TextSize = 10
-AutoMasteryLabel.TextColor3 = Color3.fromRGB(240, 242, 247)
-AutoMasteryLabel.TextXAlignment = Enum.TextXAlignment.Left
-AutoMasteryLabel.Parent = AutoMasteryToggle
-
-local AutoMasteryStatus = Instance.new("TextLabel")
-AutoMasteryStatus.Position = UDim2.fromOffset(13, 28)
-AutoMasteryStatus.Size = UDim2.new(1, -90, 0, 17)
-AutoMasteryStatus.BackgroundTransparency = 1
-AutoMasteryStatus.Text = "● MASTERY FARM OFF"
-AutoMasteryStatus.Font = Enum.Font.GothamMedium
-AutoMasteryStatus.TextSize = 8
-AutoMasteryStatus.TextColor3 = Color3.fromRGB(130, 135, 148)
-AutoMasteryStatus.TextXAlignment = Enum.TextXAlignment.Left
-AutoMasteryStatus.Parent = AutoMasteryToggle
-
-local AutoMasteryPill = Instance.new("Frame")
-AutoMasteryPill.Size = UDim2.fromOffset(52, 29)
-AutoMasteryPill.Position = UDim2.new(1, -65, 0, 14)
-AutoMasteryPill.BackgroundColor3 = Color3.fromRGB(70, 74, 85)
-AutoMasteryPill.BorderSizePixel = 0
-AutoMasteryPill.Parent = AutoMasteryToggle
-
-local ampc2 = Instance.new("UICorner")
-ampc2.CornerRadius = UDim.new(1, 0)
-ampc2.Parent = AutoMasteryPill
-
-local AutoMasteryKnob = Instance.new("Frame")
-AutoMasteryKnob.Size = UDim2.fromOffset(23, 23)
-AutoMasteryKnob.Position = UDim2.fromOffset(3, 3)
-AutoMasteryKnob.BackgroundColor3 = Color3.fromRGB(230, 232, 238)
-AutoMasteryKnob.BorderSizePixel = 0
-AutoMasteryKnob.Parent = AutoMasteryPill
-
-local amkc2 = Instance.new("UICorner")
-amkc2.CornerRadius = UDim.new(1, 0)
-amkc2.Parent = AutoMasteryKnob
-
-local function UpdateMasteryToggle()
-    if MasteryEnabled then
-        AutoMasteryToggle.BackgroundColor3 = Color3.fromRGB(255, 211, 65)
-        AutoMasteryKnob.Position = UDim2.fromOffset(26, 3)
-        AutoMasteryKnob.BackgroundColor3 = Color3.fromRGB(16, 18, 24)
-        AutoMasteryStatus.Text = "● FARMING: " .. SelectedMasteryWeapon
-        AutoMasteryStatus.TextColor3 = Color3.fromRGB(16, 18, 24)
-    else
-        AutoMasteryToggle.BackgroundColor3 = Color3.fromRGB(55, 59, 70)
-        AutoMasteryKnob.Position = UDim2.fromOffset(3, 3)
-        AutoMasteryKnob.BackgroundColor3 = Color3.fromRGB(230, 232, 238)
-        AutoMasteryStatus.Text = "● MASTERY FARM OFF"
-        AutoMasteryStatus.TextColor3 = Color3.fromRGB(130, 135, 148)
-    end
-end
-
-AutoMasteryToggle.Activated:Connect(function()
-    if farmEnabled or MaterialEnabled then return end
-
-    if not MasteryEnabled then
-        if SelectedMasteryWeapon == "" then
-            RebuildMasteryOptions()
-            return
-        end
-
-        MasteryEnabled = true
-        _G.FarmMastery_G = false
-        _G.FarmMastery_S = false
-        _G.FarmMastery_Dev = false
-        _G.AutoMaterial = false
-        _G.AutoLevel = true
-        _G.PhongdzFarmMethod = "Farm Mastery"
-    else
-        MasteryEnabled = false
-        _G.FarmMastery_G = false
-        _G.FarmMastery_S = false
-        _G.FarmMastery_Dev = false
-        _G.AutoLevel = false
-        _G.PhongdzFarmMethod = SelectedFarmMethod
-        ActiveTarget = nil
-        pcall(StopSourceMovement)
-    end
-
-    UpdateMasteryToggle()
-end)
-
-UpdateMasteryToggle()
-
--- Source target positions and mob lists.
-local MasteryTargetData = {
-    Cake = {
-        Names = {"Cookie Crafter"},
-        Position = CFrame.new(-1943.676513671875, 251.5095672607422, -12337.880859375),
-    },
-    Bone = {
-        Names = {"Reborn Skeleton"},
-        Position = CFrame.new(-9495.6806640625, 453.58624267578125, 5977.3486328125),
-    },
-}
-
-local function FindMasteryTarget(data)
-    local enemies = workspace:FindFirstChild("Enemies")
-    if not enemies then return nil end
-
-    for _, name in ipairs(data.Names) do
-        for _, mob in ipairs(enemies:GetChildren()) do
-            if mob.Name == name and SourceFarmAlive(mob) then
-                return mob
-            end
-        end
-    end
-
-    return nil
-end
-
-local function GetSelectedMasteryType()
-    local character = LocalPlayer.Character
-    local backpack = LocalPlayer:FindFirstChildOfClass("Backpack")
-
-    local function inspect(container)
-        if not container then return nil end
-        local tool = container:FindFirstChild(SelectedMasteryWeapon)
-        if tool and tool:IsA("Tool") then
-            if tool.ToolTip == "Sword" or tool.ToolTip == "Gun" then
-                return tool.ToolTip
-            end
-        end
-        return nil
-    end
-
-    return inspect(character) or inspect(backpack)
-end
-
-local function EquipSelectedMasteryWeapon()
-    if SelectedMasteryWeapon == "" then return false end
-
-    local character = LocalPlayer.Character
-    local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-    local backpack = LocalPlayer:FindFirstChildOfClass("Backpack")
-
-    if not humanoid or not backpack then return false end
-
-    local equipped = character:FindFirstChild(SelectedMasteryWeapon)
-    if equipped and equipped:IsA("Tool") then return true end
-
-    local tool = backpack:FindFirstChild(SelectedMasteryWeapon)
-    if tool and tool:IsA("Tool") then
-        pcall(function()
-            humanoid:EquipTool(tool)
-        end)
-        return character:FindFirstChild(SelectedMasteryWeapon) ~= nil
-    end
-
-    -- Match source behavior: load the selected inventory item when it is not
-    -- currently in the backpack.
-    pcall(function()
-        ReplicatedStorage.Remotes.CommF_:InvokeServer("LoadItem", SelectedMasteryWeapon)
-    end)
-
-    return false
-end
-
-local function RunSourceMasteryStep()
-    if not MasteryEnabled or not _G.AutoLevel then
-        return
-    end
-
-    local data = MasteryTargetData[(_G.PhongdzMasteryIsland or "Bone")]
-    if not data then return end
-
-    local target = FindMasteryTarget(data)
-    if not target then
-        ActiveTarget = nil
-        TweenTo(data.Position)
-        return
-    end
-
-    local root = target:FindFirstChild("HumanoidRootPart")
-    local humanoid = target:FindFirstChildOfClass("Humanoid")
-    if not root or not humanoid then return end
-
-    ActiveTarget = target
-    AutoHaki()
-    BringEnemy(target)
-
-    local weaponType = GetSelectedMasteryType()
-    if not weaponType then
-        EquipSelectedMasteryWeapon()
-        weaponType = GetSelectedMasteryType()
-    end
-
-    if weaponType == "Sword" then
-        -- Source Attack.Sword: bring mob, equip sword, stay above target.
-        EquipSelectedMasteryWeapon()
-        TweenTo(root.CFrame * CFrame.new(0, 30, 0))
-    elseif weaponType == "Gun" then
-        -- Source Attack.Masgun: use the low-health window for gun skills.
-        local healthThreshold = humanoid.MaxHealth * 0.70
-        if humanoid.Health <= healthThreshold then
-            EquipSelectedMasteryWeapon()
-            TweenTo(root.CFrame * CFrame.new(0, 35, 8))
-        else
-            -- Source first brings the target down before switching to gun damage.
-            local melee = character and character:FindFirstChildOfClass("Tool")
-            if not melee or melee.ToolTip ~= "Melee" then
-                pcall(EquipFarmWeapon)
-            end
-            TweenTo(root.CFrame * CFrame.new(0, 30, 0))
-        end
-    end
-
-    -- Keep the existing source-derived fast attack core active for the
-    -- selected Sword/Gun while the mastery routine owns the target.
-    if weaponType == "Sword" or weaponType == "Gun" then
-        pcall(ExecuteSourceFastAttack)
-        pcall(ExecuteSourceHitRegistration)
-    end
-end
-
-task.spawn(function()
-    while task.wait(0.12) do
-        pcall(RunSourceMasteryStep)
-    end
-end)
-
--- Refresh the weapon list periodically, but never overwrite the user's
--- selection while Mastery Farm is running.
-task.spawn(function()
-    while task.wait(2) do
-        if not MasteryEnabled and MasteryDropOpen then
-            pcall(RebuildMasteryOptions)
-        end
-    end
-end)
-
 
 -- Keep controls above their cards/dropdowns clickable.
 WeaponButton.ZIndex = 70
@@ -2435,11 +1952,7 @@ end)
 Close.Activated:Connect(function()
     _G.AutoLevel = false
     _G.AutoMaterial = false
-    _G.FarmMastery_G = false
-    _G.FarmMastery_S = false
-    _G.FarmMastery_Dev = false
     MaterialEnabled = false
-    MasteryEnabled = false
     Gui:Destroy()
 end)
 
@@ -3282,7 +2795,7 @@ end
 -- Farm Level flow transplanted from source.txt; runs only for Level Farm.
 task.spawn(function()
     while task.wait(Sec) do
-        if _G.AutoLevel and not _G.AutoMaterial and not MasteryEnabled and (_G.PhongdzFarmMethod or "Level Farm") == "Level Farm" then
+        if _G.AutoLevel and not _G.AutoMaterial and (_G.PhongdzFarmMethod or "Level Farm") == "Level Farm" then
             pcall(function()
                 local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
                 local Root = char:WaitForChild("HumanoidRootPart")
@@ -3502,7 +3015,7 @@ local function GetBoneMob()
 end
 
 local function RunBoneFarmStep()
-    if not _G.AutoLevel or _G.AutoMaterial or MasteryEnabled or (_G.PhongdzFarmMethod or "Level Farm") ~= "Farm Bones" then
+    if not _G.AutoLevel or _G.AutoMaterial or (_G.PhongdzFarmMethod or "Level Farm") ~= "Farm Bones" then
         BoneFarmAlive = false
         BoneFarmTarget = nil
         return
@@ -3674,7 +3187,7 @@ Toggle.Activated:Connect(function()
     local nextState = not farmEnabled
 
     if nextState then
-        if MaterialEnabled or MasteryEnabled then return end
+        if MaterialEnabled then return end
         if not farmLoaded then
             if not loadFarm() then
                 farmEnabled = false
@@ -3694,13 +3207,8 @@ Toggle.Activated:Connect(function()
         _G.AutoLevel = false
         _G.AutoFarm_Bone = false
         _G.AutoMaterial = false
-        _G.FarmMastery_G = false
-        _G.FarmMastery_S = false
-        _G.FarmMastery_Dev = false
         MaterialEnabled = false
-        MasteryEnabled = false
         UpdateMaterialToggle()
-        UpdateMasteryToggle()
         pcall(StopSourceMovement)
     end
 
