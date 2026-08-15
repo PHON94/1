@@ -330,7 +330,7 @@ local Title = Instance.new("TextLabel")
 Title.Position = UDim2.fromOffset(18, 7)
 Title.Size = UDim2.fromOffset(300, 25)
 Title.BackgroundTransparency = 1
-Title.Text = "PHONGDZ HUB  v2.7"
+Title.Text = "PHONGDZ HUB  v2.9"
 Title.Font = Enum.Font.GothamBlack
 Title.TextSize = 19
 Title.TextColor3 = Color3.fromRGB(255, 211, 65)
@@ -341,7 +341,7 @@ local Sub = Instance.new("TextLabel")
 Sub.Position = UDim2.fromOffset(19, 34)
 Sub.Size = UDim2.fromOffset(300, 16)
 Sub.BackgroundTransparency = 1
-Sub.Text = "FARM LEVEL  •  FAST ATTACK"
+Sub.Text = "FARM LEVEL / BONES  •  FAST ATTACK"
 Sub.Font = Enum.Font.GothamMedium
 Sub.TextSize = 9
 Sub.TextColor3 = Color3.fromRGB(145, 150, 163)
@@ -690,7 +690,7 @@ FolderScroll.Position = UDim2.fromOffset(0, 60)
 FolderScroll.Size = UDim2.fromOffset(W, H - 60)
 FolderScroll.BackgroundTransparency = 1
 FolderScroll.BorderSizePixel = 0
-FolderScroll.CanvasSize = UDim2.fromOffset(0, 380)
+FolderScroll.CanvasSize = UDim2.fromOffset(0, 420)
 FolderScroll.ScrollBarThickness = 5
 FolderScroll.ScrollBarImageColor3 = Color3.fromRGB(255, 211, 65)
 FolderScroll.ScrollingDirection = Enum.ScrollingDirection.Y
@@ -790,40 +790,143 @@ end
 _G.PhongdzFolderScrollTop = scrollFoldersToTop
 _G.PhongdzFolderScrollBottom = scrollFoldersToBottom
 
-local Card = Instance.new("Frame")
-Card.Position = UDim2.fromOffset(16, 144)
-Card.Size = UDim2.fromOffset(W - 32, 65)
-Card.BackgroundColor3 = Color3.fromRGB(22, 25, 33)
-Card.BorderSizePixel = 0
-Card.Parent = FolderScroll
+--===========================================================================
+-- FARM METHOD SELECTOR + START FARM
+--===========================================================================
+local farmEnabled = false
 
-local cardCorner = Instance.new("UICorner")
-cardCorner.CornerRadius = UDim.new(0, 10)
-cardCorner.Parent = Card
+local FarmMethodButton = Instance.new("TextButton")
+FarmMethodButton.Name = "FarmMethodButton"
+FarmMethodButton.Position = UDim2.fromOffset(16, 144)
+FarmMethodButton.Size = UDim2.fromOffset(W - 32, 65)
+FarmMethodButton.BackgroundColor3 = Color3.fromRGB(22, 25, 33)
+FarmMethodButton.BorderSizePixel = 0
+FarmMethodButton.Text = ""
+FarmMethodButton.AutoButtonColor = false
+FarmMethodButton.Parent = FolderScroll
 
-local CardTitle = Instance.new("TextLabel")
-CardTitle.Position = UDim2.fromOffset(13, 8)
-CardTitle.Size = UDim2.fromOffset(W - 58, 23)
-CardTitle.BackgroundTransparency = 1
-CardTitle.Text = "Automatic Level Farming"
-CardTitle.Font = Enum.Font.GothamBold
-CardTitle.TextSize = 12
-CardTitle.TextColor3 = Color3.fromRGB(241, 243, 247)
-CardTitle.TextXAlignment = Enum.TextXAlignment.Left
-CardTitle.Parent = Card
+local fmbc = Instance.new("UICorner")
+fmbc.CornerRadius = UDim.new(0, 10)
+fmbc.Parent = FarmMethodButton
 
-local CardDesc = Instance.new("TextLabel")
-CardDesc.Position = UDim2.fromOffset(13, 32)
-CardDesc.Size = UDim2.fromOffset(W - 58, 22)
-CardDesc.BackgroundTransparency = 1
-CardDesc.Text = "Quest → đúng mob → di chuyển → Fast Attack"
-CardDesc.Font = Enum.Font.Gotham
-CardDesc.TextSize = 9
-CardDesc.TextColor3 = Color3.fromRGB(143, 149, 162)
-CardDesc.TextXAlignment = Enum.TextXAlignment.Left
-CardDesc.Parent = Card
+local FarmMethodTitle = Instance.new("TextLabel")
+FarmMethodTitle.Position = UDim2.fromOffset(13, 7)
+FarmMethodTitle.Size = UDim2.fromOffset(W - 58, 20)
+FarmMethodTitle.BackgroundTransparency = 1
+FarmMethodTitle.Text = "Select Method Farm"
+FarmMethodTitle.Font = Enum.Font.GothamBlack
+FarmMethodTitle.TextSize = 11
+FarmMethodTitle.TextColor3 = Color3.fromRGB(255, 211, 65)
+FarmMethodTitle.TextXAlignment = Enum.TextXAlignment.Left
+FarmMethodTitle.Parent = FarmMethodButton
+
+local FarmMethodValue = Instance.new("TextLabel")
+FarmMethodValue.Position = UDim2.fromOffset(13, 30)
+FarmMethodValue.Size = UDim2.fromOffset(W - 94, 24)
+FarmMethodValue.BackgroundTransparency = 1
+FarmMethodValue.Text = "Level Farm"
+FarmMethodValue.Font = Enum.Font.GothamBold
+FarmMethodValue.TextSize = 10
+FarmMethodValue.TextColor3 = Color3.fromRGB(240, 242, 247)
+FarmMethodValue.TextXAlignment = Enum.TextXAlignment.Left
+FarmMethodValue.Parent = FarmMethodButton
+
+local FarmMethodArrow = Instance.new("TextLabel")
+FarmMethodArrow.Size = UDim2.fromOffset(28, 65)
+FarmMethodArrow.Position = UDim2.new(1, -36, 0, 0)
+FarmMethodArrow.BackgroundTransparency = 1
+FarmMethodArrow.Text = "▾"
+FarmMethodArrow.Font = Enum.Font.GothamBold
+FarmMethodArrow.TextSize = 16
+FarmMethodArrow.TextColor3 = Color3.fromRGB(180, 186, 198)
+FarmMethodArrow.Parent = FarmMethodButton
+
+local FarmMethodDrop = Instance.new("Frame")
+FarmMethodDrop.Name = "FarmMethodDropdown"
+FarmMethodDrop.Position = UDim2.fromOffset(16, 213)
+FarmMethodDrop.Size = UDim2.fromOffset(W - 32, 0)
+FarmMethodDrop.BackgroundColor3 = Color3.fromRGB(27, 30, 38)
+FarmMethodDrop.BorderSizePixel = 0
+FarmMethodDrop.Visible = false
+FarmMethodDrop.ClipsDescendants = true
+FarmMethodDrop.ZIndex = 300
+FarmMethodDrop.Parent = FolderScroll
+
+local fmddc = Instance.new("UICorner")
+fmddc.CornerRadius = UDim.new(0, 9)
+fmddc.Parent = FarmMethodDrop
+
+local FarmMethods = {"Level Farm", "Farm Bones"}
+local SelectedFarmMethod = _G.PhongdzFarmMethod or "Level Farm"
+if SelectedFarmMethod ~= "Level Farm" and SelectedFarmMethod ~= "Farm Bones" then
+    SelectedFarmMethod = "Level Farm"
+end
+_G.PhongdzFarmMethod = SelectedFarmMethod
+local FarmMethodOpen = false
+
+local function refreshFarmMethodUI()
+    FarmMethodValue.Text = SelectedFarmMethod
+    FarmMethodArrow.Text = FarmMethodOpen and "▴" or "▾"
+end
+
+local function rebuildFarmMethodOptions()
+    for _, child in ipairs(FarmMethodDrop:GetChildren()) do
+        if child:IsA("TextButton") then
+            child:Destroy()
+        end
+    end
+
+    for index, methodName in ipairs(FarmMethods) do
+        local option = Instance.new("TextButton")
+        option.Size = UDim2.new(1, -10, 0, 34)
+        option.Position = UDim2.fromOffset(5, (index - 1) * 38 + 5)
+        option.BackgroundColor3 = methodName == SelectedFarmMethod
+            and Color3.fromRGB(48, 53, 66)
+            or Color3.fromRGB(35, 39, 49)
+        option.BorderSizePixel = 0
+        option.Text = methodName
+        option.Font = Enum.Font.GothamMedium
+        option.TextSize = 10
+        option.TextColor3 = Color3.fromRGB(230, 233, 240)
+        option.AutoButtonColor = false
+        option.ZIndex = 310
+        option.Parent = FarmMethodDrop
+
+        local oc = Instance.new("UICorner")
+        oc.CornerRadius = UDim.new(0, 6)
+        oc.Parent = option
+
+        option.Activated:Connect(function()
+            if farmEnabled then return end
+            SelectedFarmMethod = methodName
+            _G.PhongdzFarmMethod = methodName
+            FarmMethodOpen = false
+            FarmMethodDrop.Visible = false
+            FarmMethodDrop.Size = UDim2.fromOffset(W - 32, 0)
+            refreshFarmMethodUI()
+            rebuildFarmMethodOptions()
+        end)
+    end
+end
+
+FarmMethodButton.Activated:Connect(function()
+    if farmEnabled then return end
+    FarmMethodOpen = not FarmMethodOpen
+    FarmMethodDrop.Visible = FarmMethodOpen
+    FarmMethodDrop.Size = FarmMethodOpen
+        and UDim2.fromOffset(W - 32, #FarmMethods * 38 + 10)
+        or UDim2.fromOffset(W - 32, 0)
+    refreshFarmMethodUI()
+    if FarmMethodOpen then
+        rebuildFarmMethodOptions()
+    end
+end)
+
+refreshFarmMethodUI()
+rebuildFarmMethodOptions()
 
 local Toggle = Instance.new("TextButton")
+Toggle.Name = "StartFarm"
 Toggle.Position = UDim2.fromOffset(16, 222)
 Toggle.Size = UDim2.fromOffset(W - 32, 52)
 Toggle.Text = ""
@@ -840,7 +943,7 @@ local Label = Instance.new("TextLabel")
 Label.Position = UDim2.fromOffset(13, 5)
 Label.Size = UDim2.fromOffset(290, 20)
 Label.BackgroundTransparency = 1
-Label.Text = "FARM LEVEL + FAST ATTACK"
+Label.Text = "START FARM"
 Label.Font = Enum.Font.GothamBold
 Label.TextSize = 11
 Label.TextColor3 = Color3.fromRGB(240, 242, 247)
@@ -884,7 +987,7 @@ local Hint = Instance.new("TextLabel")
 Hint.Position = UDim2.fromOffset(16, 287)
 Hint.Size = UDim2.fromOffset(W - 32, 18)
 Hint.BackgroundTransparency = 1
-Hint.Text = "Kéo header để di chuyển  •  — để thu nhỏ"
+Hint.Text = "Chọn method trước khi Start Farm  •  — để thu nhỏ"
 Hint.Font = Enum.Font.GothamMedium
 Hint.TextSize = 8
 Hint.TextColor3 = Color3.fromRGB(86, 91, 104)
@@ -1221,16 +1324,21 @@ SettingFarm.Size = UDim2.new(1, -8, 0, 152)
 SettingFarm.ZIndex = 45
 SettingFarm.Active = true
 
-Card.Parent = farmPage
-Card.Position = UDim2.fromOffset(4, 4)
-Card.Size = UDim2.new(1, -8, 0, 68)
-Card.ZIndex = 45
-Card.Active = false
+FarmMethodButton.Parent = farmPage
+FarmMethodButton.Position = UDim2.fromOffset(4, 4)
+FarmMethodButton.Size = UDim2.new(1, -8, 0, 65)
+FarmMethodButton.ZIndex = 70
+FarmMethodButton.Active = true
+
+FarmMethodDrop.Parent = farmPage
+FarmMethodDrop.Position = UDim2.fromOffset(4, 74)
+FarmMethodDrop.Size = UDim2.new(1, -8, 0, 0)
+FarmMethodDrop.ZIndex = 200
 
 Toggle.Parent = farmPage
 Toggle.Position = UDim2.fromOffset(4, 80)
 Toggle.Size = UDim2.new(1, -8, 0, 58)
-Toggle.ZIndex = 50
+Toggle.ZIndex = 80
 Toggle.Active = true
 
 Hint.Parent = farmPage
@@ -1600,7 +1708,7 @@ StartSourceMovement()
 --===========================================================================
 -- SOURCE BRING ENEMY CORE
 -- Based on source.txt BringEnemy(Mon).
--- Only the mob grouping layer is replaced; CheckLevel remains unchanged.
+-- Source mob grouping is preserved; a watchdog keeps the group locked during Farm.
 --===========================================================================
 
 local _B = true
@@ -1703,6 +1811,30 @@ local function BringEnemy(Mon)
         end
     end)
 end
+
+
+-- Farm-only mob grouping watchdog.
+-- The source BringEnemy routine remains unchanged; this calls it repeatedly
+-- for the currently active target so the group is maintained while Farm runs.
+local BringEnemyWatchdogEnabled = true
+local BringEnemyWatchdogBusy = false
+
+task.spawn(function()
+    while task.wait(0.05) do
+        if BringEnemyWatchdogEnabled and _G.AutoLevel then
+            local target = ActiveTarget or BoneFarmTarget
+            if target and target.Parent then
+                if not BringEnemyWatchdogBusy then
+                    BringEnemyWatchdogBusy = true
+                    pcall(function()
+                        BringEnemy(target)
+                    end)
+                    BringEnemyWatchdogBusy = false
+                end
+            end
+        end
+    end
+end)
 
 
 local EquipFarmWeapon
@@ -2188,10 +2320,10 @@ local function IsInSubmergedIsland()
     return (playerXZ - islandXZ).Magnitude < 2000
 end
 
--- Farm Level flow transplanted from source.txt; the existing UI is unchanged.
+-- Farm Level flow transplanted from source.txt; runs only for Level Farm.
 task.spawn(function()
     while task.wait(Sec) do
-        if _G.AutoLevel then
+        if _G.AutoLevel and (_G.PhongdzFarmMethod or "Level Farm") == "Level Farm" then
             pcall(function()
                 local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
                 local Root = char:WaitForChild("HumanoidRootPart")
@@ -2329,6 +2461,100 @@ task.spawn(function()
     end
 end)
 
+--===========================================================================
+-- FARM BONES — source.txt logic adapted to the shared movement/attack core.
+-- The source uses these four enemy names and HauntedQuest variants.
+--===========================================================================
+local BoneFarmAlive = false
+local BoneFarmTarget = nil
+local BoneFarmMethods = {
+    "Reborn Skeleton",
+    "Living Zombie",
+    "Demonic Soul",
+    "Possessed Mummy",
+}
+
+local function GetBoneMob()
+    local enemies = workspace:FindFirstChild("Enemies")
+    if not enemies then return nil end
+    for _, v in ipairs(enemies:GetChildren()) do
+        local hum = v:FindFirstChildOfClass("Humanoid")
+        local root = v:FindFirstChild("HumanoidRootPart")
+        if hum and root and hum.Health > 0 and table.find(BoneFarmMethods, v.Name) then
+            return v
+        end
+    end
+    return nil
+end
+
+local function RunBoneFarmStep()
+    if not _G.AutoLevel or (_G.PhongdzFarmMethod or "Level Farm") ~= "Farm Bones" then
+        BoneFarmAlive = false
+        BoneFarmTarget = nil
+        return
+    end
+
+    BoneFarmAlive = true
+    local player = LocalPlayer
+    local char = player.Character
+    local root = char and char:FindFirstChild("HumanoidRootPart")
+    if not root then return end
+
+    local questUI = player.PlayerGui
+        and player.PlayerGui:FindFirstChild("Main")
+        and player.PlayerGui.Main:FindFirstChild("Quest")
+
+    -- Source Bone quest location/quest variants.
+    if questUI and not questUI.Visible then
+        local questPos = CFrame.new(-9516.99316,172.01718,6078.46533)
+        TweenTo(questPos)
+        if (root.Position - questPos.Position).Magnitude <= 50 then
+            local questData = {
+                {"StartQuest","HauntedQuest2",2},
+                {"StartQuest","HauntedQuest2",1},
+                {"StartQuest","HauntedQuest1",1},
+                {"StartQuest","HauntedQuest1",2},
+            }
+            pcall(function()
+                ReplicatedStorage.Remotes.CommF_:InvokeServer(
+                    unpack(questData[math.random(1, #questData)])
+                )
+            end)
+        end
+        return
+    end
+
+    local bone = GetBoneMob()
+    BoneFarmTarget = bone
+    ActiveTarget = bone
+
+    if bone then
+        repeat
+            if not _G.AutoLevel or (_G.PhongdzFarmMethod or "Level Farm") ~= "Farm Bones" then break end
+            local mobRoot = bone:FindFirstChild("HumanoidRootPart")
+            local hum = bone:FindFirstChildOfClass("Humanoid")
+            if not mobRoot or not hum or hum.Health <= 0 then break end
+
+            AutoHaki()
+            TweenTo(mobRoot.CFrame * CFrame.new(0, 20, 0))
+            BringEnemy(bone)
+            EquipFarmWeapon()
+            task.wait()
+        until not bone.Parent or not SourceFarmAlive(bone)
+
+        BoneFarmTarget = nil
+        ActiveTarget = nil
+    else
+        TweenTo(CFrame.new(-9495.6806640625, 453.58624267578125, 5977.3486328125))
+    end
+end
+
+task.spawn(function()
+    while task.wait(0.5) do
+        pcall(RunBoneFarmStep)
+    end
+end)
+
 -- Recover from stale targets/spawn transitions without touching the UI.
 -- Keep this thread alive even while Farm is OFF, because AutoLevel can be
 -- enabled later by the UI after FARM_SOURCE has already loaded.
@@ -2408,14 +2634,12 @@ local function loadFarm()
     return true
 end
 
-local farmEnabled = false
-
 local function updateToggle()
     if farmEnabled then
         Toggle.BackgroundColor3 = Color3.fromRGB(255, 211, 65)
         Knob.Position = UDim2.fromOffset(26, 3)
         Knob.BackgroundColor3 = Color3.fromRGB(16, 18, 24)
-        Status.Text = "● FARM LEVEL ĐANG CHẠY"
+        Status.Text = "● " .. (_G.PhongdzFarmMethod or SelectedFarmMethod) .. " ĐANG CHẠY"
         Status.TextColor3 = Color3.fromRGB(88, 224, 132)
     else
         Toggle.BackgroundColor3 = Color3.fromRGB(55, 59, 70)
@@ -2445,14 +2669,15 @@ Toggle.Activated:Connect(function()
             end
         end
 
-        -- Enable only after FARM_SOURCE has initialized.
-        -- The Farm worker is persistent and will see this state immediately.
+        _G.PhongdzFarmMethod = SelectedFarmMethod
+        _G.AutoFarm_Bone = (SelectedFarmMethod == "Farm Bones")
         _G.AutoLevel = true
         farmEnabled = true
         pcall(StartSourceMovement)
     else
         farmEnabled = false
         _G.AutoLevel = false
+        _G.AutoFarm_Bone = false
         pcall(StopSourceMovement)
     end
 
