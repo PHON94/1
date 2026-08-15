@@ -330,7 +330,7 @@ local Title = Instance.new("TextLabel")
 Title.Position = UDim2.fromOffset(18, 7)
 Title.Size = UDim2.fromOffset(300, 25)
 Title.BackgroundTransparency = 1
-Title.Text = "PHONGDZ HUB  v3.0"
+Title.Text = "PHONGDZ HUB  v3.2"
 Title.Font = Enum.Font.GothamBlack
 Title.TextSize = 19
 Title.TextColor3 = Color3.fromRGB(255, 211, 65)
@@ -641,6 +641,8 @@ local function rebuildWeaponOptions()
         option.Activated:Connect(function()
             ChooseWeapon = weaponType
             _G.ChooseWP = weaponType
+            _G.SelectWeapon = nil
+            SelectWeapon = nil
             WeaponText.Text = weaponType
             WeaponDrop.Visible = false
             WeaponDrop.Size = UDim2.fromOffset(W - 58, 0)
@@ -1329,11 +1331,10 @@ local StatusCards = {}
 
 local function makeStatusCard(parent, title, initialText)
     local card = Instance.new("Frame")
-    card.Size = UDim2.new(1, -6, 0, 64)
+    card.Size = UDim2.new(1, -6, 0, 58)
     card.BackgroundColor3 = Color3.fromRGB(22, 25, 33)
     card.BorderSizePixel = 0
     card.ZIndex = 45
-    card.Active = false
     card.Parent = parent
 
     local cc = Instance.new("UICorner")
@@ -1341,8 +1342,8 @@ local function makeStatusCard(parent, title, initialText)
     cc.Parent = card
 
     local titleLabel = Instance.new("TextLabel")
-    titleLabel.Position = UDim2.fromOffset(12, 8)
-    titleLabel.Size = UDim2.new(1, -24, 0, 19)
+    titleLabel.Position = UDim2.fromOffset(12, 7)
+    titleLabel.Size = UDim2.new(1, -24, 0, 18)
     titleLabel.BackgroundTransparency = 1
     titleLabel.Text = title
     titleLabel.Font = Enum.Font.GothamBlack
@@ -1353,7 +1354,7 @@ local function makeStatusCard(parent, title, initialText)
     titleLabel.Parent = card
 
     local valueLabel = Instance.new("TextLabel")
-    valueLabel.Position = UDim2.fromOffset(12, 31)
+    valueLabel.Position = UDim2.fromOffset(12, 28)
     valueLabel.Size = UDim2.new(1, -24, 0, 20)
     valueLabel.BackgroundTransparency = 1
     valueLabel.Text = initialText
@@ -1370,6 +1371,7 @@ end
 
 local statusHeader = Instance.new("Frame")
 statusHeader.Size = UDim2.new(1, -6, 0, 70)
+statusHeader.Position = UDim2.fromOffset(3, 2)
 statusHeader.BackgroundColor3 = Color3.fromRGB(22, 25, 33)
 statusHeader.BorderSizePixel = 0
 statusHeader.ZIndex = 45
@@ -1403,150 +1405,168 @@ shDesc.TextXAlignment = Enum.TextXAlignment.Left
 shDesc.ZIndex = 46
 shDesc.Parent = statusHeader
 
-local _, moonStatusLabel = makeStatusCard(statusPage, "Moon", "Moon: 0/5")
-local _, mirageStatusLabel = makeStatusCard(statusPage, "Mirage Island", "Status: ❌")
-local _, kitsuneStatusLabel = makeStatusCard(statusPage, "Kitsune Island", "Status: ❌")
-local _, prehistoricStatusLabel = makeStatusCard(statusPage, "Prehistoric Island", "Status: ❌")
-local _, seaStatusLabel = makeStatusCard(statusPage, "Sea / World", "Detecting...")
+-- The source's Status Server contains these status entries.
+local _, timeZoneLabel = makeStatusCard(statusPage, "Time Zone", "Loading...")
+local _, gameTimeLabel = makeStatusCard(statusPage, "Game Time", "Loading...")
+local _, moonLabel = makeStatusCard(statusPage, "Full Moon", "0/5")
+local _, mirageLabel = makeStatusCard(statusPage, "Mirage Island", "Status: ❌")
+local _, kitsuneLabel = makeStatusCard(statusPage, "Kitsune Island", "Status: ❌")
+local _, prehistoricLabel = makeStatusCard(statusPage, "Prehistoric Island", "Status: ❌")
+local _, frozenLabel = makeStatusCard(statusPage, "Frozen Dimension", "Status: ❌")
+local _, cakePrinceLabel = makeStatusCard(statusPage, "Cake Prince", "Status: ❌")
+local _, ripIndraLabel = makeStatusCard(statusPage, "Rip Indra", "Status: ❌")
+local _, doughKingLabel = makeStatusCard(statusPage, "Dough King", "Status: ❌")
+local _, legendaryLabel = makeStatusCard(statusPage, "Legendary Sword", "Status: ❌")
+local _, boneLabel = makeStatusCard(statusPage, "Bone", "0")
 
-statusHeader.Position = UDim2.fromOffset(3, 2)
-statusHeader.Size = UDim2.new(1, -6, 0, 70)
-
-local statusCardPositions = {
-    [moonStatusLabel] = 78,
-    [mirageStatusLabel] = 148,
-    [kitsuneStatusLabel] = 218,
-    [prehistoricStatusLabel] = 288,
-    [seaStatusLabel] = 358,
+local statusCards = {
+    timeZoneLabel, gameTimeLabel, moonLabel, mirageLabel,
+    kitsuneLabel, prehistoricLabel, frozenLabel, cakePrinceLabel,
+    ripIndraLabel, doughKingLabel, legendaryLabel, boneLabel
 }
 
-for label, y in pairs(statusCardPositions) do
+for index, label in ipairs(statusCards) do
     local card = label.Parent
-    card.Position = UDim2.fromOffset(3, y)
+    card.Position = UDim2.fromOffset(3, 76 + ((index - 1) * 62))
 end
 
-local function getSourceMoonTexture()
+local function sourceStatusLocations()
+    local worldOrigin = workspace:FindFirstChild("_WorldOrigin")
+    return worldOrigin and worldOrigin:FindFirstChild("Locations")
+end
+
+local function hasLocation(name)
+    local locations = sourceStatusLocations()
+    return locations and locations:FindFirstChild(name) ~= nil
+end
+
+local function hasMap(name)
+    local map = workspace:FindFirstChild("Map")
+    return map and map:FindFirstChild(name) ~= nil
+end
+
+local function sourceMoonTexture()
     local lighting = game:GetService("Lighting")
     local placeId = game.PlaceId
 
-    -- Same world split used by source.txt's Getmoon():
-    -- World1/World2 -> FantasySky, World3 -> Sky.
-    local isWorld1 = placeId == 2753915549 or placeId == 85211729168715
-    local isWorld2 = placeId == 4442272183 or placeId == 79091703265657
-    local isWorld3 = placeId == 7449423635 or placeId == 100117331123089
+    local world1 = placeId == 2753915549 or placeId == 85211729168715
+    local world2 = placeId == 4442272183 or placeId == 79091703265657
+    local world3 = placeId == 7449423635 or placeId == 100117331123089
 
-    if isWorld1 or isWorld2 then
+    if world1 or world2 then
         local sky = lighting:FindFirstChild("FantasySky")
-        return sky and sky.MoonTextureId or nil
-    elseif isWorld3 then
+        return sky and sky.MoonTextureId or ""
+    elseif world3 then
         local sky = lighting:FindFirstChild("Sky")
-        return sky and sky.MoonTextureId or nil
+        return sky and sky.MoonTextureId or ""
     end
 
     local sky = lighting:FindFirstChild("Sky") or lighting:FindFirstChild("FantasySky")
-    return sky and sky.MoonTextureId or nil
+    return sky and sky.MoonTextureId or ""
 end
 
-local function getMoonStatus()
-    local moonTextureId = getSourceMoonTexture()
-    local moonStatus = "Moon: 0/5"
+local function sourceMoonText()
+    local id = sourceMoonTexture()
 
-    if moonTextureId == "http://www.roblox.com/asset/?id=9709149431" then
-        moonStatus = "Moon: 5/5 (Full Moon) ✅"
-    elseif moonTextureId == "http://www.roblox.com/asset/?id=9709149052" then
-        moonStatus = "Moon: 4/5"
-    elseif moonTextureId == "http://www.roblox.com/asset/?id=9709143733" then
-        moonStatus = "Moon: 3/5"
-    elseif moonTextureId == "http://www.roblox.com/asset/?id=9709150401" then
-        moonStatus = "Moon: 2/5"
-    elseif moonTextureId == "http://www.roblox.com/asset/?id=9709149680" then
-        moonStatus = "Moon: 1/5"
+    if id == "http://www.roblox.com/asset/?id=9709149431" then
+        return "5/5 — Full Moon"
+    elseif id == "http://www.roblox.com/asset/?id=9709149052" then
+        return "4/5"
+    elseif id == "http://www.roblox.com/asset/?id=9709143733" then
+        return "3/5"
+    elseif id == "http://www.roblox.com/asset/?id=9709150401" then
+        return "2/5"
+    elseif id == "http://www.roblox.com/asset/?id=9709149680" then
+        return "1/5"
     end
 
-    return moonStatus
+    return "0/5"
 end
 
-local function getMirageStatus()
-    local ok, result = pcall(function()
-        local locations = workspace:FindFirstChild("_WorldOrigin")
-            and workspace._WorldOrigin:FindFirstChild("Locations")
-        local map = workspace:FindFirstChild("Map")
+local function sourceTimeZone()
+    local date = os.date("*t")
+    local hour = date.hour % 24
+    local ampm = hour < 12 and "AM" or "PM"
+    local clock = string.format("%02i:%02i:%02i %s", ((hour - 1) % 12) + 1, date.min, date.sec, ampm)
+    local datetime = string.format("%02d/%02d/%04d", date.day, date.month, date.year)
 
-        return (locations and locations:FindFirstChild("Mirage Island") ~= nil)
-            or (map and map:FindFirstChild("MysticIsland") ~= nil)
+    local code = "Unknown"
+    pcall(function()
+        local cached = getgenv().countryRegionCode
+        if cached then
+            code = cached
+        else
+            local LocalizationService = game:GetService("LocalizationService")
+            local result, region = pcall(function()
+                return LocalizationService:GetCountryRegionForPlayerAsync(LocalPlayer)
+            end)
+            if result and region then
+                code = region
+                getgenv().countryRegionCode = region
+            end
+        end
     end)
-    return ok and result and "Status: ✅" or "Status: ❌"
+
+    return datetime .. " - " .. clock .. " [ " .. code .. " ]"
 end
 
-local function getKitsuneStatus()
-    local ok, result = pcall(function()
-        local locations = workspace:FindFirstChild("_WorldOrigin")
-            and workspace._WorldOrigin:FindFirstChild("Locations")
-        local map = workspace:FindFirstChild("Map")
+local function sourceGameTime()
+    local total = math.floor(workspace.DistributedGameTime + 0.5)
+    local hour = math.floor(total / 3600) % 24
+    local minute = math.floor(total / 60) % 60
+    local second = total % 60
+    return hour .. " Hour (h) " .. minute .. " Minute (m) " .. second .. " Second (s)"
+end
 
-        return (map and map:FindFirstChild("KitsuneIsland") ~= nil)
-            or (locations and locations:FindFirstChild("Kitsune Island") ~= nil)
+local function sourceBoneCount()
+    local value = 0
+    pcall(function()
+        local main = LocalPlayer:FindFirstChild("Data")
+        local fragments = main and main:FindFirstChild("Fragments")
+        -- Source's UI reads the "Bone" value from the player Data when available.
+        local bone = main and main:FindFirstChild("Bone")
+        if bone and typeof(bone.Value) == "number" then
+            value = bone.Value
+        elseif fragments and typeof(fragments.Value) == "number" then
+            -- Do not invent a Bone value when the source's exact value is absent.
+            value = 0
+        end
     end)
-    return ok and result and "Status: ✅" or "Status: ❌"
+    return tostring(value)
 end
 
-local function getPrehistoricStatus()
-    local ok, result = pcall(function()
-        local locations = workspace:FindFirstChild("_WorldOrigin")
-            and workspace._WorldOrigin:FindFirstChild("Locations")
-        local map = workspace:FindFirstChild("Map")
-
-        return (map and map:FindFirstChild("PrehistoricIsland") ~= nil)
-            or (locations and locations:FindFirstChild("Prehistoric Island") ~= nil)
-    end)
-    return ok and result and "Status: ✅" or "Status: ❌"
-end
-
-local function getSeaStatus()
-    local placeId = game.PlaceId
-
-    if placeId == 2753915549 or placeId == 85211729168715 then
-        return "Sea 1 / World 1"
-    elseif placeId == 4442272183 or placeId == 79091703265657 then
-        return "Sea 2 / World 2"
-    elseif placeId == 7449423635 or placeId == 100117331123089 then
-        return "Sea 3 / World 3"
-    end
-
-    return "Unknown Sea"
+local function statusText(exists)
+    return exists and "Status: ✅" or "Status: ❌"
 end
 
 task.spawn(function()
     while Gui.Parent do
         pcall(function()
-            moonStatusLabel.Text = getMoonStatus()
-            mirageStatusLabel.Text = getMirageStatus()
-            kitsuneStatusLabel.Text = getKitsuneStatus()
-            prehistoricStatusLabel.Text = getPrehistoricStatus()
-            seaStatusLabel.Text = getSeaStatus()
+            timeZoneLabel.Text = sourceTimeZone()
+            gameTimeLabel.Text = sourceGameTime()
+            moonLabel.Text = sourceMoonText()
 
-            moonStatusLabel.TextColor3 =
-                moonStatusLabel.Text:find("Full Moon", 1, true)
-                and Color3.fromRGB(88, 224, 132)
-                or Color3.fromRGB(224, 227, 235)
+            mirageLabel.Text = statusText(hasLocation("Mirage Island"))
+            kitsuneLabel.Text = statusText(hasMap("KitsuneIsland"))
+            prehistoricLabel.Text = statusText(hasLocation("Prehistoric Island"))
+            frozenLabel.Text = statusText(hasLocation("Frozen Dimension"))
+            cakePrinceLabel.Text = statusText(hasLocation("Cake Prince"))
+            ripIndraLabel.Text = statusText(hasLocation("rip_indra"))
+            doughKingLabel.Text = statusText(hasLocation("Dough King"))
+            legendaryLabel.Text = statusText(
+                hasLocation("Legendary Sword") or hasLocation("Legendary Sword Dealer")
+            )
+            boneLabel.Text = sourceBoneCount()
 
-            mirageStatusLabel.TextColor3 =
-                mirageStatusLabel.Text:find("✅", 1, true)
-                and Color3.fromRGB(88, 224, 132)
-                or Color3.fromRGB(224, 227, 235)
-
-            kitsuneStatusLabel.TextColor3 =
-                kitsuneStatusLabel.Text:find("✅", 1, true)
-                and Color3.fromRGB(88, 224, 132)
-                or Color3.fromRGB(224, 227, 235)
-
-            prehistoricStatusLabel.TextColor3 =
-                prehistoricStatusLabel.Text:find("✅", 1, true)
-                and Color3.fromRGB(88, 224, 132)
-                or Color3.fromRGB(224, 227, 235)
+            for _, label in ipairs(statusCards) do
+                if label.Text:find("✅", 1, true) or label.Text:find("Full Moon", 1, true) then
+                    label.TextColor3 = Color3.fromRGB(88, 224, 132)
+                else
+                    label.TextColor3 = Color3.fromRGB(224, 227, 235)
+                end
+            end
         end)
-
-        task.wait(0.5)
+        task.wait(1)
     end
 end)
 
@@ -2319,43 +2339,86 @@ local function ExecuteSourceFruitM1()
     end)
 end
 
-EquipFarmWeapon = function()
-    if not _G.AutoLevel then return nil end
-
-    local wanted = ChooseWeapon or _G.ChooseWP or "Melee"
-    local name = weaponSc(wanted)
-
-    if not name then
-        -- If the selected tool is already equipped, keep it.
-        local character = LocalPlayer.Character
-        local equipped = character and character:FindFirstChildOfClass("Tool")
-        if equipped and equipped.ToolTip == wanted then
-            _G.SelectWeapon = equipped.Name
-            SelectWeapon = equipped.Name
-            return equipped
-        end
-        return nil
-    end
+-- Robust source-style weapon resolver/equipper.
+-- Checks the currently equipped Character tool first, then Backpack.
+local function GetSelectedWeaponTool(weaponType)
+    if not weaponType then return nil end
 
     local character = LocalPlayer.Character
-    return character and character:FindFirstChildOfClass("Tool")
+    local backpack = LocalPlayer:FindFirstChildOfClass("Backpack")
+
+    if character then
+        for _, tool in ipairs(character:GetChildren()) do
+            if tool:IsA("Tool") and tool.ToolTip == weaponType then
+                return tool
+            end
+        end
+    end
+
+    if backpack then
+        for _, tool in ipairs(backpack:GetChildren()) do
+            if tool:IsA("Tool") and tool.ToolTip == weaponType then
+                return tool
+            end
+        end
+    end
+
+    return nil
 end
 
 weaponSc = function(weapon)
-    if not _G.AutoLevel then return end
-    if not weapon then return end
+    if not _G.AutoLevel or not weapon then return nil end
 
+    local tool = GetSelectedWeaponTool(weapon)
+    if not tool then return nil end
+
+    _G.SelectWeapon = tool.Name
+    SelectWeapon = tool.Name
+
+    local character = LocalPlayer.Character
+    local humanoid = character and character:FindFirstChildOfClass("Humanoid")
     local backpack = LocalPlayer:FindFirstChildOfClass("Backpack")
-    if not backpack then return end
 
-    for _, v in pairs(backpack:GetChildren()) do
-        if v:IsA("Tool") and v.ToolTip == weapon then
-            EquipWeapon(v.Name)
-            _G.SelectWeapon = v.Name
-            SelectWeapon = v.Name
-            return v.Name
+    if character and humanoid then
+        if tool.Parent == character then
+            return tool.Name
+        end
+
+        if backpack and tool.Parent == backpack then
+            pcall(function()
+                humanoid:EquipTool(tool)
+            end)
+
+            local equipped = character:FindFirstChild(tool.Name)
+            if equipped and equipped:IsA("Tool") and equipped.ToolTip == weapon then
+                _G.SelectWeapon = equipped.Name
+                SelectWeapon = equipped.Name
+                return equipped.Name
+            end
+
+            return tool.Name
         end
     end
+
+    return tool.Name
+end
+
+EquipFarmWeapon = function()
+    if not _G.AutoLevel then return nil end
+
+    local wanted = _G.ChooseWP or ChooseWeapon or "Melee"
+    local name = weaponSc(wanted)
+    if name then return name end
+
+    local character = LocalPlayer.Character
+    local equipped = character and character:FindFirstChildOfClass("Tool")
+    if equipped and equipped.ToolTip == wanted then
+        _G.SelectWeapon = equipped.Name
+        SelectWeapon = equipped.Name
+        return equipped.Name
+    end
+
+    return nil
 end
 
 local function AutoHaki()
