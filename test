@@ -330,7 +330,7 @@ local Title = Instance.new("TextLabel")
 Title.Position = UDim2.fromOffset(18, 7)
 Title.Size = UDim2.fromOffset(300, 25)
 Title.BackgroundTransparency = 1
-Title.Text = "PHONGDZ HUB  v2.9"
+Title.Text = "PHONGDZ HUB  v3.0"
 Title.Font = Enum.Font.GothamBlack
 Title.TextSize = 19
 Title.TextColor3 = Color3.fromRGB(255, 211, 65)
@@ -1183,6 +1183,7 @@ local farmButton, farmPage = makeCategory("FARM", "⚔", 1)
 local espButton, espPage = makeCategory("ESP", "◉", 2)
 local settingButton, settingPage = makeCategory("SETTING", "⚙", 3)
 local miscButton, miscPage = makeCategory("MISC", "✦", 4)
+local statusButton, statusPage = makeCategory("STATUS SERVER", "◌", 5)
 
 local function activateCategory(name)
     for pageName, page in pairs(CategoryPages) do
@@ -1204,6 +1205,7 @@ farmButton.Activated:Connect(function() activateCategory("FARM") end)
 espButton.Activated:Connect(function() activateCategory("ESP") end)
 settingButton.Activated:Connect(function() activateCategory("SETTING") end)
 miscButton.Activated:Connect(function() activateCategory("MISC") end)
+statusButton.Activated:Connect(function() activateCategory("STATUS SERVER") end)
 
 -- Function-level scroll helpers: one independent scrollbar per section.
 local function ScrollFunctions(page, delta)
@@ -1316,6 +1318,237 @@ end
 
 sectionCard(espPage, "ESP", "ESP controls can be placed here.")
 sectionCard(miscPage, "MISC", "Miscellaneous controls can be placed here.")
+
+--===========================================================================
+-- STATUS SERVER
+-- Based only on status checks present in source.txt:
+-- Moon + Mirage Island + Kitsune Island + Prehistoric Island + Sea/World.
+--===========================================================================
+
+local StatusCards = {}
+
+local function makeStatusCard(parent, title, initialText)
+    local card = Instance.new("Frame")
+    card.Size = UDim2.new(1, -6, 0, 64)
+    card.BackgroundColor3 = Color3.fromRGB(22, 25, 33)
+    card.BorderSizePixel = 0
+    card.ZIndex = 45
+    card.Active = false
+    card.Parent = parent
+
+    local cc = Instance.new("UICorner")
+    cc.CornerRadius = UDim.new(0, 10)
+    cc.Parent = card
+
+    local titleLabel = Instance.new("TextLabel")
+    titleLabel.Position = UDim2.fromOffset(12, 8)
+    titleLabel.Size = UDim2.new(1, -24, 0, 19)
+    titleLabel.BackgroundTransparency = 1
+    titleLabel.Text = title
+    titleLabel.Font = Enum.Font.GothamBlack
+    titleLabel.TextSize = 10
+    titleLabel.TextColor3 = Color3.fromRGB(255, 211, 65)
+    titleLabel.TextXAlignment = Enum.TextXAlignment.Left
+    titleLabel.ZIndex = 46
+    titleLabel.Parent = card
+
+    local valueLabel = Instance.new("TextLabel")
+    valueLabel.Position = UDim2.fromOffset(12, 31)
+    valueLabel.Size = UDim2.new(1, -24, 0, 20)
+    valueLabel.BackgroundTransparency = 1
+    valueLabel.Text = initialText
+    valueLabel.Font = Enum.Font.GothamMedium
+    valueLabel.TextSize = 9
+    valueLabel.TextColor3 = Color3.fromRGB(224, 227, 235)
+    valueLabel.TextXAlignment = Enum.TextXAlignment.Left
+    valueLabel.ZIndex = 46
+    valueLabel.Parent = card
+
+    StatusCards[title] = valueLabel
+    return card, valueLabel
+end
+
+local statusHeader = Instance.new("Frame")
+statusHeader.Size = UDim2.new(1, -6, 0, 70)
+statusHeader.BackgroundColor3 = Color3.fromRGB(22, 25, 33)
+statusHeader.BorderSizePixel = 0
+statusHeader.ZIndex = 45
+statusHeader.Parent = statusPage
+
+local shc = Instance.new("UICorner")
+shc.CornerRadius = UDim.new(0, 10)
+shc.Parent = statusHeader
+
+local shTitle = Instance.new("TextLabel")
+shTitle.Position = UDim2.fromOffset(12, 10)
+shTitle.Size = UDim2.new(1, -24, 0, 22)
+shTitle.BackgroundTransparency = 1
+shTitle.Text = "STATUS SERVER"
+shTitle.Font = Enum.Font.GothamBlack
+shTitle.TextSize = 13
+shTitle.TextColor3 = Color3.fromRGB(255, 211, 65)
+shTitle.TextXAlignment = Enum.TextXAlignment.Left
+shTitle.ZIndex = 46
+shTitle.Parent = statusHeader
+
+local shDesc = Instance.new("TextLabel")
+shDesc.Position = UDim2.fromOffset(12, 35)
+shDesc.Size = UDim2.new(1, -24, 0, 20)
+shDesc.BackgroundTransparency = 1
+shDesc.Text = "Thông tin server cập nhật tự động"
+shDesc.Font = Enum.Font.Gotham
+shDesc.TextSize = 8
+shDesc.TextColor3 = Color3.fromRGB(143, 149, 162)
+shDesc.TextXAlignment = Enum.TextXAlignment.Left
+shDesc.ZIndex = 46
+shDesc.Parent = statusHeader
+
+local _, moonStatusLabel = makeStatusCard(statusPage, "Moon", "Moon: 0/5")
+local _, mirageStatusLabel = makeStatusCard(statusPage, "Mirage Island", "Status: ❌")
+local _, kitsuneStatusLabel = makeStatusCard(statusPage, "Kitsune Island", "Status: ❌")
+local _, prehistoricStatusLabel = makeStatusCard(statusPage, "Prehistoric Island", "Status: ❌")
+local _, seaStatusLabel = makeStatusCard(statusPage, "Sea / World", "Detecting...")
+
+statusHeader.Position = UDim2.fromOffset(3, 2)
+statusHeader.Size = UDim2.new(1, -6, 0, 70)
+
+local statusCardPositions = {
+    [moonStatusLabel] = 78,
+    [mirageStatusLabel] = 148,
+    [kitsuneStatusLabel] = 218,
+    [prehistoricStatusLabel] = 288,
+    [seaStatusLabel] = 358,
+}
+
+for label, y in pairs(statusCardPositions) do
+    local card = label.Parent
+    card.Position = UDim2.fromOffset(3, y)
+end
+
+local function getSourceMoonTexture()
+    local lighting = game:GetService("Lighting")
+    local placeId = game.PlaceId
+
+    -- Same world split used by source.txt's Getmoon():
+    -- World1/World2 -> FantasySky, World3 -> Sky.
+    local isWorld1 = placeId == 2753915549 or placeId == 85211729168715
+    local isWorld2 = placeId == 4442272183 or placeId == 79091703265657
+    local isWorld3 = placeId == 7449423635 or placeId == 100117331123089
+
+    if isWorld1 or isWorld2 then
+        local sky = lighting:FindFirstChild("FantasySky")
+        return sky and sky.MoonTextureId or nil
+    elseif isWorld3 then
+        local sky = lighting:FindFirstChild("Sky")
+        return sky and sky.MoonTextureId or nil
+    end
+
+    local sky = lighting:FindFirstChild("Sky") or lighting:FindFirstChild("FantasySky")
+    return sky and sky.MoonTextureId or nil
+end
+
+local function getMoonStatus()
+    local moonTextureId = getSourceMoonTexture()
+    local moonStatus = "Moon: 0/5"
+
+    if moonTextureId == "http://www.roblox.com/asset/?id=9709149431" then
+        moonStatus = "Moon: 5/5 (Full Moon) ✅"
+    elseif moonTextureId == "http://www.roblox.com/asset/?id=9709149052" then
+        moonStatus = "Moon: 4/5"
+    elseif moonTextureId == "http://www.roblox.com/asset/?id=9709143733" then
+        moonStatus = "Moon: 3/5"
+    elseif moonTextureId == "http://www.roblox.com/asset/?id=9709150401" then
+        moonStatus = "Moon: 2/5"
+    elseif moonTextureId == "http://www.roblox.com/asset/?id=9709149680" then
+        moonStatus = "Moon: 1/5"
+    end
+
+    return moonStatus
+end
+
+local function getMirageStatus()
+    local ok, result = pcall(function()
+        local locations = workspace:FindFirstChild("_WorldOrigin")
+            and workspace._WorldOrigin:FindFirstChild("Locations")
+        local map = workspace:FindFirstChild("Map")
+
+        return (locations and locations:FindFirstChild("Mirage Island") ~= nil)
+            or (map and map:FindFirstChild("MysticIsland") ~= nil)
+    end)
+    return ok and result and "Status: ✅" or "Status: ❌"
+end
+
+local function getKitsuneStatus()
+    local ok, result = pcall(function()
+        local locations = workspace:FindFirstChild("_WorldOrigin")
+            and workspace._WorldOrigin:FindFirstChild("Locations")
+        local map = workspace:FindFirstChild("Map")
+
+        return (map and map:FindFirstChild("KitsuneIsland") ~= nil)
+            or (locations and locations:FindFirstChild("Kitsune Island") ~= nil)
+    end)
+    return ok and result and "Status: ✅" or "Status: ❌"
+end
+
+local function getPrehistoricStatus()
+    local ok, result = pcall(function()
+        local locations = workspace:FindFirstChild("_WorldOrigin")
+            and workspace._WorldOrigin:FindFirstChild("Locations")
+        local map = workspace:FindFirstChild("Map")
+
+        return (map and map:FindFirstChild("PrehistoricIsland") ~= nil)
+            or (locations and locations:FindFirstChild("Prehistoric Island") ~= nil)
+    end)
+    return ok and result and "Status: ✅" or "Status: ❌"
+end
+
+local function getSeaStatus()
+    local placeId = game.PlaceId
+
+    if placeId == 2753915549 or placeId == 85211729168715 then
+        return "Sea 1 / World 1"
+    elseif placeId == 4442272183 or placeId == 79091703265657 then
+        return "Sea 2 / World 2"
+    elseif placeId == 7449423635 or placeId == 100117331123089 then
+        return "Sea 3 / World 3"
+    end
+
+    return "Unknown Sea"
+end
+
+task.spawn(function()
+    while Gui.Parent do
+        pcall(function()
+            moonStatusLabel.Text = getMoonStatus()
+            mirageStatusLabel.Text = getMirageStatus()
+            kitsuneStatusLabel.Text = getKitsuneStatus()
+            prehistoricStatusLabel.Text = getPrehistoricStatus()
+            seaStatusLabel.Text = getSeaStatus()
+
+            moonStatusLabel.TextColor3 =
+                moonStatusLabel.Text:find("Full Moon", 1, true)
+                and Color3.fromRGB(88, 224, 132)
+                or Color3.fromRGB(224, 227, 235)
+
+            mirageStatusLabel.TextColor3 =
+                mirageStatusLabel.Text:find("✅", 1, true)
+                and Color3.fromRGB(88, 224, 132)
+                or Color3.fromRGB(224, 227, 235)
+
+            kitsuneStatusLabel.TextColor3 =
+                kitsuneStatusLabel.Text:find("✅", 1, true)
+                and Color3.fromRGB(88, 224, 132)
+                or Color3.fromRGB(224, 227, 235)
+
+            prehistoricStatusLabel.TextColor3 =
+                prehistoricStatusLabel.Text:find("✅", 1, true)
+                and Color3.fromRGB(88, 224, 132)
+                or Color3.fromRGB(224, 227, 235)
+        end)
+
+        task.wait(0.5)
+    end
+end)
 
 -- Existing controls are NOW available, so re-parenting works reliably.
 SettingFarm.Parent = settingPage
