@@ -330,7 +330,7 @@ local Title = Instance.new("TextLabel")
 Title.Position = UDim2.fromOffset(18, 7)
 Title.Size = UDim2.fromOffset(300, 25)
 Title.BackgroundTransparency = 1
-Title.Text = "PHONGDZ HUB  v3.3"
+Title.Text = "PHONGDZ HUB  v3.2"
 Title.Font = Enum.Font.GothamBlack
 Title.TextSize = 19
 Title.TextColor3 = Color3.fromRGB(255, 211, 65)
@@ -795,7 +795,6 @@ _G.PhongdzFolderScrollBottom = scrollFoldersToBottom
 --===========================================================================
 -- FARM METHOD SELECTOR + START FARM
 --===========================================================================
-local loadFarm
 local farmEnabled = false
 
 local FarmMethodButton = Instance.new("TextButton")
@@ -1601,179 +1600,6 @@ Hint.Size = UDim2.new(1, -8, 0, 22)
 Hint.ZIndex = 45
 Hint.Active = false
 
-local MaterialEnabled = false
-local SelectedMaterial = _G.PhongdzSelectedMaterial or "Leather + Scrap Metal"
-_G.PhongdzSelectedMaterial = SelectedMaterial
-
-local MaterialButton = Instance.new("TextButton")
-MaterialButton.Name = "MaterialSelector"
-MaterialButton.Position = UDim2.fromOffset(4,176)
-MaterialButton.Size = UDim2.new(1,-8,0,58)
-MaterialButton.BackgroundColor3 = Color3.fromRGB(22,25,33)
-MaterialButton.BorderSizePixel = 0
-MaterialButton.Text = ""
-MaterialButton.AutoButtonColor = false
-MaterialButton.ZIndex = 70
-MaterialButton.Active = true
-MaterialButton.Parent = farmPage
-
-local mc1=Instance.new("UICorner"); mc1.CornerRadius=UDim.new(0,10); mc1.Parent=MaterialButton
-
-local MaterialTitle=Instance.new("TextLabel")
-MaterialTitle.Position=UDim2.fromOffset(13,7)
-MaterialTitle.Size=UDim2.new(1,-55,0,19)
-MaterialTitle.BackgroundTransparency=1
-MaterialTitle.Text="SELECT MATERIAL"
-MaterialTitle.Font=Enum.Font.GothamBlack
-MaterialTitle.TextSize=10
-MaterialTitle.TextColor3=Color3.fromRGB(255,211,65)
-MaterialTitle.TextXAlignment=Enum.TextXAlignment.Left
-MaterialTitle.Parent=MaterialButton
-
-local MaterialValue=Instance.new("TextLabel")
-MaterialValue.Position=UDim2.fromOffset(13,29)
-MaterialValue.Size=UDim2.new(1,-65,0,21)
-MaterialValue.BackgroundTransparency=1
-MaterialValue.Text=SelectedMaterial
-MaterialValue.Font=Enum.Font.GothamBold
-MaterialValue.TextSize=9
-MaterialValue.TextColor3=Color3.fromRGB(240,242,247)
-MaterialValue.TextXAlignment=Enum.TextXAlignment.Left
-MaterialValue.Parent=MaterialButton
-
-local MaterialArrow=Instance.new("TextLabel")
-MaterialArrow.Size=UDim2.fromOffset(28,58)
-MaterialArrow.Position=UDim2.new(1,-36,0,0)
-MaterialArrow.BackgroundTransparency=1
-MaterialArrow.Text="▾"
-MaterialArrow.Font=Enum.Font.GothamBold
-MaterialArrow.TextSize=16
-MaterialArrow.TextColor3=Color3.fromRGB(180,186,198)
-MaterialArrow.Parent=MaterialButton
-
-local MaterialDrop=Instance.new("Frame")
-MaterialDrop.Name="MaterialDropdown"
-MaterialDrop.Position=UDim2.fromOffset(4,238)
-MaterialDrop.Size=UDim2.new(1,-8,0,0)
-MaterialDrop.BackgroundColor3=Color3.fromRGB(27,30,38)
-MaterialDrop.BorderSizePixel=0
-MaterialDrop.Visible=false
-MaterialDrop.ClipsDescendants=true
-MaterialDrop.ZIndex=300
-MaterialDrop.Parent=farmPage
-local mc2=Instance.new("UICorner"); mc2.CornerRadius=UDim.new(0,9); mc2.Parent=MaterialDrop
-
-local MaterialOptionsBySea={
- [1]={"Leather + Scrap Metal","Angel Wings","Magma Ore","Fish Tail"},
- [2]={"Leather + Scrap Metal","Radioactive Material","Ectoplasm","Mystic Droplet","Magma Ore","Vampire Fang"},
- [3]={"Scrap Metal","Demonic Wisp","Conjured Cocoa","Dragon Scale","Gunpowder","Fish Tail","Mini Tusk"},
-}
-local function CurrentSea()
- local id=game.PlaceId
- if id==2753915549 or id==85211729168715 then return 1 end
- if id==4442272183 or id==79091703265657 then return 2 end
- if id==7449423635 or id==100117331123089 then return 3 end
- return 1
-end
-local function MaterialOptions()
- return MaterialOptionsBySea[CurrentSea()] or MaterialOptionsBySea[1]
-end
-local MaterialDropOpen=false
-
-local function RefreshMaterial()
- MaterialValue.Text=SelectedMaterial
- MaterialArrow.Text=MaterialDropOpen and "▴" or "▾"
-end
-
-local function RebuildMaterialOptions()
- for _,c in ipairs(MaterialDrop:GetChildren()) do if c:IsA("TextButton") then c:Destroy() end end
- local opts=MaterialOptions()
- if not table.find(opts,SelectedMaterial) then
-  SelectedMaterial=opts[1]; _G.PhongdzSelectedMaterial=SelectedMaterial
- end
- for i,name in ipairs(opts) do
-  local b=Instance.new("TextButton")
-  b.Size=UDim2.new(1,-10,0,32); b.Position=UDim2.fromOffset(5,(i-1)*36+5)
-  b.BackgroundColor3=name==SelectedMaterial and Color3.fromRGB(48,53,66) or Color3.fromRGB(35,39,49)
-  b.BorderSizePixel=0; b.Text=name; b.Font=Enum.Font.GothamMedium; b.TextSize=9
-  b.TextColor3=Color3.fromRGB(230,233,240); b.AutoButtonColor=false; b.ZIndex=310; b.Parent=MaterialDrop
-  local bc=Instance.new("UICorner"); bc.CornerRadius=UDim.new(0,6); bc.Parent=b
-  b.Activated:Connect(function()
-   if MaterialEnabled then return end
-   SelectedMaterial=name; _G.PhongdzSelectedMaterial=name
-   MaterialDropOpen=false; MaterialDrop.Visible=false; MaterialDrop.Size=UDim2.new(1,-8,0,0)
-   RebuildMaterialOptions()
-  end)
- end
- RefreshMaterial()
-end
-
-MaterialButton.Activated:Connect(function()
- if MaterialEnabled or farmEnabled then return end
- MaterialDropOpen=not MaterialDropOpen; MaterialDrop.Visible=MaterialDropOpen
- MaterialDrop.Size=MaterialDropOpen and UDim2.new(1,-8,0,#MaterialOptions()*36+10) or UDim2.new(1,-8,0,0)
- RefreshMaterial()
- if MaterialDropOpen then RebuildMaterialOptions() end
-end)
-RebuildMaterialOptions()
-
-local AutoMaterialToggle=Instance.new("TextButton")
-AutoMaterialToggle.Name="AutoFarmMaterial"
-AutoMaterialToggle.Position=UDim2.fromOffset(4,242)
-AutoMaterialToggle.Size=UDim2.new(1,-8,0,58)
-AutoMaterialToggle.BackgroundColor3=Color3.fromRGB(55,59,70)
-AutoMaterialToggle.BorderSizePixel=0
-AutoMaterialToggle.Text=""
-AutoMaterialToggle.AutoButtonColor=false
-AutoMaterialToggle.ZIndex=80
-AutoMaterialToggle.Active=true
-AutoMaterialToggle.Parent=farmPage
-local ac=Instance.new("UICorner"); ac.CornerRadius=UDim.new(0,10); ac.Parent=AutoMaterialToggle
-
-local aml=Instance.new("TextLabel")
-aml.Position=UDim2.fromOffset(13,6); aml.Size=UDim2.new(1,-90,0,20); aml.BackgroundTransparency=1
-aml.Text="AUTO FARM MATERIAL"; aml.Font=Enum.Font.GothamBold; aml.TextSize=10
-aml.TextColor3=Color3.fromRGB(240,242,247); aml.TextXAlignment=Enum.TextXAlignment.Left; aml.Parent=AutoMaterialToggle
-
-local ams=Instance.new("TextLabel")
-ams.Position=UDim2.fromOffset(13,28); ams.Size=UDim2.new(1,-90,0,17); ams.BackgroundTransparency=1
-ams.Text="● MATERIAL FARM OFF"; ams.Font=Enum.Font.GothamMedium; ams.TextSize=8
-ams.TextColor3=Color3.fromRGB(130,135,148); ams.TextXAlignment=Enum.TextXAlignment.Left; ams.Parent=AutoMaterialToggle
-
-local amp=Instance.new("Frame"); amp.Size=UDim2.fromOffset(52,29); amp.Position=UDim2.new(1,-65,0,14)
-amp.BackgroundColor3=Color3.fromRGB(70,74,85); amp.BorderSizePixel=0; amp.Parent=AutoMaterialToggle
-local apc=Instance.new("UICorner"); apc.CornerRadius=UDim.new(1,0); apc.Parent=amp
-local amk=Instance.new("Frame"); amk.Size=UDim2.fromOffset(23,23); amk.Position=UDim2.fromOffset(3,3)
-amk.BackgroundColor3=Color3.fromRGB(230,232,238); amk.BorderSizePixel=0; amk.Parent=amp
-local akc=Instance.new("UICorner"); akc.CornerRadius=UDim.new(1,0); akc.Parent=amk
-
-local function UpdateMaterialToggle()
- if MaterialEnabled then
-  AutoMaterialToggle.BackgroundColor3=Color3.fromRGB(255,211,65); amk.Position=UDim2.fromOffset(26,3)
-  amk.BackgroundColor3=Color3.fromRGB(16,18,24); ams.Text="● FARMING: "..SelectedMaterial
-  ams.TextColor3=Color3.fromRGB(16,18,24)
- else
-  AutoMaterialToggle.BackgroundColor3=Color3.fromRGB(55,59,70); amk.Position=UDim2.fromOffset(3,3)
-  amk.BackgroundColor3=Color3.fromRGB(230,232,238); ams.Text="● MATERIAL FARM OFF"
-  ams.TextColor3=Color3.fromRGB(130,135,148)
- end
-end
-
-AutoMaterialToggle.Activated:Connect(function()
- if farmEnabled then return end
- MaterialEnabled=not MaterialEnabled
- if MaterialEnabled then
-  if not farmLoaded or not loadFarm() then MaterialEnabled=false; UpdateMaterialToggle(); return end
-  _G.PhongdzSelectedMaterial=SelectedMaterial; _G.AutoMaterial=true; _G.AutoLevel=true
-  _G.PhongdzFarmMethod="Farm Material"
- else
-  _G.AutoMaterial=false; _G.AutoLevel=false; _G.PhongdzFarmMethod=SelectedFarmMethod
-  pcall(StopSourceMovement)
- end
- UpdateMaterialToggle()
-end)
-UpdateMaterialToggle()
-
 -- Keep controls above their cards/dropdowns clickable.
 WeaponButton.ZIndex = 70
 WeaponButton.Active = true
@@ -1951,8 +1777,6 @@ end)
 
 Close.Activated:Connect(function()
     _G.AutoLevel = false
-    _G.AutoMaterial = false
-    MaterialEnabled = false
     Gui:Destroy()
 end)
 
@@ -2251,7 +2075,7 @@ local BringEnemyWatchdogBusy = false
 task.spawn(function()
     while task.wait(0.05) do
         if BringEnemyWatchdogEnabled and _G.AutoLevel then
-            local target = ActiveTarget or BoneFarmTarget or MaterialFarmTarget
+            local target = ActiveTarget or BoneFarmTarget
             if target and target.Parent then
                 if not BringEnemyWatchdogBusy then
                     BringEnemyWatchdogBusy = true
@@ -2795,7 +2619,7 @@ end
 -- Farm Level flow transplanted from source.txt; runs only for Level Farm.
 task.spawn(function()
     while task.wait(Sec) do
-        if _G.AutoLevel and not _G.AutoMaterial and (_G.PhongdzFarmMethod or "Level Farm") == "Level Farm" then
+        if _G.AutoLevel and (_G.PhongdzFarmMethod or "Level Farm") == "Level Farm" then
             pcall(function()
                 local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
                 local Root = char:WaitForChild("HumanoidRootPart")
@@ -2934,61 +2758,6 @@ task.spawn(function()
 end)
 
 --===========================================================================
--- FARM MATERIAL — source MaterialMon() mapping
---===========================================================================
-local MaterialFarmTarget=nil
-local MaterialMap={
- ["Angel Wings"]={{"Shanda","Royal Squad","Royal Soldier","Wysper","Thunder God"},CFrame.new(-4698,845,-1912),1},
- ["Leather + Scrap Metal"]={{"Brute","Pirate"},CFrame.new(-1145,15,4350),1},
- ["Magma Ore"]={{"Military Soldier","Military Spy","Magma Admiral"},CFrame.new(-5815,84,8820),1},
- ["Fish Tail"]={{"Fishman Warrior","Fishman Commando","Fishman Lord"},CFrame.new(61123,19,1569),1},
- ["Radioactive Material"]={{"Factory Staff"},CFrame.new(295,73,-56),2},
- ["Ectoplasm"]={{"Ship Deckhand","Ship Engineer","Ship Steward","Ship Officer"},CFrame.new(911.35827636719,125.95812988281,33159.5390625),2},
- ["Mystic Droplet"]={{"Water Fighter"},CFrame.new(-3385,239,-10542),2},
- ["Vampire Fang"]={{"Vampire"},CFrame.new(-6033,7,-1317),2},
- ["Leather + Scrap Metal W2"]={{"Marine Captain"},CFrame.new(-2010.5059814453125,73.00115966796875,-3326.620849609375),2},
- ["Scrap Metal"]={{"Jungle Pirate","Forest Pirate"},CFrame.new(-11975.78515625,331.7734069824219,-10620.0302734375),3},
- ["Conjured Cocoa"]={{"Chocolate Bar Battler","Cocoa Warrior"},CFrame.new(620.6344604492188,78.93644714355469,-12581.369140625),3},
- ["Dragon Scale"]={{"Dragon Crew Archer","Dragon Crew Warrior"},CFrame.new(6594,383,139),3},
- ["Gunpowder"]={{"Pistol Billionaire"},CFrame.new(-84.8556900024414,85.62061309814453,6132.0087890625),3},
- ["Mini Tusk"]={{"Mythological Pirate"},CFrame.new(-13545,470,-6917),3},
- ["Demonic Wisp"]={{"Demonic Soul"},CFrame.new(-9495.6806640625,453.58624267578125,5977.3486328125),3},
-}
-
-local function MaterialFindTarget(names)
- local enemies=workspace:FindFirstChild("Enemies"); if not enemies then return nil end
- for _,name in ipairs(names) do
-  for _,mob in ipairs(enemies:GetChildren()) do
-   if mob.Name==name and SourceFarmAlive(mob) then return mob end
-  end
- end
- return nil
-end
-
-local function RunMaterialFarmStep()
- if not _G.AutoMaterial or not _G.AutoLevel then MaterialFarmTarget=nil; return end
- local selected=_G.PhongdzSelectedMaterial
- local data=selected and MaterialMap[selected]
- if selected=="Leather + Scrap Metal" and CheckSea(2) then data=MaterialMap["Leather + Scrap Metal W2"] end
- if not data or not CheckSea(data[3]) then MaterialFarmTarget=nil; return end
-
- local target=MaterialFindTarget(data[1])
- if target then
-  MaterialFarmTarget=target; ActiveTarget=target; AutoHaki()
-  local root=target:FindFirstChild("HumanoidRootPart")
-  if root then
-   TweenTo(root.CFrame*CFrame.new(0,20,0)); BringEnemy(target); EquipFarmWeapon(); SpamFruitSkillsFallback()
-  end
- else
-  MaterialFarmTarget=nil; ActiveTarget=nil; TweenTo(data[2])
- end
-end
-
-task.spawn(function()
- while task.wait(0.12) do pcall(RunMaterialFarmStep) end
-end)
-
---===========================================================================
 -- FARM BONES — source.txt logic adapted to the shared movement/attack core.
 -- The source uses these four enemy names and HauntedQuest variants.
 --===========================================================================
@@ -3015,7 +2784,7 @@ local function GetBoneMob()
 end
 
 local function RunBoneFarmStep()
-    if not _G.AutoLevel or _G.AutoMaterial or (_G.PhongdzFarmMethod or "Level Farm") ~= "Farm Bones" then
+    if not _G.AutoLevel or (_G.PhongdzFarmMethod or "Level Farm") ~= "Farm Bones" then
         BoneFarmAlive = false
         BoneFarmTarget = nil
         return
@@ -3128,7 +2897,7 @@ end)
 local farmLoaded = false
 local farmError = nil
 
-loadFarm = function()
+local function loadFarm()
     if farmLoaded then
         return true
     end
@@ -3187,7 +2956,6 @@ Toggle.Activated:Connect(function()
     local nextState = not farmEnabled
 
     if nextState then
-        if MaterialEnabled then return end
         if not farmLoaded then
             if not loadFarm() then
                 farmEnabled = false
@@ -3206,9 +2974,6 @@ Toggle.Activated:Connect(function()
         farmEnabled = false
         _G.AutoLevel = false
         _G.AutoFarm_Bone = false
-        _G.AutoMaterial = false
-        MaterialEnabled = false
-        UpdateMaterialToggle()
         pcall(StopSourceMovement)
     end
 
