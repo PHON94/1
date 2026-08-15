@@ -330,7 +330,7 @@ local Title = Instance.new("TextLabel")
 Title.Position = UDim2.fromOffset(18, 7)
 Title.Size = UDim2.fromOffset(300, 25)
 Title.BackgroundTransparency = 1
-Title.Text = "PHONGDZ HUB  v2.5"
+Title.Text = "PHONGDZ HUB  v2.7"
 Title.Font = Enum.Font.GothamBlack
 Title.TextSize = 19
 Title.TextColor3 = Color3.fromRGB(255, 211, 65)
@@ -593,7 +593,6 @@ local function SourceResolveWeapon()
 end
 
 EquipWeapon = function(text)
-    -- Auto-equip is disabled unless Farm Level is ON.
     if not _G.AutoLevel then return end
     if not text then return end
 
@@ -601,10 +600,10 @@ EquipWeapon = function(text)
     local backpack = LocalPlayer:FindFirstChildOfClass("Backpack")
     local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 
-    if not humanoid or not backpack then return end
+    if not character or not backpack or not humanoid then return end
 
     local tool = backpack:FindFirstChild(text)
-    if tool then
+    if tool and tool:IsA("Tool") then
         pcall(function()
             humanoid:EquipTool(tool)
         end)
@@ -1956,17 +1955,42 @@ local function ExecuteSourceFruitM1()
 end
 
 EquipFarmWeapon = function()
-    -- Only equip the selected weapon while Farm Level is enabled.
     if not _G.AutoLevel then return nil end
 
-    resolveSelectedWeapon()
-    local selected = SelectWeapon or SourceResolveWeapon()
-    if selected then
-        EquipWeapon(selected)
+    local wanted = ChooseWeapon or _G.ChooseWP or "Melee"
+    local name = weaponSc(wanted)
+
+    if not name then
+        -- If the selected tool is already equipped, keep it.
+        local character = LocalPlayer.Character
+        local equipped = character and character:FindFirstChildOfClass("Tool")
+        if equipped and equipped.ToolTip == wanted then
+            _G.SelectWeapon = equipped.Name
+            SelectWeapon = equipped.Name
+            return equipped
+        end
+        return nil
     end
 
     local character = LocalPlayer.Character
     return character and character:FindFirstChildOfClass("Tool")
+end
+
+weaponSc = function(weapon)
+    if not _G.AutoLevel then return end
+    if not weapon then return end
+
+    local backpack = LocalPlayer:FindFirstChildOfClass("Backpack")
+    if not backpack then return end
+
+    for _, v in pairs(backpack:GetChildren()) do
+        if v:IsA("Tool") and v.ToolTip == weapon then
+            EquipWeapon(v.Name)
+            _G.SelectWeapon = v.Name
+            SelectWeapon = v.Name
+            return v.Name
+        end
+    end
 end
 
 local function AutoHaki()
