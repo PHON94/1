@@ -330,7 +330,7 @@ local Title = Instance.new("TextLabel")
 Title.Position = UDim2.fromOffset(18, 7)
 Title.Size = UDim2.fromOffset(300, 25)
 Title.BackgroundTransparency = 1
-Title.Text = "PHONGDZ HUB  v2.8"
+Title.Text = "PHONGDZ HUB  v2.9"
 Title.Font = Enum.Font.GothamBlack
 Title.TextSize = 19
 Title.TextColor3 = Color3.fromRGB(255, 211, 65)
@@ -1708,7 +1708,7 @@ StartSourceMovement()
 --===========================================================================
 -- SOURCE BRING ENEMY CORE
 -- Based on source.txt BringEnemy(Mon).
--- Only the mob grouping layer is replaced; CheckLevel remains unchanged.
+-- Source mob grouping is preserved; a watchdog keeps the group locked during Farm.
 --===========================================================================
 
 local _B = true
@@ -1811,6 +1811,30 @@ local function BringEnemy(Mon)
         end
     end)
 end
+
+
+-- Farm-only mob grouping watchdog.
+-- The source BringEnemy routine remains unchanged; this calls it repeatedly
+-- for the currently active target so the group is maintained while Farm runs.
+local BringEnemyWatchdogEnabled = true
+local BringEnemyWatchdogBusy = false
+
+task.spawn(function()
+    while task.wait(0.05) do
+        if BringEnemyWatchdogEnabled and _G.AutoLevel then
+            local target = ActiveTarget or BoneFarmTarget
+            if target and target.Parent then
+                if not BringEnemyWatchdogBusy then
+                    BringEnemyWatchdogBusy = true
+                    pcall(function()
+                        BringEnemy(target)
+                    end)
+                    BringEnemyWatchdogBusy = false
+                end
+            end
+        end
+    end
+end)
 
 
 local EquipFarmWeapon
