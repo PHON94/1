@@ -1215,231 +1215,6 @@ settingButton.Activated:Connect(function() activateCategory("SETTING") end)
 miscButton.Activated:Connect(function() activateCategory("MISC") end)
 statusButton.Activated:Connect(function() activateCategory("STATUS SERVER") end)
 
---===========================================================================
--- PHONGDZ HUB v4.2 :: LOCAL PLAYER / AUTO STATS
---===========================================================================
-local AutoStats = {
-    Enabled = false,
-    Stat = "Defense",
-    Amount = 1,
-    Busy = false
-}
-
-local AutoStatsList = {"Melee", "Defense", "Sword", "Gun", "Blox Fruit"}
-local AutoStatsButtons = {}
-
-local function AutoStatsAddPoint()
-    if not AutoStats.Enabled or AutoStats.Busy then
-        return
-    end
-
-    local data = LocalPlayer:FindFirstChild("Data")
-    local points = data and data:FindFirstChild("Points")
-    if not points or points.Value <= 0 then
-        return
-    end
-
-    AutoStats.Busy = true
-
-    pcall(function()
-        local remotes = ReplicatedStorage:FindFirstChild("Remotes")
-        local commF = remotes and remotes:FindFirstChild("CommF_")
-        if not commF then
-            return
-        end
-
-        local stat = AutoStats.Stat == "Blox Fruit"
-            and "Demon Fruit"
-            or AutoStats.Stat
-
-        local amount = math.min(
-            points.Value,
-            math.max(1, math.floor(tonumber(AutoStats.Amount) or 1))
-        )
-
-        commF:InvokeServer("AddPoint", stat, amount)
-    end)
-
-    AutoStats.Busy = false
-end
-
-local function RefreshAutoStatsButtons()
-    for statName, button in pairs(AutoStatsButtons) do
-        local selected = statName == AutoStats.Stat
-
-        button.Text = (selected and "✓  " or "□  ") .. statName
-        button.BackgroundColor3 = selected
-            and Color3.fromRGB(64, 145, 91)
-            or Color3.fromRGB(34, 38, 48)
-    end
-end
-
-local autoStatsCard = Instance.new("Frame")
-autoStatsCard.Name = "AutoStats"
-autoStatsCard.Size = UDim2.new(1, -6, 0, 296)
-autoStatsCard.BackgroundColor3 = Color3.fromRGB(22, 25, 33)
-autoStatsCard.BorderSizePixel = 0
-autoStatsCard.ZIndex = 45
-autoStatsCard.Parent = localPlayerPage
-
-local autoCorner = Instance.new("UICorner")
-autoCorner.CornerRadius = UDim.new(0, 10)
-autoCorner.Parent = autoStatsCard
-
-local autoTitle = Instance.new("TextLabel")
-autoTitle.Position = UDim2.fromOffset(13, 9)
-autoTitle.Size = UDim2.new(1, -26, 0, 22)
-autoTitle.BackgroundTransparency = 1
-autoTitle.Text = "AUTO STATS"
-autoTitle.Font = Enum.Font.GothamBlack
-autoTitle.TextSize = 12
-autoTitle.TextColor3 = Color3.fromRGB(255, 211, 65)
-autoTitle.TextXAlignment = Enum.TextXAlignment.Left
-autoTitle.ZIndex = 46
-autoTitle.Parent = autoStatsCard
-
-local autoDesc = Instance.new("TextLabel")
-autoDesc.Position = UDim2.fromOffset(13, 31)
-autoDesc.Size = UDim2.new(1, -26, 0, 18)
-autoDesc.BackgroundTransparency = 1
-autoDesc.Text = "Chọn stats muốn nâng tự động"
-autoDesc.Font = Enum.Font.Gotham
-autoDesc.TextSize = 8
-autoDesc.TextColor3 = Color3.fromRGB(140, 146, 158)
-autoDesc.TextXAlignment = Enum.TextXAlignment.Left
-autoDesc.ZIndex = 46
-autoDesc.Parent = autoStatsCard
-
-for index, statName in ipairs(AutoStatsList) do
-    local button = Instance.new("TextButton")
-    button.Name = "AutoStats_" .. statName:gsub("%s+", "_")
-    button.Position = UDim2.fromOffset(
-        13 + ((index - 1) % 2) * 190,
-        57 + math.floor((index - 1) / 2) * 38
-    )
-    button.Size = UDim2.fromOffset(178, 32)
-    button.BackgroundColor3 = Color3.fromRGB(34, 38, 48)
-    button.BorderSizePixel = 0
-    button.Text = "□  " .. statName
-    button.Font = Enum.Font.GothamBold
-    button.TextSize = 9
-    button.TextColor3 = Color3.fromRGB(225, 228, 235)
-    button.TextXAlignment = Enum.TextXAlignment.Left
-    button.AutoButtonColor = false
-    button.ZIndex = 50
-    button.Parent = autoStatsCard
-
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 7)
-    corner.Parent = button
-
-    local padding = Instance.new("UIPadding")
-    padding.PaddingLeft = UDim.new(0, 10)
-    padding.Parent = button
-
-    AutoStatsButtons[statName] = button
-
-    button.Activated:Connect(function()
-        AutoStats.Stat = statName
-        RefreshAutoStatsButtons()
-    end)
-end
-
-local amountButton = Instance.new("TextButton")
-amountButton.Position = UDim2.fromOffset(13, 171)
-amountButton.Size = UDim2.new(1, -26, 0, 34)
-amountButton.BackgroundColor3 = Color3.fromRGB(34, 38, 48)
-amountButton.BorderSizePixel = 0
-amountButton.Text = "POINTS / CYCLE: 1"
-amountButton.Font = Enum.Font.GothamBold
-amountButton.TextSize = 9
-amountButton.TextColor3 = Color3.fromRGB(225, 228, 235)
-amountButton.AutoButtonColor = false
-amountButton.ZIndex = 50
-amountButton.Parent = autoStatsCard
-
-local amountCorner = Instance.new("UICorner")
-amountCorner.CornerRadius = UDim.new(0, 7)
-amountCorner.Parent = amountButton
-
-local amountValues = {1, 5, 10, 25, 50, 100}
-local amountIndex = 1
-
-amountButton.Activated:Connect(function()
-    amountIndex = (amountIndex % #amountValues) + 1
-    AutoStats.Amount = amountValues[amountIndex]
-    amountButton.Text = "POINTS / CYCLE: " .. tostring(AutoStats.Amount)
-end)
-
-local toggleButton = Instance.new("TextButton")
-toggleButton.Position = UDim2.fromOffset(13, 213)
-toggleButton.Size = UDim2.new(1, -26, 0, 40)
-toggleButton.BackgroundColor3 = Color3.fromRGB(48, 52, 63)
-toggleButton.BorderSizePixel = 0
-toggleButton.Text = "AUTO STATS: OFF"
-toggleButton.Font = Enum.Font.GothamBlack
-toggleButton.TextSize = 10
-toggleButton.TextColor3 = Color3.fromRGB(215, 219, 227)
-toggleButton.AutoButtonColor = false
-toggleButton.ZIndex = 50
-toggleButton.Parent = autoStatsCard
-
-local toggleCorner = Instance.new("UICorner")
-toggleCorner.CornerRadius = UDim.new(0, 8)
-toggleCorner.Parent = toggleButton
-
-local statusLabel = Instance.new("TextLabel")
-statusLabel.Position = UDim2.fromOffset(13, 258)
-statusLabel.Size = UDim2.new(1, -26, 0, 20)
-statusLabel.BackgroundTransparency = 1
-statusLabel.Text = "● OFF  •  Defense"
-statusLabel.Font = Enum.Font.GothamMedium
-statusLabel.TextSize = 8
-statusLabel.TextColor3 = Color3.fromRGB(140, 146, 158)
-statusLabel.TextXAlignment = Enum.TextXAlignment.Center
-statusLabel.ZIndex = 46
-statusLabel.Parent = autoStatsCard
-
-toggleButton.Activated:Connect(function()
-    AutoStats.Enabled = not AutoStats.Enabled
-
-    if AutoStats.Enabled then
-        toggleButton.Text = "AUTO STATS: ON"
-        toggleButton.BackgroundColor3 = Color3.fromRGB(64, 145, 91)
-        statusLabel.Text = "● RUNNING  •  " .. AutoStats.Stat
-    else
-        toggleButton.Text = "AUTO STATS: OFF"
-        toggleButton.BackgroundColor3 = Color3.fromRGB(48, 52, 63)
-        statusLabel.Text = "● OFF  •  " .. AutoStats.Stat
-    end
-end)
-
-RefreshAutoStatsButtons()
-
-_G.PhongdzAutoStats = {
-    SetEnabled = function(value)
-        AutoStats.Enabled = value == true
-    end,
-    SetStat = function(value)
-        if table.find(AutoStatsList, value) then
-            AutoStats.Stat = value
-            RefreshAutoStatsButtons()
-        end
-    end,
-    SetAmount = function(value)
-        AutoStats.Amount = math.max(1, math.floor(tonumber(value) or 1))
-    end
-}
-
-task.spawn(function()
-    while task.wait(0.4) do
-        if AutoStats.Enabled then
-            pcall(AutoStatsAddPoint)
-        end
-    end
-end)
-
-
 -- Function-level scroll helpers: one independent scrollbar per section.
 local function ScrollFunctions(page, delta)
     if not page then return end
@@ -3966,3 +3741,253 @@ RunService.RenderStepped:Connect(function()
 end)
 
 updateToggle()
+
+
+--=============================================================================
+-- PHONGDZ HUB v4.2 :: LOCAL PLAYER / AUTO STATS
+-- IMPORTANT: appended after the original v4.1 runtime.
+-- Auto Stats is isolated so it cannot block the original UI/Farm startup.
+--=============================================================================
+task.spawn(function()
+    local ok, err = xpcall(function()
+        local AutoStats = {
+            Enabled = false,
+            Stat = "Defense",
+            Amount = 1,
+            Busy = false
+        }
+
+        local Stats = {"Melee", "Defense", "Sword", "Gun", "Blox Fruit"}
+        local Buttons = {}
+
+        local function getCommF()
+            local remotes = ReplicatedStorage:FindFirstChild("Remotes")
+            return remotes and remotes:FindFirstChild("CommF_")
+        end
+
+        local function addPoint()
+            if not AutoStats.Enabled or AutoStats.Busy then
+                return
+            end
+
+            local data = LocalPlayer:FindFirstChild("Data")
+            local points = data and data:FindFirstChild("Points")
+            if not points or points.Value <= 0 then
+                return
+            end
+
+            local commF = getCommF()
+            if not commF then
+                return
+            end
+
+            AutoStats.Busy = true
+
+            pcall(function()
+                local stat = AutoStats.Stat == "Blox Fruit"
+                    and "Demon Fruit"
+                    or AutoStats.Stat
+
+                local amount = math.min(
+                    points.Value,
+                    math.max(1, math.floor(tonumber(AutoStats.Amount) or 1))
+                )
+
+                commF:InvokeServer("AddPoint", stat, amount)
+            end)
+
+            AutoStats.Busy = false
+        end
+
+        local function refresh()
+            for stat, button in pairs(Buttons) do
+                local selected = stat == AutoStats.Stat
+                button.Text = (selected and "✓  " or "□  ") .. stat
+                button.BackgroundColor3 = selected
+                    and Color3.fromRGB(64, 145, 91)
+                    or Color3.fromRGB(34, 38, 48)
+            end
+        end
+
+        -- The page already exists because it is created by the original menu.
+        local page = localPlayerPage
+        if not page or not page.Parent then
+            error("LocalPlayerPage không tồn tại")
+        end
+
+        local card = Instance.new("Frame")
+        card.Name = "AutoStats"
+        card.Size = UDim2.new(1, -6, 0, 296)
+        card.BackgroundColor3 = Color3.fromRGB(22, 25, 33)
+        card.BorderSizePixel = 0
+        card.ZIndex = 45
+        card.Parent = page
+
+        local cardCorner = Instance.new("UICorner")
+        cardCorner.CornerRadius = UDim.new(0, 10)
+        cardCorner.Parent = card
+
+        local title = Instance.new("TextLabel")
+        title.BackgroundTransparency = 1
+        title.Position = UDim2.fromOffset(13, 9)
+        title.Size = UDim2.new(1, -26, 0, 22)
+        title.Text = "AUTO STATS"
+        title.Font = Enum.Font.GothamBlack
+        title.TextSize = 12
+        title.TextColor3 = Color3.fromRGB(255, 211, 65)
+        title.TextXAlignment = Enum.TextXAlignment.Left
+        title.ZIndex = 46
+        title.Parent = card
+
+        local desc = Instance.new("TextLabel")
+        desc.BackgroundTransparency = 1
+        desc.Position = UDim2.fromOffset(13, 31)
+        desc.Size = UDim2.new(1, -26, 0, 18)
+        desc.Text = "Chọn stats muốn nâng tự động"
+        desc.Font = Enum.Font.Gotham
+        desc.TextSize = 8
+        desc.TextColor3 = Color3.fromRGB(140, 146, 158)
+        desc.TextXAlignment = Enum.TextXAlignment.Left
+        desc.ZIndex = 46
+        desc.Parent = card
+
+        for i, stat in ipairs(Stats) do
+            local button = Instance.new("TextButton")
+            button.Name = "AutoStats_" .. stat:gsub("%s+", "_")
+            button.Position = UDim2.fromOffset(
+                13 + ((i - 1) % 2) * 190,
+                57 + math.floor((i - 1) / 2) * 38
+            )
+            button.Size = UDim2.fromOffset(178, 32)
+            button.BackgroundColor3 = Color3.fromRGB(34, 38, 48)
+            button.BorderSizePixel = 0
+            button.Text = "□  " .. stat
+            button.Font = Enum.Font.GothamBold
+            button.TextSize = 9
+            button.TextColor3 = Color3.fromRGB(225, 228, 235)
+            button.TextXAlignment = Enum.TextXAlignment.Left
+            button.AutoButtonColor = false
+            button.ZIndex = 50
+            button.Parent = card
+
+            local c = Instance.new("UICorner")
+            c.CornerRadius = UDim.new(0, 7)
+            c.Parent = button
+
+            local p = Instance.new("UIPadding")
+            p.PaddingLeft = UDim.new(0, 10)
+            p.Parent = button
+
+            Buttons[stat] = button
+
+            button.Activated:Connect(function()
+                AutoStats.Stat = stat
+                refresh()
+            end)
+        end
+
+        local amountButton = Instance.new("TextButton")
+        amountButton.Position = UDim2.fromOffset(13, 171)
+        amountButton.Size = UDim2.new(1, -26, 0, 34)
+        amountButton.BackgroundColor3 = Color3.fromRGB(34, 38, 48)
+        amountButton.BorderSizePixel = 0
+        amountButton.Text = "POINTS / CYCLE: 1"
+        amountButton.Font = Enum.Font.GothamBold
+        amountButton.TextSize = 9
+        amountButton.TextColor3 = Color3.fromRGB(225, 228, 235)
+        amountButton.AutoButtonColor = false
+        amountButton.ZIndex = 50
+        amountButton.Parent = card
+
+        local amountCorner = Instance.new("UICorner")
+        amountCorner.CornerRadius = UDim.new(0, 7)
+        amountCorner.Parent = amountButton
+
+        local values = {1, 5, 10, 25, 50, 100}
+        local valueIndex = 1
+
+        amountButton.Activated:Connect(function()
+            valueIndex = valueIndex % #values + 1
+            AutoStats.Amount = values[valueIndex]
+            amountButton.Text = "POINTS / CYCLE: " .. AutoStats.Amount
+        end)
+
+        local toggle = Instance.new("TextButton")
+        toggle.Position = UDim2.fromOffset(13, 213)
+        toggle.Size = UDim2.new(1, -26, 0, 40)
+        toggle.BackgroundColor3 = Color3.fromRGB(48, 52, 63)
+        toggle.BorderSizePixel = 0
+        toggle.Text = "AUTO STATS: OFF"
+        toggle.Font = Enum.Font.GothamBlack
+        toggle.TextSize = 10
+        toggle.TextColor3 = Color3.fromRGB(215, 219, 227)
+        toggle.AutoButtonColor = false
+        toggle.ZIndex = 50
+        toggle.Parent = card
+
+        local toggleCorner = Instance.new("UICorner")
+        toggleCorner.CornerRadius = UDim.new(0, 8)
+        toggleCorner.Parent = toggle
+
+        local status = Instance.new("TextLabel")
+        status.BackgroundTransparency = 1
+        status.Position = UDim2.fromOffset(13, 258)
+        status.Size = UDim2.new(1, -26, 0, 20)
+        status.Text = "● OFF  •  Defense"
+        status.Font = Enum.Font.GothamMedium
+        status.TextSize = 8
+        status.TextColor3 = Color3.fromRGB(140, 146, 158)
+        status.TextXAlignment = Enum.TextXAlignment.Center
+        status.ZIndex = 46
+        status.Parent = card
+
+        toggle.Activated:Connect(function()
+            AutoStats.Enabled = not AutoStats.Enabled
+
+            if AutoStats.Enabled then
+                toggle.Text = "AUTO STATS: ON"
+                toggle.BackgroundColor3 = Color3.fromRGB(64, 145, 91)
+                status.Text = "● RUNNING  •  " .. AutoStats.Stat
+            else
+                toggle.Text = "AUTO STATS: OFF"
+                toggle.BackgroundColor3 = Color3.fromRGB(48, 52, 63)
+                status.Text = "● OFF  •  " .. AutoStats.Stat
+            end
+        end)
+
+        refresh()
+
+        _G.PhongdzAutoStats = {
+            SetEnabled = function(value)
+                AutoStats.Enabled = value == true
+            end,
+
+            SetStat = function(value)
+                if table.find(Stats, value) then
+                    AutoStats.Stat = value
+                    refresh()
+                end
+            end,
+
+            SetAmount = function(value)
+                AutoStats.Amount = math.max(
+                    1,
+                    math.floor(tonumber(value) or 1)
+                )
+            end
+        }
+
+        task.spawn(function()
+            while Gui.Parent and card.Parent do
+                task.wait(0.4)
+                if AutoStats.Enabled then
+                    pcall(addPoint)
+                end
+            end
+        end)
+    end, debug.traceback)
+
+    if not ok then
+        warn("[PhongdzHub][AutoStats] Disabled safely:", err)
+    end
+end)
