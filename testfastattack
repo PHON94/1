@@ -1586,6 +1586,38 @@ SettingFarm.Active = true
 --===========================================================================
 -- SETTING :: RESET BYPASS
 --===========================================================================
+-- One-shot destination state must exist before the Setting callback
+-- is created, otherwise Lua resolves it as a global.
+local ResetBypassCompletedTarget = nil
+local ResetBypassCompletedAt = 0
+local ResetBypassTargetTolerance = 120
+
+local function ResetBypassTargetAlreadyCompleted(targetCF)
+    if not targetCF or not ResetBypassCompletedTarget then
+        return false
+    end
+
+    return (targetCF.Position - ResetBypassCompletedTarget.Position).Magnitude
+        <= ResetBypassTargetTolerance
+end
+
+local function ResetBypassMarkCompleted(targetCF)
+    ResetBypassCompletedTarget = targetCF
+    ResetBypassCompletedAt = os.clock()
+end
+
+local function ResetBypassClearIfTargetChanged(targetCF)
+    if not targetCF or not ResetBypassCompletedTarget then
+        return
+    end
+
+    if (targetCF.Position - ResetBypassCompletedTarget.Position).Magnitude
+        > ResetBypassTargetTolerance then
+        ResetBypassCompletedTarget = nil
+        ResetBypassCompletedAt = 0
+    end
+end
+
 local ResetBypassToggle = Instance.new("TextButton")
 ResetBypassToggle.Name = "ResetBypassToggle"
 ResetBypassToggle.Position = UDim2.fromOffset(4, 164)
@@ -2701,43 +2733,12 @@ _G.PhongdzResetBypass = false
 local ResetBypassBusy = false
 local ResetBypassLast = 0
 local ResetBypassCooldown = 2.5
-local ResetBypassCompletedTarget = nil
-local ResetBypassCompletedAt = 0
-local ResetBypassTargetTolerance = 120
-
-local function ResetBypassTargetAlreadyCompleted(targetCF)
-    if not targetCF or not ResetBypassCompletedTarget then
-        return false
-    end
-
-    return (targetCF.Position - ResetBypassCompletedTarget.Position).Magnitude
-        <= ResetBypassTargetTolerance
-end
-
-local function ResetBypassMarkCompleted(targetCF)
-    ResetBypassCompletedTarget = targetCF
-    ResetBypassCompletedAt = os.clock()
-end
-
-local function ResetBypassClearIfTargetChanged(targetCF)
-    if not targetCF or not ResetBypassCompletedTarget then
-        return
-    end
-
-    if (targetCF.Position - ResetBypassCompletedTarget.Position).Magnitude
-        > ResetBypassTargetTolerance then
-        ResetBypassCompletedTarget = nil
-        ResetBypassCompletedAt = 0
-    end
-end
 
 local function ResetBypassCanUse(targetCF)
     if not _G.PhongdzResetBypass or ResetBypassBusy then
         return false
     end
 
-    -- One reset only for each destination. A repeated Farm loop must not
-    -- continuously respawn at the same island.
     ResetBypassClearIfTargetChanged(targetCF)
     if ResetBypassTargetAlreadyCompleted(targetCF) then
         return false
@@ -2830,9 +2831,6 @@ local function ExecuteResetBypass(targetCF)
     end)
 
     if ok then
-        -- The reset has completed its job for this destination.
-        -- Further calls for the same target are blocked until Farm requests
-        -- a materially different island/target.
         ResetBypassMarkCompleted(targetCF)
 
         task.spawn(function()
