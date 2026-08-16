@@ -1,188 +1,4 @@
 --=============================================================================
-
---===========================================================================
--- PHONGDZ_AUTO_STATS_V42
--- Local Player -> Auto Stats
---===========================================================================
-local AutoStatsEnabled = false
-local AutoStatsBusy = false
-local AutoStatsSelected = "Defense"
-local AutoStatsAmount = 1
-
-local AutoStatsNames = {"Melee","Defense","Sword","Gun","Blox Fruit"}
-
-local function AutoStatsAddPoint()
-    if not AutoStatsEnabled or AutoStatsBusy then return end
-
-    local data = LocalPlayer:FindFirstChild("Data")
-    local points = data and data:FindFirstChild("Points")
-    if not points or points.Value <= 0 then return end
-
-    local amount = math.min(points.Value, math.max(1, math.floor(AutoStatsAmount)))
-    AutoStatsBusy = true
-
-    pcall(function()
-        local commF = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("CommF_")
-        local remoteStat = AutoStatsSelected == "Blox Fruit"
-            and "Demon Fruit"
-            or AutoStatsSelected
-        commF:InvokeServer("AddPoint", remoteStat, amount)
-    end)
-
-    AutoStatsBusy = false
-end
-
-task.spawn(function()
-    while task.wait(0.35) do
-        pcall(AutoStatsAddPoint)
-    end
-end)
-
--- Local Player page/card. If the v4.1 menu has its own page switcher,
--- this page can be attached to it by its unique Name without changing Farm.
-local LocalPlayerPage = Instance.new("ScrollingFrame")
-LocalPlayerPage.Name = "LocalPlayerPage"
-LocalPlayerPage.BackgroundTransparency = 1
-LocalPlayerPage.BorderSizePixel = 0
-LocalPlayerPage.ScrollBarThickness = 3
-LocalPlayerPage.CanvasSize = UDim2.fromOffset(0, 350)
-LocalPlayerPage.Visible = false
-
-local AutoStatsCard = Instance.new("Frame")
-AutoStatsCard.Name = "PHONGDZ_AUTO_STATS_V42"
-AutoStatsCard.Position = UDim2.fromOffset(4, 6)
-AutoStatsCard.Size = UDim2.new(1, -8, 0, 300)
-AutoStatsCard.BackgroundColor3 = Color3.fromRGB(22,25,33)
-AutoStatsCard.BorderSizePixel = 0
-AutoStatsCard.ZIndex = 80
-AutoStatsCard.Parent = LocalPlayerPage
-Instance.new("UICorner", AutoStatsCard).CornerRadius = UDim.new(0,10)
-
-local title = Instance.new("TextLabel")
-title.Position = UDim2.fromOffset(13,9)
-title.Size = UDim2.new(1,-26,0,22)
-title.BackgroundTransparency = 1
-title.Text = "AUTO STATS"
-title.Font = Enum.Font.GothamBlack
-title.TextSize = 12
-title.TextColor3 = Color3.fromRGB(255,211,65)
-title.TextXAlignment = Enum.TextXAlignment.Left
-title.ZIndex = 81
-title.Parent = AutoStatsCard
-
-local desc = Instance.new("TextLabel")
-desc.Position = UDim2.fromOffset(13,31)
-desc.Size = UDim2.new(1,-26,0,18)
-desc.BackgroundTransparency = 1
-desc.Text = "Chọn stat muốn tự động nâng"
-desc.Font = Enum.Font.Gotham
-desc.TextSize = 8
-desc.TextColor3 = Color3.fromRGB(140,146,158)
-desc.TextXAlignment = Enum.TextXAlignment.Left
-desc.Parent = AutoStatsCard
-
-local statButtons = {}
-
-local function refreshStats()
-    for stat,button in pairs(statButtons) do
-        local selected = stat == AutoStatsSelected
-        button.Text = (selected and "✓  " or "□  ") .. stat
-        button.BackgroundColor3 = selected
-            and Color3.fromRGB(64,145,91)
-            or Color3.fromRGB(34,38,48)
-    end
-end
-
-for i,stat in ipairs(AutoStatsNames) do
-    local b = Instance.new("TextButton")
-    b.Position = UDim2.fromOffset(13 + ((i-1)%2)*190, 57 + math.floor((i-1)/2)*38)
-    b.Size = UDim2.fromOffset(178,32)
-    b.BackgroundColor3 = Color3.fromRGB(34,38,48)
-    b.BorderSizePixel = 0
-    b.Text = "□  "..stat
-    b.Font = Enum.Font.GothamBold
-    b.TextSize = 9
-    b.TextColor3 = Color3.fromRGB(225,228,235)
-    b.TextXAlignment = Enum.TextXAlignment.Left
-    b.AutoButtonColor = false
-    b.ZIndex = 90
-    b.Parent = AutoStatsCard
-    Instance.new("UICorner",b).CornerRadius = UDim.new(0,7)
-
-    local pad = Instance.new("UIPadding")
-    pad.PaddingLeft = UDim.new(0,10)
-    pad.Parent = b
-
-    statButtons[stat] = b
-    b.Activated:Connect(function()
-        AutoStatsSelected = stat
-        refreshStats()
-    end)
-end
-
-local amount = Instance.new("TextButton")
-amount.Position = UDim2.fromOffset(13,171)
-amount.Size = UDim2.new(1,-26,0,34)
-amount.BackgroundColor3 = Color3.fromRGB(34,38,48)
-amount.BorderSizePixel = 0
-amount.Text = "Points / cycle: 1"
-amount.Font = Enum.Font.GothamBold
-amount.TextSize = 9
-amount.TextColor3 = Color3.fromRGB(225,228,235)
-amount.AutoButtonColor = false
-amount.ZIndex = 90
-amount.Parent = AutoStatsCard
-Instance.new("UICorner",amount).CornerRadius = UDim.new(0,7)
-
-local amounts = {1,5,10,25,50,100}
-local amountIndex = 1
-amount.Activated:Connect(function()
-    amountIndex = amountIndex % #amounts + 1
-    AutoStatsAmount = amounts[amountIndex]
-    amount.Text = "Points / cycle: "..AutoStatsAmount
-end)
-
-local toggle = Instance.new("TextButton")
-toggle.Position = UDim2.fromOffset(13,214)
-toggle.Size = UDim2.new(1,-26,0,40)
-toggle.BackgroundColor3 = Color3.fromRGB(48,52,63)
-toggle.BorderSizePixel = 0
-toggle.Text = "AUTO STATS: OFF"
-toggle.Font = Enum.Font.GothamBlack
-toggle.TextSize = 10
-toggle.TextColor3 = Color3.fromRGB(215,219,227)
-toggle.AutoButtonColor = false
-toggle.ZIndex = 90
-toggle.Parent = AutoStatsCard
-Instance.new("UICorner",toggle).CornerRadius = UDim.new(0,8)
-
-toggle.Activated:Connect(function()
-    AutoStatsEnabled = not AutoStatsEnabled
-    toggle.Text = AutoStatsEnabled and "AUTO STATS: ON" or "AUTO STATS: OFF"
-    toggle.BackgroundColor3 = AutoStatsEnabled
-        and Color3.fromRGB(64,145,91)
-        or Color3.fromRGB(48,52,63)
-end)
-
-refreshStats()
-
--- Expose the page so the existing menu can place it directly above Farm.
-_G.PhongdzLocalPlayerPage = LocalPlayerPage
-_G.PhongdzAutoStats = {
-    Page = LocalPlayerPage,
-    SetEnabled = function(v) AutoStatsEnabled = v == true end,
-    SetStat = function(v)
-        if table.find(AutoStatsNames,v) then
-            AutoStatsSelected = v
-            refreshStats()
-        end
-    end,
-    SetAmount = function(v)
-        AutoStatsAmount = math.max(1,math.floor(tonumber(v) or 1))
-    end
-}
-
-
 -- PHONGDZ HUB — CLEAN / ROBUST UI + FARM LEVEL + FAST ATTACK
 -- UI được khởi tạo độc lập; Farm chỉ chạy sau khi UI đã hiện.
 --=============================================================================
@@ -1369,11 +1185,12 @@ local function makeCategory(name, icon, order)
     return button, page
 end
 
-local farmButton, farmPage = makeCategory("FARM", "⚔", 1)
-local espButton, espPage = makeCategory("ESP", "◉", 2)
-local settingButton, settingPage = makeCategory("SETTING", "⚙", 3)
-local miscButton, miscPage = makeCategory("MISC", "✦", 4)
-local statusButton, statusPage = makeCategory("STATUS SERVER", "◌", 5)
+local localPlayerButton, localPlayerPage = makeCategory("LOCAL PLAYER", "◉", 1)
+local farmButton, farmPage = makeCategory("FARM", "⚔", 2)
+local espButton, espPage = makeCategory("ESP", "◉", 3)
+local settingButton, settingPage = makeCategory("SETTING", "⚙", 4)
+local miscButton, miscPage = makeCategory("MISC", "✦", 5)
+local statusButton, statusPage = makeCategory("STATUS SERVER", "◌", 6)
 
 local function activateCategory(name)
     for pageName, page in pairs(CategoryPages) do
@@ -1391,11 +1208,252 @@ local function activateCategory(name)
     end
 end
 
+localPlayerButton.Activated:Connect(function() activateCategory("LOCAL PLAYER") end)
 farmButton.Activated:Connect(function() activateCategory("FARM") end)
 espButton.Activated:Connect(function() activateCategory("ESP") end)
 settingButton.Activated:Connect(function() activateCategory("SETTING") end)
 miscButton.Activated:Connect(function() activateCategory("MISC") end)
 statusButton.Activated:Connect(function() activateCategory("STATUS SERVER") end)
+
+--===========================================================================
+-- PHONGDZ AUTO STATS v4.2
+-- Local Player -> Auto Stats
+-- UI độc lập; không sửa Farm/Fast Attack/ESP.
+--===========================================================================
+local AutoStatsEnabled = false
+local AutoStatsBusy = false
+local AutoStatsSelected = "Defense"
+local AutoStatsAmount = 1
+
+local AutoStatsNames = {
+    "Melee",
+    "Defense",
+    "Sword",
+    "Gun",
+    "Blox Fruit"
+}
+
+local function AutoStatsAddPoint()
+    if not AutoStatsEnabled or AutoStatsBusy then
+        return
+    end
+
+    local data = LocalPlayer and LocalPlayer:FindFirstChild("Data")
+    local points = data and data:FindFirstChild("Points")
+
+    if not points or points.Value <= 0 then
+        return
+    end
+
+    local amount = math.min(
+        points.Value,
+        math.max(1, math.floor(tonumber(AutoStatsAmount) or 1))
+    )
+
+    AutoStatsBusy = true
+
+    local ok = pcall(function()
+        local remotes = ReplicatedStorage:FindFirstChild("Remotes")
+        local commF = remotes and remotes:FindFirstChild("CommF_")
+
+        if not commF then
+            return
+        end
+
+        local statName = AutoStatsSelected == "Blox Fruit"
+            and "Demon Fruit"
+            or AutoStatsSelected
+
+        commF:InvokeServer("AddPoint", statName, amount)
+    end)
+
+    AutoStatsBusy = false
+    return ok
+end
+
+task.spawn(function()
+    while task.wait(0.4) do
+        if AutoStatsEnabled then
+            pcall(AutoStatsAddPoint)
+        end
+    end
+end)
+
+local AutoStatsCard = Instance.new("Frame")
+AutoStatsCard.Name = "AutoStats"
+AutoStatsCard.Size = UDim2.new(1, -10, 0, 300)
+AutoStatsCard.BackgroundColor3 = Color3.fromRGB(22, 25, 33)
+AutoStatsCard.BorderSizePixel = 0
+AutoStatsCard.ZIndex = 45
+AutoStatsCard.Parent = localPlayerPage
+
+local autoCorner = Instance.new("UICorner")
+autoCorner.CornerRadius = UDim.new(0, 10)
+autoCorner.Parent = AutoStatsCard
+
+local autoTitle = Instance.new("TextLabel")
+autoTitle.BackgroundTransparency = 1
+autoTitle.Position = UDim2.fromOffset(14, 10)
+autoTitle.Size = UDim2.new(1, -28, 0, 22)
+autoTitle.Text = "AUTO STATS"
+autoTitle.Font = Enum.Font.GothamBlack
+autoTitle.TextSize = 12
+autoTitle.TextColor3 = Color3.fromRGB(255, 211, 65)
+autoTitle.TextXAlignment = Enum.TextXAlignment.Left
+autoTitle.ZIndex = 46
+autoTitle.Parent = AutoStatsCard
+
+local autoDesc = Instance.new("TextLabel")
+autoDesc.BackgroundTransparency = 1
+autoDesc.Position = UDim2.fromOffset(14, 33)
+autoDesc.Size = UDim2.new(1, -28, 0, 18)
+autoDesc.Text = "Chọn stat muốn tự động nâng"
+autoDesc.Font = Enum.Font.Gotham
+autoDesc.TextSize = 8
+autoDesc.TextColor3 = Color3.fromRGB(140, 146, 158)
+autoDesc.TextXAlignment = Enum.TextXAlignment.Left
+autoDesc.ZIndex = 46
+autoDesc.Parent = AutoStatsCard
+
+local autoButtons = {}
+
+local function refreshAutoStatsUI()
+    for statName, button in pairs(autoButtons) do
+        local selected = statName == AutoStatsSelected
+
+        button.Text = (selected and "✓  " or "□  ") .. statName
+        button.BackgroundColor3 = selected
+            and Color3.fromRGB(64, 145, 91)
+            or Color3.fromRGB(34, 38, 48)
+    end
+end
+
+for index, statName in ipairs(AutoStatsNames) do
+    local button = Instance.new("TextButton")
+    button.Name = "AutoStat_" .. statName:gsub("%s+", "_")
+    button.Position = UDim2.fromOffset(
+        14 + ((index - 1) % 2) * 190,
+        58 + math.floor((index - 1) / 2) * 38
+    )
+    button.Size = UDim2.fromOffset(178, 32)
+    button.BackgroundColor3 = Color3.fromRGB(34, 38, 48)
+    button.BorderSizePixel = 0
+    button.Text = "□  " .. statName
+    button.Font = Enum.Font.GothamBold
+    button.TextSize = 9
+    button.TextColor3 = Color3.fromRGB(225, 228, 235)
+    button.TextXAlignment = Enum.TextXAlignment.Left
+    button.AutoButtonColor = false
+    button.ZIndex = 50
+    button.Parent = AutoStatsCard
+
+    local corner = Instance.new("UICorner")
+    corner.CornerRadius = UDim.new(0, 7)
+    corner.Parent = button
+
+    local padding = Instance.new("UIPadding")
+    padding.PaddingLeft = UDim.new(0, 10)
+    padding.Parent = button
+
+    autoButtons[statName] = button
+
+    button.Activated:Connect(function()
+        AutoStatsSelected = statName
+        refreshAutoStatsUI()
+    end)
+end
+
+local amountButton = Instance.new("TextButton")
+amountButton.Position = UDim2.fromOffset(14, 172)
+amountButton.Size = UDim2.new(1, -28, 0, 34)
+amountButton.BackgroundColor3 = Color3.fromRGB(34, 38, 48)
+amountButton.BorderSizePixel = 0
+amountButton.Text = "POINTS / CYCLE: 1"
+amountButton.Font = Enum.Font.GothamBold
+amountButton.TextSize = 9
+amountButton.TextColor3 = Color3.fromRGB(225, 228, 235)
+amountButton.AutoButtonColor = false
+amountButton.ZIndex = 50
+amountButton.Parent = AutoStatsCard
+
+local amountCorner = Instance.new("UICorner")
+amountCorner.CornerRadius = UDim.new(0, 7)
+amountCorner.Parent = amountButton
+
+local amounts = {1, 5, 10, 25, 50, 100}
+local amountIndex = 1
+
+amountButton.Activated:Connect(function()
+    amountIndex = (amountIndex % #amounts) + 1
+    AutoStatsAmount = amounts[amountIndex]
+    amountButton.Text = "POINTS / CYCLE: " .. tostring(AutoStatsAmount)
+end)
+
+local autoToggle = Instance.new("TextButton")
+autoToggle.Position = UDim2.fromOffset(14, 214)
+autoToggle.Size = UDim2.new(1, -28, 0, 40)
+autoToggle.BackgroundColor3 = Color3.fromRGB(48, 52, 63)
+autoToggle.BorderSizePixel = 0
+autoToggle.Text = "AUTO STATS: OFF"
+autoToggle.Font = Enum.Font.GothamBlack
+autoToggle.TextSize = 10
+autoToggle.TextColor3 = Color3.fromRGB(215, 219, 227)
+autoToggle.AutoButtonColor = false
+autoToggle.ZIndex = 50
+autoToggle.Parent = AutoStatsCard
+
+local toggleCorner = Instance.new("UICorner")
+toggleCorner.CornerRadius = UDim.new(0, 8)
+toggleCorner.Parent = autoToggle
+
+local autoStatus = Instance.new("TextLabel")
+autoStatus.BackgroundTransparency = 1
+autoStatus.Position = UDim2.fromOffset(14, 258)
+autoStatus.Size = UDim2.new(1, -28, 0, 22)
+autoStatus.Text = "● OFF  •  Defense"
+autoStatus.Font = Enum.Font.GothamMedium
+autoStatus.TextSize = 8
+autoStatus.TextColor3 = Color3.fromRGB(140, 146, 158)
+autoStatus.TextXAlignment = Enum.TextXAlignment.Center
+autoStatus.ZIndex = 46
+autoStatus.Parent = AutoStatsCard
+
+autoToggle.Activated:Connect(function()
+    AutoStatsEnabled = not AutoStatsEnabled
+
+    if AutoStatsEnabled then
+        autoToggle.Text = "AUTO STATS: ON"
+        autoToggle.BackgroundColor3 = Color3.fromRGB(64, 145, 91)
+        autoStatus.Text = "● RUNNING  •  " .. AutoStatsSelected
+    else
+        autoToggle.Text = "AUTO STATS: OFF"
+        autoToggle.BackgroundColor3 = Color3.fromRGB(48, 52, 63)
+        autoStatus.Text = "● OFF  •  " .. AutoStatsSelected
+    end
+end)
+
+refreshAutoStatsUI()
+
+_G.PhongdzAutoStats = {
+    SetEnabled = function(value)
+        AutoStatsEnabled = value == true
+    end,
+
+    SetStat = function(value)
+        if table.find(AutoStatsNames, value) then
+            AutoStatsSelected = value
+            refreshAutoStatsUI()
+        end
+    end,
+
+    SetAmount = function(value)
+        AutoStatsAmount = math.max(1, math.floor(tonumber(value) or 1))
+    end
+}
+
+_G.PhongdzLocalPlayerPage = localPlayerPage
+
+
 
 -- Function-level scroll helpers: one independent scrollbar per section.
 local function ScrollFunctions(page, delta)
