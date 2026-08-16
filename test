@@ -157,7 +157,7 @@ MiniLauncher.TextColor3 = Color3.fromRGB(15, 17, 22)
 MiniLauncher.AutoButtonColor = false
 MiniLauncher.Visible = false
 MiniLauncher.ZIndex = 1000
-MiniLauncher.Parent = ScreenGui
+MiniLauncher.Parent = Gui
 
 local mlCorner = Instance.new("UICorner")
 mlCorner.CornerRadius = UDim.new(1, 0)
@@ -330,7 +330,7 @@ local Title = Instance.new("TextLabel")
 Title.Position = UDim2.fromOffset(18, 7)
 Title.Size = UDim2.fromOffset(300, 25)
 Title.BackgroundTransparency = 1
-Title.Text = "PHONGDZ HUB  v3.4"
+Title.Text = "PHONGDZ HUB  v3.5"
 Title.Font = Enum.Font.GothamBlack
 Title.TextSize = 19
 Title.TextColor3 = Color3.fromRGB(255, 211, 65)
@@ -393,7 +393,7 @@ SettingFarm.Position = UDim2.fromOffset(16, 16)
 SettingFarm.Size = UDim2.fromOffset(W - 32, 118)
 SettingFarm.BackgroundColor3 = Color3.fromRGB(22, 25, 33)
 SettingFarm.BorderSizePixel = 0
-SettingFarm.Parent = FolderScroll
+SettingFarm.Parent = Main
 
 local sfc = Instance.new("UICorner")
 sfc.CornerRadius = UDim.new(0, 10)
@@ -701,6 +701,9 @@ FolderScroll.Active = true
 FolderScroll.ClipsDescendants = true
 FolderScroll.ZIndex = 10
 FolderScroll.Parent = Main
+
+-- Re-parent SettingFarm now that FolderScroll exists.
+SettingFarm.Parent = FolderScroll
 
 local FolderPadding = Instance.new("UIPadding")
 FolderPadding.PaddingBottom = UDim.new(0, 18)
@@ -2224,7 +2227,8 @@ local function RunSourceMasteryStep()
             TweenTo(root.CFrame * CFrame.new(0, 35, 8))
         else
             -- Source first brings the target down before switching to gun damage.
-            local melee = character and character:FindFirstChildOfClass("Tool")
+            local masteryCharacter = LocalPlayer.Character
+            local melee = masteryCharacter and masteryCharacter:FindFirstChildOfClass("Tool")
             if not melee or melee.ToolTip ~= "Melee" then
                 pcall(EquipFarmWeapon)
             end
