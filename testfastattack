@@ -331,7 +331,7 @@ local Title = Instance.new("TextLabel")
 Title.Position = UDim2.fromOffset(18, 7)
 Title.Size = UDim2.fromOffset(300, 25)
 Title.BackgroundTransparency = 1
-Title.Text = "PHONGDZ HUB  v4.2"
+Title.Text = "PHONGDZ HUB  v4.4"
 Title.Font = Enum.Font.GothamBlack
 Title.TextSize = 19
 Title.TextColor3 = Color3.fromRGB(255, 211, 65)
@@ -1583,6 +1583,103 @@ SettingFarm.Size = UDim2.new(1, -8, 0, 152)
 SettingFarm.ZIndex = 45
 SettingFarm.Active = true
 
+--===========================================================================
+-- SETTING :: RESET BYPASS
+--===========================================================================
+local ResetBypassToggle = Instance.new("TextButton")
+ResetBypassToggle.Name = "ResetBypassToggle"
+ResetBypassToggle.Position = UDim2.fromOffset(4, 164)
+ResetBypassToggle.Size = UDim2.new(1, -8, 0, 52)
+ResetBypassToggle.BackgroundColor3 = Color3.fromRGB(55, 59, 70)
+ResetBypassToggle.BorderSizePixel = 0
+ResetBypassToggle.Text = ""
+ResetBypassToggle.AutoButtonColor = false
+ResetBypassToggle.Active = true
+ResetBypassToggle.ZIndex = 55
+ResetBypassToggle.Parent = settingPage
+
+local rbc = Instance.new("UICorner")
+rbc.CornerRadius = UDim.new(0, 10)
+rbc.Parent = ResetBypassToggle
+
+local ResetBypassTitle = Instance.new("TextLabel")
+ResetBypassTitle.Position = UDim2.fromOffset(13, 5)
+ResetBypassTitle.Size = UDim2.new(1, -90, 0, 20)
+ResetBypassTitle.BackgroundTransparency = 1
+ResetBypassTitle.Text = "RESET BYPASS"
+ResetBypassTitle.Font = Enum.Font.GothamBold
+ResetBypassTitle.TextSize = 10
+ResetBypassTitle.TextColor3 = Color3.fromRGB(240, 242, 247)
+ResetBypassTitle.TextXAlignment = Enum.TextXAlignment.Left
+ResetBypassTitle.ZIndex = 56
+ResetBypassTitle.Parent = ResetBypassToggle
+
+local ResetBypassStatus = Instance.new("TextLabel")
+ResetBypassStatus.Position = UDim2.fromOffset(13, 27)
+ResetBypassStatus.Size = UDim2.new(1, -90, 0, 17)
+ResetBypassStatus.BackgroundTransparency = 1
+ResetBypassStatus.Text = "● RESET BYPASS OFF"
+ResetBypassStatus.Font = Enum.Font.GothamMedium
+ResetBypassStatus.TextSize = 8
+ResetBypassStatus.TextColor3 = Color3.fromRGB(130, 135, 148)
+ResetBypassStatus.TextXAlignment = Enum.TextXAlignment.Left
+ResetBypassStatus.ZIndex = 56
+ResetBypassStatus.Parent = ResetBypassToggle
+
+local ResetBypassPill = Instance.new("Frame")
+ResetBypassPill.Size = UDim2.fromOffset(52, 29)
+ResetBypassPill.Position = UDim2.new(1, -65, 0, 11)
+ResetBypassPill.BackgroundColor3 = Color3.fromRGB(70, 74, 85)
+ResetBypassPill.BorderSizePixel = 0
+ResetBypassPill.ZIndex = 56
+ResetBypassPill.Parent = ResetBypassToggle
+
+local rbpc = Instance.new("UICorner")
+rbpc.CornerRadius = UDim.new(1, 0)
+rbpc.Parent = ResetBypassPill
+
+local ResetBypassKnob = Instance.new("Frame")
+ResetBypassKnob.Size = UDim2.fromOffset(23, 23)
+ResetBypassKnob.Position = UDim2.fromOffset(3, 3)
+ResetBypassKnob.BackgroundColor3 = Color3.fromRGB(230, 232, 238)
+ResetBypassKnob.BorderSizePixel = 0
+ResetBypassKnob.ZIndex = 57
+ResetBypassKnob.Parent = ResetBypassPill
+
+local rbkc = Instance.new("UICorner")
+rbkc.CornerRadius = UDim.new(1, 0)
+rbkc.Parent = ResetBypassKnob
+
+local function UpdateResetBypassUI()
+    if _G.PhongdzResetBypass then
+        ResetBypassToggle.BackgroundColor3 = Color3.fromRGB(255, 211, 65)
+        ResetBypassKnob.Position = UDim2.fromOffset(26, 3)
+        ResetBypassKnob.BackgroundColor3 = Color3.fromRGB(16, 18, 24)
+        ResetBypassStatus.Text = "● RESET BYPASS ON"
+        ResetBypassStatus.TextColor3 = Color3.fromRGB(16, 18, 24)
+    else
+        ResetBypassToggle.BackgroundColor3 = Color3.fromRGB(55, 59, 70)
+        ResetBypassKnob.Position = UDim2.fromOffset(3, 3)
+        ResetBypassKnob.BackgroundColor3 = Color3.fromRGB(230, 232, 238)
+        ResetBypassStatus.Text = "● RESET BYPASS OFF"
+        ResetBypassStatus.TextColor3 = Color3.fromRGB(130, 135, 148)
+    end
+end
+
+ResetBypassToggle.Activated:Connect(function()
+    _G.PhongdzResetBypass = not _G.PhongdzResetBypass
+
+    if not _G.PhongdzResetBypass then
+        ResetBypassCompletedTarget = nil
+        ResetBypassCompletedAt = 0
+    end
+
+    UpdateResetBypassUI()
+end)
+
+UpdateResetBypassUI()
+
+
 FarmMethodButton.Parent = farmPage
 FarmMethodButton.Position = UDim2.fromOffset(4, 4)
 FarmMethodButton.Size = UDim2.new(1, -8, 0, 65)
@@ -2594,6 +2691,168 @@ local function StopSourceMovement()
     end
 end
 
+
+--===========================================================================
+-- PHONGDZ_RESET_BYPASS_V42
+-- Source-derived long-distance respawn travel.
+-- Only active when the Setting toggle is ON and travel distance is large.
+--===========================================================================
+_G.PhongdzResetBypass = false
+local ResetBypassBusy = false
+local ResetBypassLast = 0
+local ResetBypassCooldown = 2.5
+local ResetBypassCompletedTarget = nil
+local ResetBypassCompletedAt = 0
+local ResetBypassTargetTolerance = 120
+
+local function ResetBypassTargetAlreadyCompleted(targetCF)
+    if not targetCF or not ResetBypassCompletedTarget then
+        return false
+    end
+
+    return (targetCF.Position - ResetBypassCompletedTarget.Position).Magnitude
+        <= ResetBypassTargetTolerance
+end
+
+local function ResetBypassMarkCompleted(targetCF)
+    ResetBypassCompletedTarget = targetCF
+    ResetBypassCompletedAt = os.clock()
+end
+
+local function ResetBypassClearIfTargetChanged(targetCF)
+    if not targetCF or not ResetBypassCompletedTarget then
+        return
+    end
+
+    if (targetCF.Position - ResetBypassCompletedTarget.Position).Magnitude
+        > ResetBypassTargetTolerance then
+        ResetBypassCompletedTarget = nil
+        ResetBypassCompletedAt = 0
+    end
+end
+
+local function ResetBypassCanUse(targetCF)
+    if not _G.PhongdzResetBypass or ResetBypassBusy then
+        return false
+    end
+
+    -- One reset only for each destination. A repeated Farm loop must not
+    -- continuously respawn at the same island.
+    ResetBypassClearIfTargetChanged(targetCF)
+    if ResetBypassTargetAlreadyCompleted(targetCF) then
+        return false
+    end
+
+    local character = LocalPlayer.Character
+    local root = character and character:FindFirstChild("HumanoidRootPart")
+    if not root or not targetCF then
+        return false
+    end
+
+    if os.clock() - ResetBypassLast < ResetBypassCooldown then
+        return false
+    end
+
+    -- Match the source behavior: only use the bypass for long travel.
+    return (targetCF.Position - root.Position).Magnitude > 3500
+end
+
+local function GetResetBypassSpawn(targetCF)
+    local worldOrigin = workspace:FindFirstChild("_WorldOrigin")
+    local playerSpawns = worldOrigin and worldOrigin:FindFirstChild("PlayerSpawns")
+    local pirates = playerSpawns and playerSpawns:FindFirstChild("Pirates")
+    if not pirates then
+        return nil
+    end
+
+    local character = LocalPlayer.Character
+    local root = character and character:FindFirstChild("HumanoidRootPart")
+    if not root then
+        return nil
+    end
+
+    local best, bestDistance = nil, math.huge
+
+    for _, spawn in ipairs(pirates:GetChildren()) do
+        local part = spawn:FindFirstChild("Part")
+        if part and part:IsA("BasePart") then
+            local toTarget = (part.Position - targetCF.Position).Magnitude
+            local toPlayer = (part.Position - root.Position).Magnitude
+
+            if toPlayer >= 3000 and toPlayer <= 10000 and toTarget < bestDistance then
+                best = spawn
+                bestDistance = toTarget
+            end
+        end
+    end
+
+    return best
+end
+
+local function ExecuteResetBypass(targetCF)
+    if not ResetBypassCanUse(targetCF) then
+        return false
+    end
+
+    local spawnPoint = GetResetBypassSpawn(targetCF)
+    if not spawnPoint then
+        return false
+    end
+
+    local spawnPart = spawnPoint:FindFirstChild("Part")
+    local character = LocalPlayer.Character
+    local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+    if not spawnPart or not humanoid or humanoid.Health <= 0 then
+        return false
+    end
+
+    ResetBypassBusy = true
+    ResetBypassLast = os.clock()
+
+    local remotes = ReplicatedStorage:FindFirstChild("Remotes")
+    local commF = remotes and remotes:FindFirstChild("CommF_")
+
+    local ok = pcall(function()
+        -- Same source sequence:
+        -- SetLastSpawnPoint -> SetSpawnPoint -> pivot to spawn -> force respawn.
+        local lastSpawnPoint = character:FindFirstChild("LastSpawnPoint")
+        if lastSpawnPoint then
+            lastSpawnPoint.Disabled = true
+        end
+
+        if commF then
+            commF:InvokeServer("SetLastSpawnPoint", spawnPoint.Name)
+            commF:InvokeServer("SetSpawnPoint")
+        end
+
+        character:PivotTo(spawnPart.CFrame)
+        humanoid:ChangeState(15)
+    end)
+
+    if ok then
+        -- The reset has completed its job for this destination.
+        -- Further calls for the same target are blocked until Farm requests
+        -- a materially different island/target.
+        ResetBypassMarkCompleted(targetCF)
+
+        task.spawn(function()
+            local deadline = os.clock() + 8
+            repeat
+                task.wait()
+            until os.clock() >= deadline
+                or (LocalPlayer.Character
+                    and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+                    and LocalPlayer.Character:FindFirstChildOfClass("Humanoid").Health > 0)
+
+            ResetBypassBusy = false
+        end)
+    else
+        ResetBypassBusy = false
+    end
+
+    return ok
+end
+
 local function TweenTo(target)
     local gg
     if typeof(target) == "Vector3" then
@@ -2613,6 +2872,15 @@ local function TweenTo(target)
     shouldTween = true
 
     local distance = (gg.Position - rootPart.Position).Magnitude
+
+    -- When enabled, use the source-derived respawn bypass instead of flying
+    -- across long distances. If it cannot be used, keep normal TweenTo.
+    if ResetBypassCanUse(gg) then
+        if ExecuteResetBypass(gg) then
+            return nil
+        end
+    end
+
     local tweenInfo = TweenInfo.new(distance / 300, Enum.EasingStyle.Linear)
     local tween = TweenService:Create(block, tweenInfo, {CFrame = gg})
     ActiveTween = tween
