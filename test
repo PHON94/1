@@ -331,7 +331,7 @@ local Title = Instance.new("TextLabel")
 Title.Position = UDim2.fromOffset(18, 7)
 Title.Size = UDim2.fromOffset(300, 25)
 Title.BackgroundTransparency = 1
-Title.Text = "PHONGDZ HUB  v4.3"
+Title.Text = "PHONGDZ HUB  v4.4"
 Title.Font = Enum.Font.GothamBlack
 Title.TextSize = 19
 Title.TextColor3 = Color3.fromRGB(255, 211, 65)
@@ -4004,6 +4004,253 @@ end)
 
 
 --===========================================================================
+-- PHONGDZ HUB v4.4 :: ACTIVE FUNCTION GREEN CHARACTER
+-- Uses the source's exact "Lime green" color convention. The source checks
+-- BrickColor == "Lime green" for its aura-state validation. This extension
+-- applies the same visible color to the player's character while automation
+-- is active, and restores the original colors when automation stops.
+--===========================================================================
+
+task.spawn(function()
+    local ok, err = xpcall(function()
+        local GreenState = {
+            Enabled = true,
+            Applied = false,
+            Character = nil,
+            Saved = {},
+            BodyColors = nil,
+            BodySaved = nil,
+        }
+
+        _G.PhongdzGreenCharacter = true
+
+        local LIME_GREEN = BrickColor.new("Lime green").Color
+
+        local function isAutomationActive()
+            local autoStats = _G.PhongdzAutoStats
+            local statsActive = false
+            if type(autoStats) == "table" and type(autoStats.IsEnabled) == "function" then
+                statsActive = autoStats.IsEnabled() == true
+            end
+
+            return _G.AutoLevel == true
+                or _G.AutoMaterial == true
+                or _G.AutoFarm_Bone == true
+                or _G.PhongdzMasteryEnabled == true
+                or _G.FarmMastery_G == true
+                or _G.FarmMastery_S == true
+                or _G.FarmMastery_Dev == true
+                or _G.FastAttack == true
+                or _G.FruitM1Enabled == true
+                or statsActive
+                or (_G.PhongdzResetBypass and _G.PhongdzResetBypass.IsEnabled
+                    and _G.PhongdzResetBypass.IsEnabled() == true)
+        end
+
+        local function isCharacterPart(instance, character)
+            if not instance:IsA("BasePart") or instance.Name == "HumanoidRootPart" then
+                return false
+            end
+
+            local ancestor = instance.Parent
+            while ancestor and ancestor ~= character do
+                if ancestor:IsA("Accessory") or ancestor:IsA("Tool") then
+                    return false
+                end
+                ancestor = ancestor.Parent
+            end
+
+            return ancestor == character
+        end
+
+        local function saveCharacter(character)
+            GreenState.Saved = {}
+            GreenState.BodyColors = character:FindFirstChildOfClass("BodyColors")
+            GreenState.BodySaved = nil
+
+            if GreenState.BodyColors then
+                local bc = GreenState.BodyColors
+                GreenState.BodySaved = {
+                    Head = bc.HeadColor3,
+                    Torso = bc.TorsoColor3,
+                    LeftArm = bc.LeftArmColor3,
+                    RightArm = bc.RightArmColor3,
+                    LeftLeg = bc.LeftLegColor3,
+                    RightLeg = bc.RightLegColor3,
+                }
+            end
+
+            for _, instance in ipairs(character:GetDescendants()) do
+                if isCharacterPart(instance, character) then
+                    GreenState.Saved[instance] = instance.Color
+                end
+            end
+        end
+
+        local function applyGreen(character)
+            if not character or not character.Parent then
+                return
+            end
+
+            if GreenState.Character ~= character then
+                if GreenState.Applied and GreenState.Character then
+                    -- Restore the previous character before switching targets.
+                    for part, color in pairs(GreenState.Saved) do
+                        if part and part.Parent then
+                            pcall(function() part.Color = color end)
+                        end
+                    end
+                end
+                saveCharacter(character)
+                GreenState.Character = character
+            end
+
+            local bc = GreenState.BodyColors
+            if bc and GreenState.BodySaved then
+                pcall(function()
+                    bc.HeadColor3 = LIME_GREEN
+                    bc.TorsoColor3 = LIME_GREEN
+                    bc.LeftArmColor3 = LIME_GREEN
+                    bc.RightArmColor3 = LIME_GREEN
+                    bc.LeftLegColor3 = LIME_GREEN
+                    bc.RightLegColor3 = LIME_GREEN
+                end)
+            end
+
+            for part in pairs(GreenState.Saved) do
+                if part and part.Parent and isCharacterPart(part, character) then
+                    pcall(function() part.Color = LIME_GREEN end)
+                end
+            end
+
+            GreenState.Applied = true
+        end
+
+        local function restoreGreen()
+            local character = GreenState.Character
+
+            for part, color in pairs(GreenState.Saved) do
+                if part and part.Parent then
+                    pcall(function() part.Color = color end)
+                end
+            end
+
+            local bc = GreenState.BodyColors
+            local saved = GreenState.BodySaved
+            if bc and bc.Parent and saved then
+                pcall(function()
+                    bc.HeadColor3 = saved.Head
+                    bc.TorsoColor3 = saved.Torso
+                    bc.LeftArmColor3 = saved.LeftArm
+                    bc.RightArmColor3 = saved.RightArm
+                    bc.LeftLegColor3 = saved.LeftLeg
+                    bc.RightLegColor3 = saved.RightLeg
+                end)
+            end
+
+            GreenState.Applied = false
+            GreenState.Character = character
+            GreenState.Saved = {}
+            GreenState.BodyColors = nil
+            GreenState.BodySaved = nil
+        end
+
+        local function setEnabled(value)
+            GreenState.Enabled = value == true
+            _G.PhongdzGreenCharacter = GreenState.Enabled
+
+            if not GreenState.Enabled then
+                restoreGreen()
+            end
+        end
+
+        _G.PhongdzGreenCharacterController = {
+            SetEnabled = setEnabled,
+            IsEnabled = function()
+                return GreenState.Enabled
+            end,
+            IsApplied = function()
+                return GreenState.Applied
+            end,
+        }
+
+        LocalPlayer.CharacterAdded:Connect(function(character)
+            if GreenState.Applied then
+                restoreGreen()
+            end
+            GreenState.Character = character
+        end)
+
+        -- Public setting UI. Protected so a UI failure cannot stop the hub.
+        if settingPage and settingPage.Parent then
+            local card = Instance.new("Frame")
+            card.Name = "GreenCharacterCard"
+            card.Size = UDim2.new(1, -8, 0, 72)
+            card.BackgroundColor3 = Color3.fromRGB(22, 25, 33)
+            card.BorderSizePixel = 0
+            card.ZIndex = 80
+            card.Parent = settingPage
+
+            local corner = Instance.new("UICorner")
+            corner.CornerRadius = UDim.new(0, 10)
+            corner.Parent = card
+
+            local button = Instance.new("TextButton")
+            button.Size = UDim2.new(1, -12, 1, -12)
+            button.Position = UDim2.fromOffset(6, 6)
+            button.BackgroundColor3 = Color3.fromRGB(64, 145, 91)
+            button.BorderSizePixel = 0
+            button.Text = "GREEN CHARACTER  •  ON"
+            button.Font = Enum.Font.GothamBlack
+            button.TextSize = 9
+            button.TextColor3 = Color3.fromRGB(235, 255, 240)
+            button.AutoButtonColor = false
+            button.ZIndex = 81
+            button.Parent = card
+
+            local bc = Instance.new("UICorner")
+            bc.CornerRadius = UDim.new(0, 8)
+            bc.Parent = button
+
+            local function refreshButton()
+                if GreenState.Enabled then
+                    button.Text = "GREEN CHARACTER  •  ON"
+                    button.BackgroundColor3 = Color3.fromRGB(64, 145, 91)
+                    button.TextColor3 = Color3.fromRGB(235, 255, 240)
+                else
+                    button.Text = "GREEN CHARACTER  •  OFF"
+                    button.BackgroundColor3 = Color3.fromRGB(48, 52, 63)
+                    button.TextColor3 = Color3.fromRGB(225, 228, 235)
+                end
+            end
+
+            button.Activated:Connect(function()
+                setEnabled(not GreenState.Enabled)
+                refreshButton()
+            end)
+
+            refreshButton()
+        end
+
+        while task.wait(0.15) do
+            if GreenState.Enabled and isAutomationActive() then
+                local character = LocalPlayer.Character
+                if character then
+                    applyGreen(character)
+                end
+            elseif GreenState.Applied then
+                restoreGreen()
+            end
+        end
+    end, debug.traceback)
+
+    if not ok then
+        warn("[PhongdzHub][GreenCharacter] Disabled safely:", err)
+    end
+end)
+
+
+--===========================================================================
 -- PHONGDZ HUB v4.3 :: RESET BYPASS (ISOLATED)
 -- Built exactly like the stable Auto Stats extension:
 --   * appended AFTER the original v4.2 runtime
@@ -4204,3 +4451,4 @@ task.spawn(function()
         warn("[PhongdzHub][ResetBypass] Disabled safely:", err)
     end
 end)
+
