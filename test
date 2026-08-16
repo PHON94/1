@@ -4,6 +4,7 @@
 --=============================================================================
 
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UIS = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
@@ -240,17 +241,6 @@ MiniLauncher.Activated:Connect(function()
     end
 end)
 
--- Detect the existing minimize button without replacing its original callback.
-for _, descendant in ipairs(Main:GetDescendants()) do
-    if descendant:IsA("TextButton") or descendant:IsA("ImageButton") then
-        local n = string.lower(descendant.Name)
-        if n == "minimize" or n == "minbutton" or n == "collapse" then
-            descendant.Activated:Connect(hideHub)
-            break
-        end
-    end
-end
-
 _G.PhongdzShowHub = showHub
 _G.PhongdzHideHub = hideHub
 _G.PhongdzMiniLauncher = MiniLauncher
@@ -284,6 +274,17 @@ if not parentOK then
     else
         warn("[PhongdzHub] Không thể parent ScreenGui:", parentErr)
         return
+    end
+end
+
+-- Detect the existing minimize button only after Main has been created.
+for _, descendant in ipairs(Main:GetDescendants()) do
+    if descendant:IsA("TextButton") or descendant:IsA("ImageButton") then
+        local n = string.lower(descendant.Name)
+        if n == "minimize" or n == "minbutton" or n == "collapse" then
+            descendant.Activated:Connect(hideHub)
+            break
+        end
     end
 end
 
@@ -330,7 +331,7 @@ local Title = Instance.new("TextLabel")
 Title.Position = UDim2.fromOffset(18, 7)
 Title.Size = UDim2.fromOffset(300, 25)
 Title.BackgroundTransparency = 1
-Title.Text = "PHONGDZ HUB  v3.5"
+Title.Text = "PHONGDZ HUB  v4.1"
 Title.Font = Enum.Font.GothamBlack
 Title.TextSize = 19
 Title.TextColor3 = Color3.fromRGB(255, 211, 65)
@@ -798,8 +799,7 @@ _G.PhongdzFolderScrollBottom = scrollFoldersToBottom
 --===========================================================================
 -- FARM METHOD SELECTOR + START FARM
 --===========================================================================
-local loadFarm
-local farmEnabled = false
+_G.PhongdzFarmEnabled = false
 
 local FarmMethodButton = Instance.new("TextButton")
 FarmMethodButton.Name = "FarmMethodButton"
@@ -903,7 +903,7 @@ local function rebuildFarmMethodOptions()
         oc.Parent = option
 
         option.Activated:Connect(function()
-            if farmEnabled then return end
+            if _G.PhongdzFarmEnabled then return end
             SelectedFarmMethod = methodName
             _G.PhongdzFarmMethod = methodName
             FarmMethodOpen = false
@@ -916,7 +916,7 @@ local function rebuildFarmMethodOptions()
 end
 
 FarmMethodButton.Activated:Connect(function()
-    if farmEnabled then return end
+    if _G.PhongdzFarmEnabled then return end
     FarmMethodOpen = not FarmMethodOpen
     FarmMethodDrop.Visible = FarmMethodOpen
     FarmMethodDrop.Size = FarmMethodOpen
@@ -1712,7 +1712,7 @@ local function RebuildMaterialOptions()
 end
 
 MaterialButton.Activated:Connect(function()
- if MaterialEnabled or farmEnabled then return end
+ if MaterialEnabled or _G.PhongdzFarmEnabled then return end
  MaterialDropOpen=not MaterialDropOpen; MaterialDrop.Visible=MaterialDropOpen
  MaterialDrop.Size=MaterialDropOpen and UDim2.new(1,-8,0,#MaterialOptions()*36+10) or UDim2.new(1,-8,0,0)
  RefreshMaterial()
@@ -1763,10 +1763,10 @@ local function UpdateMaterialToggle()
 end
 
 AutoMaterialToggle.Activated:Connect(function()
- if farmEnabled or MasteryEnabled then return end
+ if _G.PhongdzFarmEnabled or _G.PhongdzMasteryEnabled then return end
  MaterialEnabled=not MaterialEnabled
  if MaterialEnabled then
-  if not farmLoaded or not loadFarm() then MaterialEnabled=false; UpdateMaterialToggle(); return end
+  if not _G.PhongdzFarmLoaded or not _G.PhongdzLoadFarm() then MaterialEnabled=false; UpdateMaterialToggle(); return end
   _G.PhongdzSelectedMaterial=SelectedMaterial; _G.AutoMaterial=true; _G.AutoLevel=true
   _G.PhongdzFarmMethod="Farm Material"
  else
@@ -1777,6 +1777,9 @@ AutoMaterialToggle.Activated:Connect(function()
 end)
 UpdateMaterialToggle()
 
+_G.PhongdzMasteryEnabled = false
+
+local function BuildMasteryUI()
 --===========================================================================
 -- FARM MASTERY
 -- Source-derived target logic:
@@ -1786,7 +1789,7 @@ UpdateMaterialToggle()
 --   keep mobs grouped, move above target, and use the selected weapon.
 --===========================================================================
 
-local MasteryEnabled = false
+_G.PhongdzMasteryEnabled = false
 local SelectedMasteryWeapon = _G.PhongdzMasteryWeapon or ""
 _G.PhongdzMasteryWeapon = SelectedMasteryWeapon
 
@@ -1968,7 +1971,7 @@ local function RebuildMasteryOptions()
             oc.Parent = option
 
             option.Activated:Connect(function()
-                if MasteryEnabled then return end
+                if _G.PhongdzMasteryEnabled then return end
 
                 SelectedMasteryWeapon = item.Name
                 _G.PhongdzMasteryWeapon = item.Name
@@ -1986,7 +1989,7 @@ local function RebuildMasteryOptions()
 end
 
 MasteryButton.Activated:Connect(function()
-    if MasteryEnabled or farmEnabled then return end
+    if _G.PhongdzMasteryEnabled or _G.PhongdzFarmEnabled then return end
 
     MasteryDropOpen = not MasteryDropOpen
     MasteryDrop.Visible = MasteryDropOpen
@@ -2065,7 +2068,7 @@ amkc2.CornerRadius = UDim.new(1, 0)
 amkc2.Parent = AutoMasteryKnob
 
 local function UpdateMasteryToggle()
-    if MasteryEnabled then
+    if _G.PhongdzMasteryEnabled then
         AutoMasteryToggle.BackgroundColor3 = Color3.fromRGB(255, 211, 65)
         AutoMasteryKnob.Position = UDim2.fromOffset(26, 3)
         AutoMasteryKnob.BackgroundColor3 = Color3.fromRGB(16, 18, 24)
@@ -2081,15 +2084,15 @@ local function UpdateMasteryToggle()
 end
 
 AutoMasteryToggle.Activated:Connect(function()
-    if farmEnabled or MaterialEnabled then return end
+    if _G.PhongdzFarmEnabled or MaterialEnabled then return end
 
-    if not MasteryEnabled then
+    if not _G.PhongdzMasteryEnabled then
         if SelectedMasteryWeapon == "" then
             RebuildMasteryOptions()
             return
         end
 
-        MasteryEnabled = true
+        _G.PhongdzMasteryEnabled = true
         _G.FarmMastery_G = false
         _G.FarmMastery_S = false
         _G.FarmMastery_Dev = false
@@ -2097,7 +2100,7 @@ AutoMasteryToggle.Activated:Connect(function()
         _G.AutoLevel = true
         _G.PhongdzFarmMethod = "Farm Mastery"
     else
-        MasteryEnabled = false
+        _G.PhongdzMasteryEnabled = false
         _G.FarmMastery_G = false
         _G.FarmMastery_S = false
         _G.FarmMastery_Dev = false
@@ -2187,7 +2190,7 @@ local function EquipSelectedMasteryWeapon()
 end
 
 local function RunSourceMasteryStep()
-    if not MasteryEnabled or not _G.AutoLevel then
+    if not _G.PhongdzMasteryEnabled or not _G.AutoLevel then
         return
     end
 
@@ -2254,12 +2257,16 @@ end)
 -- selection while Mastery Farm is running.
 task.spawn(function()
     while task.wait(2) do
-        if not MasteryEnabled and MasteryDropOpen then
+        if not _G.PhongdzMasteryEnabled and MasteryDropOpen then
             pcall(RebuildMasteryOptions)
         end
     end
 end)
 
+
+end
+
+BuildMasteryUI()
 
 -- Keep controls above their cards/dropdowns clickable.
 WeaponButton.ZIndex = 70
@@ -2370,19 +2377,16 @@ end
 Min.Activated:Connect(minimizeMenu)
 -- Allow the minimized launcher itself to be dragged.
 -- A click without movement still restores the menu.
-local launcherDragging = false
-local launcherMoved = false
-local launcherDragStart = Vector2.zero
-local launcherOrigin = Vector2.zero
+local launcherState = {dragging=false, moved=false, dragStart=Vector2.zero, origin=Vector2.zero}
 
 Launcher.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1
         or input.UserInputType == Enum.UserInputType.Touch then
 
-        launcherDragging = true
-        launcherMoved = false
-        launcherDragStart = input.Position
-        launcherOrigin = Vector2.new(
+        launcherState.dragging = true
+        launcherState.moved = false
+        launcherState.dragStart = input.Position
+        launcherState.origin = Vector2.new(
             Launcher.Position.X.Offset,
             Launcher.Position.Y.Offset
         )
@@ -2390,27 +2394,27 @@ Launcher.InputBegan:Connect(function(input)
 end)
 
 Launcher.InputChanged:Connect(function(input)
-    if not launcherDragging then
+    if not launcherState.dragging then
         return
     end
 
     if input.UserInputType == Enum.UserInputType.MouseMovement
         or input.UserInputType == Enum.UserInputType.Touch then
 
-        local delta = input.Position - launcherDragStart
+        local delta = input.Position - launcherState.dragStart
 
         if math.abs(delta.X) > 3 or math.abs(delta.Y) > 3 then
-            launcherMoved = true
+            launcherState.moved = true
         end
 
         local v = viewport()
         local x = math.clamp(
-            launcherOrigin.X + delta.X,
+            launcherState.origin.X + delta.X,
             0,
             math.max(0, v.X - Launcher.AbsoluteSize.X)
         )
         local y = math.clamp(
-            launcherOrigin.Y + delta.Y,
+            launcherState.origin.Y + delta.Y,
             0,
             math.max(0, v.Y - Launcher.AbsoluteSize.Y)
         )
@@ -2423,11 +2427,11 @@ UIS.InputEnded:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1
         or input.UserInputType == Enum.UserInputType.Touch then
 
-        if launcherDragging and not launcherMoved then
+        if launcherState.dragging and not launcherState.moved then
             restoreMenu()
         end
 
-        launcherDragging = false
+        launcherState.dragging = false
     end
 end)
 
@@ -2443,7 +2447,7 @@ Close.Activated:Connect(function()
     _G.FarmMastery_S = false
     _G.FarmMastery_Dev = false
     MaterialEnabled = false
-    MasteryEnabled = false
+    _G.PhongdzMasteryEnabled = false
     Gui:Destroy()
 end)
 
@@ -2454,7 +2458,7 @@ print("[PhongdzHub] UI READY")
 -- FARM SOURCE (isolated)
 --===========================================================================
 
-local FARM_SOURCE = [=[
+_G.PhongdzFarmSource = [=[
 ChooseWeapon = _G.ChooseWP or "Melee"
 SelectWeapon = _G.SelectWeapon
 FruitM1Enabled = _G.FruitM1Enabled == true
@@ -3286,7 +3290,7 @@ end
 -- Farm Level flow transplanted from source.txt; runs only for Level Farm.
 task.spawn(function()
     while task.wait(Sec) do
-        if _G.AutoLevel and not _G.AutoMaterial and not MasteryEnabled and (_G.PhongdzFarmMethod or "Level Farm") == "Level Farm" then
+        if _G.AutoLevel and not _G.AutoMaterial and not _G.PhongdzMasteryEnabled and (_G.PhongdzFarmMethod or "Level Farm") == "Level Farm" then
             pcall(function()
                 local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
                 local Root = char:WaitForChild("HumanoidRootPart")
@@ -3506,7 +3510,7 @@ local function GetBoneMob()
 end
 
 local function RunBoneFarmStep()
-    if not _G.AutoLevel or _G.AutoMaterial or MasteryEnabled or (_G.PhongdzFarmMethod or "Level Farm") ~= "Farm Bones" then
+    if not _G.AutoLevel or _G.AutoMaterial or _G.PhongdzMasteryEnabled or (_G.PhongdzFarmMethod or "Level Farm") ~= "Farm Bones" then
         BoneFarmAlive = false
         BoneFarmTarget = nil
         return
@@ -3616,44 +3620,44 @@ end)
 
 ]=]
 
-local farmLoaded = false
-local farmError = nil
+_G.PhongdzFarmLoaded = false
+_G.PhongdzFarmError = nil
 
-loadFarm = function()
-    if farmLoaded then
+_G.PhongdzLoadFarm = function()
+    if _G.PhongdzFarmLoaded then
         return true
     end
 
     local loader = loadstring
 
     if type(loader) ~= "function" then
-        farmError = "loadstring unavailable"
+        _G.PhongdzFarmError = "loadstring unavailable"
         return false
     end
 
-    local okCompile, chunkOrError = pcall(loader, FARM_SOURCE)
+    local okCompile, chunkOrError = pcall(loader, _G.PhongdzFarmSource)
 
     if not okCompile or type(chunkOrError) ~= "function" then
-        farmError = tostring(chunkOrError)
-        warn("[PhongdzHub] Farm compile error:", farmError)
+        _G.PhongdzFarmError = tostring(chunkOrError)
+        warn("[PhongdzHub] Farm compile error:", _G.PhongdzFarmError)
         return false
     end
 
     local okRun, runtimeError = pcall(chunkOrError)
 
     if not okRun then
-        farmError = tostring(runtimeError)
-        warn("[PhongdzHub] Farm runtime error:", farmError)
+        _G.PhongdzFarmError = tostring(runtimeError)
+        warn("[PhongdzHub] Farm runtime error:", _G.PhongdzFarmError)
         return false
     end
 
-    farmLoaded = true
-    farmError = nil
+    _G.PhongdzFarmLoaded = true
+    _G.PhongdzFarmError = nil
     return true
 end
 
 local function updateToggle()
-    if farmEnabled then
+    if _G.PhongdzFarmEnabled then
         Toggle.BackgroundColor3 = Color3.fromRGB(255, 211, 65)
         Knob.Position = UDim2.fromOffset(26, 3)
         Knob.BackgroundColor3 = Color3.fromRGB(16, 18, 24)
@@ -3664,7 +3668,7 @@ local function updateToggle()
         Knob.Position = UDim2.fromOffset(3, 3)
         Knob.BackgroundColor3 = Color3.fromRGB(230, 232, 238)
 
-        if farmError then
+        if _G.PhongdzFarmError then
             Status.Text = "● FARM SOURCE ERROR"
             Status.TextColor3 = Color3.fromRGB(255, 95, 95)
         else
@@ -3675,13 +3679,13 @@ local function updateToggle()
 end
 
 Toggle.Activated:Connect(function()
-    local nextState = not farmEnabled
+    local nextState = not _G.PhongdzFarmEnabled
 
     if nextState then
-        if MaterialEnabled or MasteryEnabled then return end
-        if not farmLoaded then
-            if not loadFarm() then
-                farmEnabled = false
+        if MaterialEnabled or _G.PhongdzMasteryEnabled then return end
+        if not _G.PhongdzFarmLoaded then
+            if not _G.PhongdzLoadFarm() then
+                _G.PhongdzFarmEnabled = false
                 _G.AutoLevel = false
                 updateToggle()
                 return
@@ -3691,10 +3695,10 @@ Toggle.Activated:Connect(function()
         _G.PhongdzFarmMethod = SelectedFarmMethod
         _G.AutoFarm_Bone = (SelectedFarmMethod == "Farm Bones")
         _G.AutoLevel = true
-        farmEnabled = true
+        _G.PhongdzFarmEnabled = true
         pcall(StartSourceMovement)
     else
-        farmEnabled = false
+        _G.PhongdzFarmEnabled = false
         _G.AutoLevel = false
         _G.AutoFarm_Bone = false
         _G.AutoMaterial = false
@@ -3702,9 +3706,9 @@ Toggle.Activated:Connect(function()
         _G.FarmMastery_S = false
         _G.FarmMastery_Dev = false
         MaterialEnabled = false
-        MasteryEnabled = false
+        _G.PhongdzMasteryEnabled = false
         UpdateMaterialToggle()
-        UpdateMasteryToggle()
+        if _G.PhongdzUpdateMasteryToggle then pcall(_G.PhongdzUpdateMasteryToggle) end
         pcall(StopSourceMovement)
     end
 
