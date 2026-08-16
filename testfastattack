@@ -1,4 +1,4 @@
--=============================================================================
+--=============================================================================
 -- PHONGDZ HUB — CLEAN / ROBUST UI + FARM LEVEL + FAST ATTACK
 -- UI được khởi tạo độc lập; Farm chỉ chạy sau khi UI đã hiện.
 --=============================================================================
@@ -1583,99 +1583,6 @@ SettingFarm.Size = UDim2.new(1, -8, 0, 152)
 SettingFarm.ZIndex = 45
 SettingFarm.Active = true
 
---===========================================================================
--- SETTING :: RESET BYPASS
---===========================================================================
-local ResetBypassToggle = Instance.new("TextButton")
-ResetBypassToggle.Name = "ResetBypassToggle"
-ResetBypassToggle.Position = UDim2.fromOffset(4, 164)
-ResetBypassToggle.Size = UDim2.new(1, -8, 0, 52)
-ResetBypassToggle.BackgroundColor3 = Color3.fromRGB(55, 59, 70)
-ResetBypassToggle.BorderSizePixel = 0
-ResetBypassToggle.Text = ""
-ResetBypassToggle.AutoButtonColor = false
-ResetBypassToggle.Active = true
-ResetBypassToggle.ZIndex = 75
-ResetBypassToggle.Parent = settingPage
-
-local rbCorner = Instance.new("UICorner")
-rbCorner.CornerRadius = UDim.new(0, 10)
-rbCorner.Parent = ResetBypassToggle
-
-local rbTitle = Instance.new("TextLabel")
-rbTitle.BackgroundTransparency = 1
-rbTitle.Position = UDim2.fromOffset(13, 6)
-rbTitle.Size = UDim2.new(1, -90, 0, 19)
-rbTitle.Text = "RESET BYPASS"
-rbTitle.Font = Enum.Font.GothamBold
-rbTitle.TextSize = 10
-rbTitle.TextColor3 = Color3.fromRGB(240, 242, 247)
-rbTitle.TextXAlignment = Enum.TextXAlignment.Left
-rbTitle.ZIndex = 76
-rbTitle.Parent = ResetBypassToggle
-
-local rbStatus = Instance.new("TextLabel")
-rbStatus.BackgroundTransparency = 1
-rbStatus.Position = UDim2.fromOffset(13, 28)
-rbStatus.Size = UDim2.new(1, -90, 0, 16)
-rbStatus.Text = "● OFF"
-rbStatus.Font = Enum.Font.GothamMedium
-rbStatus.TextSize = 8
-rbStatus.TextColor3 = Color3.fromRGB(130, 135, 148)
-rbStatus.TextXAlignment = Enum.TextXAlignment.Left
-rbStatus.ZIndex = 76
-rbStatus.Parent = ResetBypassToggle
-
-local rbPill = Instance.new("Frame")
-rbPill.Size = UDim2.fromOffset(52, 29)
-rbPill.Position = UDim2.new(1, -65, 0, 11)
-rbPill.BackgroundColor3 = Color3.fromRGB(70, 74, 85)
-rbPill.BorderSizePixel = 0
-rbPill.ZIndex = 76
-rbPill.Parent = ResetBypassToggle
-
-local rbPillCorner = Instance.new("UICorner")
-rbPillCorner.CornerRadius = UDim.new(1, 0)
-rbPillCorner.Parent = rbPill
-
-local rbKnob = Instance.new("Frame")
-rbKnob.Size = UDim2.fromOffset(23, 23)
-rbKnob.Position = UDim2.fromOffset(3, 3)
-rbKnob.BackgroundColor3 = Color3.fromRGB(230, 232, 238)
-rbKnob.BorderSizePixel = 0
-rbKnob.ZIndex = 77
-rbKnob.Parent = rbPill
-
-local rbKnobCorner = Instance.new("UICorner")
-rbKnobCorner.CornerRadius = UDim.new(1, 0)
-rbKnobCorner.Parent = rbKnob
-
-local function UpdateResetBypassUI()
-    local enabled = ResetBypassEnabled
-
-    if enabled then
-        ResetBypassToggle.BackgroundColor3 = Color3.fromRGB(255, 211, 65)
-        rbKnob.Position = UDim2.fromOffset(26, 3)
-        rbKnob.BackgroundColor3 = Color3.fromRGB(16, 18, 24)
-        rbStatus.Text = "● ON  •  LONG TRAVEL"
-        rbStatus.TextColor3 = Color3.fromRGB(16, 18, 24)
-    else
-        ResetBypassToggle.BackgroundColor3 = Color3.fromRGB(55, 59, 70)
-        rbKnob.Position = UDim2.fromOffset(3, 3)
-        rbKnob.BackgroundColor3 = Color3.fromRGB(230, 232, 238)
-        rbStatus.Text = "● OFF"
-        rbStatus.TextColor3 = Color3.fromRGB(130, 135, 148)
-    end
-end
-
-ResetBypassToggle.Activated:Connect(function()
-    ResetBypassEnabled = not ResetBypassEnabled
-    _G.PhongdzResetBypass.SetEnabled(ResetBypassEnabled)
-    UpdateResetBypassUI()
-end)
-
-UpdateResetBypassUI()
-
 FarmMethodButton.Parent = farmPage
 FarmMethodButton.Position = UDim2.fromOffset(4, 4)
 FarmMethodButton.Size = UDim2.new(1, -8, 0, 65)
@@ -2687,156 +2594,6 @@ local function StopSourceMovement()
     end
 end
 
-
---===========================================================================
--- PHONGDZ HUB v4.3 :: RESET BYPASS
--- Built from the stable v4.2 base.
--- Source sequence:
---   GetBypassCFrame -> SetLastSpawnPoint -> SetSpawnPoint
---   -> PivotTo spawn -> Humanoid:ChangeState(15)
---
--- This module is isolated from UI/Farm/AutoStats.
---===========================================================================
-local ResetBypassEnabled = false
-local ResetBypassBusy = false
-local ResetBypassLast = 0
-local ResetBypassCooldown = 2.5
-local ResetBypassLastTarget = nil
-local ResetBypassTolerance = 120
-
-local function ResetBypassGetSpawn(targetCF)
-    local worldOrigin = workspace:FindFirstChild("_WorldOrigin")
-    local playerSpawns = worldOrigin and worldOrigin:FindFirstChild("PlayerSpawns")
-    local pirates = playerSpawns and playerSpawns:FindFirstChild("Pirates")
-    if not pirates then return nil end
-
-    local character = LocalPlayer.Character
-    local hrp = character and character:FindFirstChild("HumanoidRootPart")
-    if not hrp then return nil end
-
-    local best, bestDistance = nil, math.huge
-
-    for _, spawn in ipairs(pirates:GetChildren()) do
-        local part = spawn:FindFirstChild("Part")
-        if part and part:IsA("BasePart") then
-            local fromPlayer = (part.Position - hrp.Position).Magnitude
-            local fromTarget = (part.Position - targetCF.Position).Magnitude
-
-            -- Match the source's important distance constraints.
-            if fromPlayer >= 3000
-                and fromPlayer <= 10000
-                and fromTarget < bestDistance then
-
-                best = spawn
-                bestDistance = fromTarget
-            end
-        end
-    end
-
-    return best
-end
-
-local function ResetBypassShouldRun(targetCF)
-    if not ResetBypassEnabled or ResetBypassBusy or not targetCF then
-        return false
-    end
-
-    if os.clock() - ResetBypassLast < ResetBypassCooldown then
-        return false
-    end
-
-    if ResetBypassLastTarget
-        and (targetCF.Position - ResetBypassLastTarget.Position).Magnitude
-            <= ResetBypassTolerance then
-        return false
-    end
-
-    local character = LocalPlayer.Character
-    local hrp = character and character:FindFirstChild("HumanoidRootPart")
-    if not hrp then return false end
-
-    return (targetCF.Position - hrp.Position).Magnitude > 3500
-end
-
-local function ResetBypassExecute(targetCF)
-    if not ResetBypassShouldRun(targetCF) then
-        return false
-    end
-
-    local character = LocalPlayer.Character
-    local humanoid = character and character:FindFirstChildOfClass("Humanoid")
-    local hrp = character and character:FindFirstChild("HumanoidRootPart")
-    if not character or not humanoid or not hrp or humanoid.Health <= 0 then
-        return false
-    end
-
-    local targetSpawn = ResetBypassGetSpawn(targetCF)
-    local spawnPart = targetSpawn and targetSpawn:FindFirstChild("Part")
-    if not targetSpawn or not spawnPart then
-        return false
-    end
-
-    local remotes = ReplicatedStorage:FindFirstChild("Remotes")
-    local commF = remotes and remotes:FindFirstChild("CommF_")
-    if not commF then
-        return false
-    end
-
-    ResetBypassBusy = true
-    ResetBypassLast = os.clock()
-    ResetBypassLastTarget = targetCF
-
-    local ok = pcall(function()
-        -- Exact source-style respawn sequence.
-        local lastSpawnPoint = character:FindFirstChild("LastSpawnPoint")
-        if lastSpawnPoint then
-            lastSpawnPoint.Disabled = true
-        end
-
-        commF:InvokeServer("SetLastSpawnPoint", targetSpawn.Name)
-        commF:InvokeServer("SetSpawnPoint")
-
-        character:PivotTo(spawnPart.CFrame)
-        humanoid:ChangeState(15)
-    end)
-
-    if ok then
-        task.spawn(function()
-            local deadline = os.clock() + 8
-
-            repeat
-                task.wait()
-            until os.clock() >= deadline
-                or (
-                    LocalPlayer.Character
-                    and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-                    and LocalPlayer.Character:FindFirstChildOfClass("Humanoid").Health > 0
-                )
-
-            ResetBypassBusy = false
-        end)
-    else
-        ResetBypassBusy = false
-    end
-
-    return ok
-end
-
-_G.PhongdzResetBypass = {
-    SetEnabled = function(value)
-        ResetBypassEnabled = value == true
-
-        if not ResetBypassEnabled then
-            ResetBypassBusy = false
-            ResetBypassLastTarget = nil
-        end
-    end,
-
-    IsEnabled = function()
-        return ResetBypassEnabled
-    end
-}
-
 local function TweenTo(target)
     local gg
     if typeof(target) == "Vector3" then
@@ -2852,16 +2609,20 @@ local function TweenTo(target)
     local rootPart = character and character:FindFirstChild("HumanoidRootPart")
     if not rootPart then return end
 
-    -- Reset Bypass only takes ownership of long-distance travel.
-    -- If it cannot execute, the original TweenTo continues untouched.
-    if ResetBypassExecute(gg) then
-        return nil
-    end
-
     StartSourceMovement()
     shouldTween = true
 
     local distance = (gg.Position - rootPart.Position).Magnitude
+
+    -- Optional Reset Bypass. If unavailable/fails, original Tween remains.
+    if _G.PhongdzResetBypass
+        and _G.PhongdzResetBypass.IsEnabled
+        and _G.PhongdzResetBypass.IsEnabled() then
+        if _G.PhongdzResetBypass.Execute(gg) then
+            return nil
+        end
+    end
+
     local tweenInfo = TweenInfo.new(distance / 300, Enum.EasingStyle.Linear)
     local tween = TweenService:Create(block, tweenInfo, {CFrame = gg})
     ActiveTween = tween
@@ -4240,3 +4001,207 @@ task.spawn(function()
         warn("[PhongdzHub][AutoStats] Disabled safely:", err)
     end
 end)
+
+
+--===========================================================================
+-- PHONGDZ HUB v4.3 :: RESET BYPASS (ISOLATED)
+-- Built exactly like the stable Auto Stats extension:
+--   * appended AFTER the original v4.2 runtime
+--   * xpcall protected
+--   * feature failure cannot prevent the menu from appearing
+--   * does not replace Farm/Fast Attack/Auto Stats
+--===========================================================================
+
+task.spawn(function()
+    local ok, err = xpcall(function()
+
+        local ResetBypass = {
+            Enabled = false,
+            Busy = false,
+            LastUse = 0,
+            Cooldown = 2.5,
+            LastTarget = nil,
+            Tolerance = 120
+        }
+
+        local function getSpawnForTarget(targetCF)
+            local worldOrigin = workspace:FindFirstChild("_WorldOrigin")
+            local playerSpawns = worldOrigin and worldOrigin:FindFirstChild("PlayerSpawns")
+            local pirates = playerSpawns and playerSpawns:FindFirstChild("Pirates")
+            if not pirates then
+                return nil
+            end
+
+            local character = LocalPlayer.Character
+            local root = character and character:FindFirstChild("HumanoidRootPart")
+            if not root then
+                return nil
+            end
+
+            local best, bestDistance = nil, math.huge
+
+            for _, spawn in ipairs(pirates:GetChildren()) do
+                local part = spawn:FindFirstChild("Part")
+
+                if part and part:IsA("BasePart") then
+                    local playerDistance = (part.Position - root.Position).Magnitude
+                    local targetDistance = (part.Position - targetCF.Position).Magnitude
+
+                    if playerDistance >= 3000
+                        and playerDistance <= 10000
+                        and targetDistance < bestDistance then
+
+                        best = spawn
+                        bestDistance = targetDistance
+                    end
+                end
+            end
+
+            return best
+        end
+
+        local function sameTarget(targetCF)
+            return ResetBypass.LastTarget
+                and (targetCF.Position - ResetBypass.LastTarget.Position).Magnitude
+                    <= ResetBypass.Tolerance
+        end
+
+        local function execute(targetCF)
+            if not ResetBypass.Enabled
+                or ResetBypass.Busy
+                or not targetCF
+                or sameTarget(targetCF)
+                or os.clock() - ResetBypass.LastUse < ResetBypass.Cooldown then
+                return false
+            end
+
+            local character = LocalPlayer.Character
+            local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+            local root = character and character:FindFirstChild("HumanoidRootPart")
+
+            if not character or not humanoid or not root or humanoid.Health <= 0 then
+                return false
+            end
+
+            if (targetCF.Position - root.Position).Magnitude <= 3500 then
+                return false
+            end
+
+            local spawn = getSpawnForTarget(targetCF)
+            local spawnPart = spawn and spawn:FindFirstChild("Part")
+            if not spawn or not spawnPart then
+                return false
+            end
+
+            local remotes = ReplicatedStorage:FindFirstChild("Remotes")
+            local commF = remotes and remotes:FindFirstChild("CommF_")
+            if not commF then
+                return false
+            end
+
+            ResetBypass.Busy = true
+            ResetBypass.LastUse = os.clock()
+            ResetBypass.LastTarget = targetCF
+
+            local success = pcall(function()
+                local lastSpawnPoint = character:FindFirstChild("LastSpawnPoint")
+                if lastSpawnPoint then
+                    lastSpawnPoint.Disabled = true
+                end
+
+                commF:InvokeServer("SetLastSpawnPoint", spawn.Name)
+                commF:InvokeServer("SetSpawnPoint")
+
+                character:PivotTo(spawnPart.CFrame)
+                humanoid:ChangeState(15)
+            end)
+
+            task.delay(8, function()
+                ResetBypass.Busy = false
+            end)
+
+            return success
+        end
+
+        -- Public bridge for the existing Setting UI.
+        _G.PhongdzResetBypass = {
+            SetEnabled = function(value)
+                ResetBypass.Enabled = value == true
+
+                if not ResetBypass.Enabled then
+                    ResetBypass.Busy = false
+                    ResetBypass.LastTarget = nil
+                end
+            end,
+
+            Execute = execute,
+
+            IsEnabled = function()
+                return ResetBypass.Enabled
+            end
+        }
+
+        --========================================================================
+        -- SETTING UI
+        --========================================================================
+
+        if not settingPage or not settingPage.Parent then
+            error("settingPage is unavailable")
+        end
+
+        local card = Instance.new("Frame")
+        card.Name = "ResetBypassCard"
+        card.Size = UDim2.new(1, -8, 0, 62)
+        card.BackgroundColor3 = Color3.fromRGB(22, 25, 33)
+        card.BorderSizePixel = 0
+        card.ZIndex = 80
+        card.Parent = settingPage
+
+        local corner = Instance.new("UICorner")
+        corner.CornerRadius = UDim.new(0, 10)
+        corner.Parent = card
+
+        local button = Instance.new("TextButton")
+        button.Size = UDim2.new(1, -12, 1, -12)
+        button.Position = UDim2.fromOffset(6, 6)
+        button.BackgroundColor3 = Color3.fromRGB(48, 52, 63)
+        button.BorderSizePixel = 0
+        button.Text = "RESET BYPASS  •  OFF"
+        button.Font = Enum.Font.GothamBlack
+        button.TextSize = 9
+        button.TextColor3 = Color3.fromRGB(225, 228, 235)
+        button.AutoButtonColor = false
+        button.ZIndex = 81
+        button.Parent = card
+
+        local bc = Instance.new("UICorner")
+        bc.CornerRadius = UDim.new(0, 8)
+        bc.Parent = button
+
+        local function update()
+            if ResetBypass.Enabled then
+                button.Text = "RESET BYPASS  •  ON"
+                button.BackgroundColor3 = Color3.fromRGB(255, 211, 65)
+                button.TextColor3 = Color3.fromRGB(16, 18, 24)
+            else
+                button.Text = "RESET BYPASS  •  OFF"
+                button.BackgroundColor3 = Color3.fromRGB(48, 52, 63)
+                button.TextColor3 = Color3.fromRGB(225, 228, 235)
+            end
+        end
+
+        button.Activated:Connect(function()
+            ResetBypass.Enabled = not ResetBypass.Enabled
+            _G.PhongdzResetBypass.SetEnabled(ResetBypass.Enabled)
+            update()
+        end)
+
+        update()
+
+    end, debug.traceback)
+
+    if not ok then
+        warn("[PhongdzHub][ResetBypass] Disabled safely:", err)
+    end
+end)
+
