@@ -1,9 +1,194 @@
 --=============================================================================
+
+--===========================================================================
+-- PHONGDZ_AUTO_STATS_V42
+-- Local Player -> Auto Stats
+--===========================================================================
+local AutoStatsEnabled = false
+local AutoStatsBusy = false
+local AutoStatsSelected = "Defense"
+local AutoStatsAmount = 1
+
+local AutoStatsNames = {"Melee","Defense","Sword","Gun","Blox Fruit"}
+
+local function AutoStatsAddPoint()
+    if not AutoStatsEnabled or AutoStatsBusy then return end
+
+    local data = LocalPlayer:FindFirstChild("Data")
+    local points = data and data:FindFirstChild("Points")
+    if not points or points.Value <= 0 then return end
+
+    local amount = math.min(points.Value, math.max(1, math.floor(AutoStatsAmount)))
+    AutoStatsBusy = true
+
+    pcall(function()
+        local commF = ReplicatedStorage:WaitForChild("Remotes"):WaitForChild("CommF_")
+        local remoteStat = AutoStatsSelected == "Blox Fruit"
+            and "Demon Fruit"
+            or AutoStatsSelected
+        commF:InvokeServer("AddPoint", remoteStat, amount)
+    end)
+
+    AutoStatsBusy = false
+end
+
+task.spawn(function()
+    while task.wait(0.35) do
+        pcall(AutoStatsAddPoint)
+    end
+end)
+
+-- Local Player page/card. If the v4.1 menu has its own page switcher,
+-- this page can be attached to it by its unique Name without changing Farm.
+local LocalPlayerPage = Instance.new("ScrollingFrame")
+LocalPlayerPage.Name = "LocalPlayerPage"
+LocalPlayerPage.BackgroundTransparency = 1
+LocalPlayerPage.BorderSizePixel = 0
+LocalPlayerPage.ScrollBarThickness = 3
+LocalPlayerPage.CanvasSize = UDim2.fromOffset(0, 350)
+LocalPlayerPage.Visible = false
+
+local AutoStatsCard = Instance.new("Frame")
+AutoStatsCard.Name = "PHONGDZ_AUTO_STATS_V42"
+AutoStatsCard.Position = UDim2.fromOffset(4, 6)
+AutoStatsCard.Size = UDim2.new(1, -8, 0, 300)
+AutoStatsCard.BackgroundColor3 = Color3.fromRGB(22,25,33)
+AutoStatsCard.BorderSizePixel = 0
+AutoStatsCard.ZIndex = 80
+AutoStatsCard.Parent = LocalPlayerPage
+Instance.new("UICorner", AutoStatsCard).CornerRadius = UDim.new(0,10)
+
+local title = Instance.new("TextLabel")
+title.Position = UDim2.fromOffset(13,9)
+title.Size = UDim2.new(1,-26,0,22)
+title.BackgroundTransparency = 1
+title.Text = "AUTO STATS"
+title.Font = Enum.Font.GothamBlack
+title.TextSize = 12
+title.TextColor3 = Color3.fromRGB(255,211,65)
+title.TextXAlignment = Enum.TextXAlignment.Left
+title.ZIndex = 81
+title.Parent = AutoStatsCard
+
+local desc = Instance.new("TextLabel")
+desc.Position = UDim2.fromOffset(13,31)
+desc.Size = UDim2.new(1,-26,0,18)
+desc.BackgroundTransparency = 1
+desc.Text = "Chọn stat muốn tự động nâng"
+desc.Font = Enum.Font.Gotham
+desc.TextSize = 8
+desc.TextColor3 = Color3.fromRGB(140,146,158)
+desc.TextXAlignment = Enum.TextXAlignment.Left
+desc.Parent = AutoStatsCard
+
+local statButtons = {}
+
+local function refreshStats()
+    for stat,button in pairs(statButtons) do
+        local selected = stat == AutoStatsSelected
+        button.Text = (selected and "✓  " or "□  ") .. stat
+        button.BackgroundColor3 = selected
+            and Color3.fromRGB(64,145,91)
+            or Color3.fromRGB(34,38,48)
+    end
+end
+
+for i,stat in ipairs(AutoStatsNames) do
+    local b = Instance.new("TextButton")
+    b.Position = UDim2.fromOffset(13 + ((i-1)%2)*190, 57 + math.floor((i-1)/2)*38)
+    b.Size = UDim2.fromOffset(178,32)
+    b.BackgroundColor3 = Color3.fromRGB(34,38,48)
+    b.BorderSizePixel = 0
+    b.Text = "□  "..stat
+    b.Font = Enum.Font.GothamBold
+    b.TextSize = 9
+    b.TextColor3 = Color3.fromRGB(225,228,235)
+    b.TextXAlignment = Enum.TextXAlignment.Left
+    b.AutoButtonColor = false
+    b.ZIndex = 90
+    b.Parent = AutoStatsCard
+    Instance.new("UICorner",b).CornerRadius = UDim.new(0,7)
+
+    local pad = Instance.new("UIPadding")
+    pad.PaddingLeft = UDim.new(0,10)
+    pad.Parent = b
+
+    statButtons[stat] = b
+    b.Activated:Connect(function()
+        AutoStatsSelected = stat
+        refreshStats()
+    end)
+end
+
+local amount = Instance.new("TextButton")
+amount.Position = UDim2.fromOffset(13,171)
+amount.Size = UDim2.new(1,-26,0,34)
+amount.BackgroundColor3 = Color3.fromRGB(34,38,48)
+amount.BorderSizePixel = 0
+amount.Text = "Points / cycle: 1"
+amount.Font = Enum.Font.GothamBold
+amount.TextSize = 9
+amount.TextColor3 = Color3.fromRGB(225,228,235)
+amount.AutoButtonColor = false
+amount.ZIndex = 90
+amount.Parent = AutoStatsCard
+Instance.new("UICorner",amount).CornerRadius = UDim.new(0,7)
+
+local amounts = {1,5,10,25,50,100}
+local amountIndex = 1
+amount.Activated:Connect(function()
+    amountIndex = amountIndex % #amounts + 1
+    AutoStatsAmount = amounts[amountIndex]
+    amount.Text = "Points / cycle: "..AutoStatsAmount
+end)
+
+local toggle = Instance.new("TextButton")
+toggle.Position = UDim2.fromOffset(13,214)
+toggle.Size = UDim2.new(1,-26,0,40)
+toggle.BackgroundColor3 = Color3.fromRGB(48,52,63)
+toggle.BorderSizePixel = 0
+toggle.Text = "AUTO STATS: OFF"
+toggle.Font = Enum.Font.GothamBlack
+toggle.TextSize = 10
+toggle.TextColor3 = Color3.fromRGB(215,219,227)
+toggle.AutoButtonColor = false
+toggle.ZIndex = 90
+toggle.Parent = AutoStatsCard
+Instance.new("UICorner",toggle).CornerRadius = UDim.new(0,8)
+
+toggle.Activated:Connect(function()
+    AutoStatsEnabled = not AutoStatsEnabled
+    toggle.Text = AutoStatsEnabled and "AUTO STATS: ON" or "AUTO STATS: OFF"
+    toggle.BackgroundColor3 = AutoStatsEnabled
+        and Color3.fromRGB(64,145,91)
+        or Color3.fromRGB(48,52,63)
+end)
+
+refreshStats()
+
+-- Expose the page so the existing menu can place it directly above Farm.
+_G.PhongdzLocalPlayerPage = LocalPlayerPage
+_G.PhongdzAutoStats = {
+    Page = LocalPlayerPage,
+    SetEnabled = function(v) AutoStatsEnabled = v == true end,
+    SetStat = function(v)
+        if table.find(AutoStatsNames,v) then
+            AutoStatsSelected = v
+            refreshStats()
+        end
+    end,
+    SetAmount = function(v)
+        AutoStatsAmount = math.max(1,math.floor(tonumber(v) or 1))
+    end
+}
+
+
 -- PHONGDZ HUB — CLEAN / ROBUST UI + FARM LEVEL + FAST ATTACK
 -- UI được khởi tạo độc lập; Farm chỉ chạy sau khi UI đã hiện.
 --=============================================================================
 
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UIS = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
@@ -157,7 +342,7 @@ MiniLauncher.TextColor3 = Color3.fromRGB(15, 17, 22)
 MiniLauncher.AutoButtonColor = false
 MiniLauncher.Visible = false
 MiniLauncher.ZIndex = 1000
-MiniLauncher.Parent = ScreenGui
+MiniLauncher.Parent = Gui
 
 local mlCorner = Instance.new("UICorner")
 mlCorner.CornerRadius = UDim.new(1, 0)
@@ -240,17 +425,6 @@ MiniLauncher.Activated:Connect(function()
     end
 end)
 
--- Detect the existing minimize button without replacing its original callback.
-for _, descendant in ipairs(Main:GetDescendants()) do
-    if descendant:IsA("TextButton") or descendant:IsA("ImageButton") then
-        local n = string.lower(descendant.Name)
-        if n == "minimize" or n == "minbutton" or n == "collapse" then
-            descendant.Activated:Connect(hideHub)
-            break
-        end
-    end
-end
-
 _G.PhongdzShowHub = showHub
 _G.PhongdzHideHub = hideHub
 _G.PhongdzMiniLauncher = MiniLauncher
@@ -284,6 +458,17 @@ if not parentOK then
     else
         warn("[PhongdzHub] Không thể parent ScreenGui:", parentErr)
         return
+    end
+end
+
+-- Detect the existing minimize button only after Main has been created.
+for _, descendant in ipairs(Main:GetDescendants()) do
+    if descendant:IsA("TextButton") or descendant:IsA("ImageButton") then
+        local n = string.lower(descendant.Name)
+        if n == "minimize" or n == "minbutton" or n == "collapse" then
+            descendant.Activated:Connect(hideHub)
+            break
+        end
     end
 end
 
@@ -330,7 +515,7 @@ local Title = Instance.new("TextLabel")
 Title.Position = UDim2.fromOffset(18, 7)
 Title.Size = UDim2.fromOffset(300, 25)
 Title.BackgroundTransparency = 1
-Title.Text = "PHONGDZ HUB  v3.2"
+Title.Text = "PHONGDZ HUB  v4.2"
 Title.Font = Enum.Font.GothamBlack
 Title.TextSize = 19
 Title.TextColor3 = Color3.fromRGB(255, 211, 65)
@@ -393,7 +578,7 @@ SettingFarm.Position = UDim2.fromOffset(16, 16)
 SettingFarm.Size = UDim2.fromOffset(W - 32, 118)
 SettingFarm.BackgroundColor3 = Color3.fromRGB(22, 25, 33)
 SettingFarm.BorderSizePixel = 0
-SettingFarm.Parent = FolderScroll
+SettingFarm.Parent = Main
 
 local sfc = Instance.new("UICorner")
 sfc.CornerRadius = UDim.new(0, 10)
@@ -702,6 +887,9 @@ FolderScroll.ClipsDescendants = true
 FolderScroll.ZIndex = 10
 FolderScroll.Parent = Main
 
+-- Re-parent SettingFarm now that FolderScroll exists.
+SettingFarm.Parent = FolderScroll
+
 local FolderPadding = Instance.new("UIPadding")
 FolderPadding.PaddingBottom = UDim.new(0, 18)
 FolderPadding.Parent = FolderScroll
@@ -795,7 +983,7 @@ _G.PhongdzFolderScrollBottom = scrollFoldersToBottom
 --===========================================================================
 -- FARM METHOD SELECTOR + START FARM
 --===========================================================================
-local farmEnabled = false
+_G.PhongdzFarmEnabled = false
 
 local FarmMethodButton = Instance.new("TextButton")
 FarmMethodButton.Name = "FarmMethodButton"
@@ -899,7 +1087,7 @@ local function rebuildFarmMethodOptions()
         oc.Parent = option
 
         option.Activated:Connect(function()
-            if farmEnabled then return end
+            if _G.PhongdzFarmEnabled then return end
             SelectedFarmMethod = methodName
             _G.PhongdzFarmMethod = methodName
             FarmMethodOpen = false
@@ -912,7 +1100,7 @@ local function rebuildFarmMethodOptions()
 end
 
 FarmMethodButton.Activated:Connect(function()
-    if farmEnabled then return end
+    if _G.PhongdzFarmEnabled then return end
     FarmMethodOpen = not FarmMethodOpen
     FarmMethodDrop.Visible = FarmMethodOpen
     FarmMethodDrop.Size = FarmMethodOpen
@@ -1600,6 +1788,670 @@ Hint.Size = UDim2.new(1, -8, 0, 22)
 Hint.ZIndex = 45
 Hint.Active = false
 
+local MaterialEnabled = false
+local SelectedMaterial = _G.PhongdzSelectedMaterial or "Leather + Scrap Metal"
+_G.PhongdzSelectedMaterial = SelectedMaterial
+
+local MaterialButton = Instance.new("TextButton")
+MaterialButton.Name = "MaterialSelector"
+MaterialButton.Position = UDim2.fromOffset(4,176)
+MaterialButton.Size = UDim2.new(1,-8,0,58)
+MaterialButton.BackgroundColor3 = Color3.fromRGB(22,25,33)
+MaterialButton.BorderSizePixel = 0
+MaterialButton.Text = ""
+MaterialButton.AutoButtonColor = false
+MaterialButton.ZIndex = 70
+MaterialButton.Active = true
+MaterialButton.Parent = farmPage
+
+local mc1=Instance.new("UICorner"); mc1.CornerRadius=UDim.new(0,10); mc1.Parent=MaterialButton
+
+local MaterialTitle=Instance.new("TextLabel")
+MaterialTitle.Position=UDim2.fromOffset(13,7)
+MaterialTitle.Size=UDim2.new(1,-55,0,19)
+MaterialTitle.BackgroundTransparency=1
+MaterialTitle.Text="SELECT MATERIAL"
+MaterialTitle.Font=Enum.Font.GothamBlack
+MaterialTitle.TextSize=10
+MaterialTitle.TextColor3=Color3.fromRGB(255,211,65)
+MaterialTitle.TextXAlignment=Enum.TextXAlignment.Left
+MaterialTitle.Parent=MaterialButton
+
+local MaterialValue=Instance.new("TextLabel")
+MaterialValue.Position=UDim2.fromOffset(13,29)
+MaterialValue.Size=UDim2.new(1,-65,0,21)
+MaterialValue.BackgroundTransparency=1
+MaterialValue.Text=SelectedMaterial
+MaterialValue.Font=Enum.Font.GothamBold
+MaterialValue.TextSize=9
+MaterialValue.TextColor3=Color3.fromRGB(240,242,247)
+MaterialValue.TextXAlignment=Enum.TextXAlignment.Left
+MaterialValue.Parent=MaterialButton
+
+local MaterialArrow=Instance.new("TextLabel")
+MaterialArrow.Size=UDim2.fromOffset(28,58)
+MaterialArrow.Position=UDim2.new(1,-36,0,0)
+MaterialArrow.BackgroundTransparency=1
+MaterialArrow.Text="▾"
+MaterialArrow.Font=Enum.Font.GothamBold
+MaterialArrow.TextSize=16
+MaterialArrow.TextColor3=Color3.fromRGB(180,186,198)
+MaterialArrow.Parent=MaterialButton
+
+local MaterialDrop=Instance.new("Frame")
+MaterialDrop.Name="MaterialDropdown"
+MaterialDrop.Position=UDim2.fromOffset(4,238)
+MaterialDrop.Size=UDim2.new(1,-8,0,0)
+MaterialDrop.BackgroundColor3=Color3.fromRGB(27,30,38)
+MaterialDrop.BorderSizePixel=0
+MaterialDrop.Visible=false
+MaterialDrop.ClipsDescendants=true
+MaterialDrop.ZIndex=300
+MaterialDrop.Parent=farmPage
+local mc2=Instance.new("UICorner"); mc2.CornerRadius=UDim.new(0,9); mc2.Parent=MaterialDrop
+
+local MaterialOptionsBySea={
+ [1]={"Leather + Scrap Metal","Angel Wings","Magma Ore","Fish Tail"},
+ [2]={"Leather + Scrap Metal","Radioactive Material","Ectoplasm","Mystic Droplet","Magma Ore","Vampire Fang"},
+ [3]={"Scrap Metal","Demonic Wisp","Conjured Cocoa","Dragon Scale","Gunpowder","Fish Tail","Mini Tusk"},
+}
+local function CurrentSea()
+ local id=game.PlaceId
+ if id==2753915549 or id==85211729168715 then return 1 end
+ if id==4442272183 or id==79091703265657 then return 2 end
+ if id==7449423635 or id==100117331123089 then return 3 end
+ return 1
+end
+local function MaterialOptions()
+ return MaterialOptionsBySea[CurrentSea()] or MaterialOptionsBySea[1]
+end
+local MaterialDropOpen=false
+
+local function RefreshMaterial()
+ MaterialValue.Text=SelectedMaterial
+ MaterialArrow.Text=MaterialDropOpen and "▴" or "▾"
+end
+
+local function RebuildMaterialOptions()
+ for _,c in ipairs(MaterialDrop:GetChildren()) do if c:IsA("TextButton") then c:Destroy() end end
+ local opts=MaterialOptions()
+ if not table.find(opts,SelectedMaterial) then
+  SelectedMaterial=opts[1]; _G.PhongdzSelectedMaterial=SelectedMaterial
+ end
+ for i,name in ipairs(opts) do
+  local b=Instance.new("TextButton")
+  b.Size=UDim2.new(1,-10,0,32); b.Position=UDim2.fromOffset(5,(i-1)*36+5)
+  b.BackgroundColor3=name==SelectedMaterial and Color3.fromRGB(48,53,66) or Color3.fromRGB(35,39,49)
+  b.BorderSizePixel=0; b.Text=name; b.Font=Enum.Font.GothamMedium; b.TextSize=9
+  b.TextColor3=Color3.fromRGB(230,233,240); b.AutoButtonColor=false; b.ZIndex=310; b.Parent=MaterialDrop
+  local bc=Instance.new("UICorner"); bc.CornerRadius=UDim.new(0,6); bc.Parent=b
+  b.Activated:Connect(function()
+   if MaterialEnabled then return end
+   SelectedMaterial=name; _G.PhongdzSelectedMaterial=name
+   MaterialDropOpen=false; MaterialDrop.Visible=false; MaterialDrop.Size=UDim2.new(1,-8,0,0)
+   RebuildMaterialOptions()
+  end)
+ end
+ RefreshMaterial()
+end
+
+MaterialButton.Activated:Connect(function()
+ if MaterialEnabled or _G.PhongdzFarmEnabled then return end
+ MaterialDropOpen=not MaterialDropOpen; MaterialDrop.Visible=MaterialDropOpen
+ MaterialDrop.Size=MaterialDropOpen and UDim2.new(1,-8,0,#MaterialOptions()*36+10) or UDim2.new(1,-8,0,0)
+ RefreshMaterial()
+ if MaterialDropOpen then RebuildMaterialOptions() end
+end)
+RebuildMaterialOptions()
+
+local AutoMaterialToggle=Instance.new("TextButton")
+AutoMaterialToggle.Name="AutoFarmMaterial"
+AutoMaterialToggle.Position=UDim2.fromOffset(4,242)
+AutoMaterialToggle.Size=UDim2.new(1,-8,0,58)
+AutoMaterialToggle.BackgroundColor3=Color3.fromRGB(55,59,70)
+AutoMaterialToggle.BorderSizePixel=0
+AutoMaterialToggle.Text=""
+AutoMaterialToggle.AutoButtonColor=false
+AutoMaterialToggle.ZIndex=80
+AutoMaterialToggle.Active=true
+AutoMaterialToggle.Parent=farmPage
+local ac=Instance.new("UICorner"); ac.CornerRadius=UDim.new(0,10); ac.Parent=AutoMaterialToggle
+
+local aml=Instance.new("TextLabel")
+aml.Position=UDim2.fromOffset(13,6); aml.Size=UDim2.new(1,-90,0,20); aml.BackgroundTransparency=1
+aml.Text="AUTO FARM MATERIAL"; aml.Font=Enum.Font.GothamBold; aml.TextSize=10
+aml.TextColor3=Color3.fromRGB(240,242,247); aml.TextXAlignment=Enum.TextXAlignment.Left; aml.Parent=AutoMaterialToggle
+
+local ams=Instance.new("TextLabel")
+ams.Position=UDim2.fromOffset(13,28); ams.Size=UDim2.new(1,-90,0,17); ams.BackgroundTransparency=1
+ams.Text="● MATERIAL FARM OFF"; ams.Font=Enum.Font.GothamMedium; ams.TextSize=8
+ams.TextColor3=Color3.fromRGB(130,135,148); ams.TextXAlignment=Enum.TextXAlignment.Left; ams.Parent=AutoMaterialToggle
+
+local amp=Instance.new("Frame"); amp.Size=UDim2.fromOffset(52,29); amp.Position=UDim2.new(1,-65,0,14)
+amp.BackgroundColor3=Color3.fromRGB(70,74,85); amp.BorderSizePixel=0; amp.Parent=AutoMaterialToggle
+local apc=Instance.new("UICorner"); apc.CornerRadius=UDim.new(1,0); apc.Parent=amp
+local amk=Instance.new("Frame"); amk.Size=UDim2.fromOffset(23,23); amk.Position=UDim2.fromOffset(3,3)
+amk.BackgroundColor3=Color3.fromRGB(230,232,238); amk.BorderSizePixel=0; amk.Parent=amp
+local akc=Instance.new("UICorner"); akc.CornerRadius=UDim.new(1,0); akc.Parent=amk
+
+local function UpdateMaterialToggle()
+ if MaterialEnabled then
+  AutoMaterialToggle.BackgroundColor3=Color3.fromRGB(255,211,65); amk.Position=UDim2.fromOffset(26,3)
+  amk.BackgroundColor3=Color3.fromRGB(16,18,24); ams.Text="● FARMING: "..SelectedMaterial
+  ams.TextColor3=Color3.fromRGB(16,18,24)
+ else
+  AutoMaterialToggle.BackgroundColor3=Color3.fromRGB(55,59,70); amk.Position=UDim2.fromOffset(3,3)
+  amk.BackgroundColor3=Color3.fromRGB(230,232,238); ams.Text="● MATERIAL FARM OFF"
+  ams.TextColor3=Color3.fromRGB(130,135,148)
+ end
+end
+
+AutoMaterialToggle.Activated:Connect(function()
+ if _G.PhongdzFarmEnabled or _G.PhongdzMasteryEnabled then return end
+ MaterialEnabled=not MaterialEnabled
+ if MaterialEnabled then
+  if not _G.PhongdzFarmLoaded or not _G.PhongdzLoadFarm() then MaterialEnabled=false; UpdateMaterialToggle(); return end
+  _G.PhongdzSelectedMaterial=SelectedMaterial; _G.AutoMaterial=true; _G.AutoLevel=true
+  _G.PhongdzFarmMethod="Farm Material"
+ else
+  _G.AutoMaterial=false; _G.AutoLevel=false; _G.PhongdzFarmMethod=SelectedFarmMethod
+  pcall(StopSourceMovement)
+ end
+ UpdateMaterialToggle()
+end)
+UpdateMaterialToggle()
+
+_G.PhongdzMasteryEnabled = false
+
+local function BuildMasteryUI()
+--===========================================================================
+-- FARM MASTERY
+-- Source-derived target logic:
+--   Cake  -> Cookie Crafter
+--   Bone  -> Reborn Skeleton
+-- Source Attack.Mas / Attack.Sword / Attack.Masgun behavior is preserved:
+--   keep mobs grouped, move above target, and use the selected weapon.
+--===========================================================================
+
+_G.PhongdzMasteryEnabled = false
+local SelectedMasteryWeapon = _G.PhongdzMasteryWeapon or ""
+_G.PhongdzMasteryWeapon = SelectedMasteryWeapon
+
+local MasteryButton = Instance.new("TextButton")
+MasteryButton.Name = "MasteryWeaponSelector"
+MasteryButton.Position = UDim2.fromOffset(4, 312)
+MasteryButton.Size = UDim2.new(1, -8, 0, 58)
+MasteryButton.BackgroundColor3 = Color3.fromRGB(22, 25, 33)
+MasteryButton.BorderSizePixel = 0
+MasteryButton.Text = ""
+MasteryButton.AutoButtonColor = false
+MasteryButton.ZIndex = 70
+MasteryButton.Active = true
+MasteryButton.Parent = farmPage
+
+local mmc = Instance.new("UICorner")
+mmc.CornerRadius = UDim.new(0, 10)
+mmc.Parent = MasteryButton
+
+local MasteryTitle = Instance.new("TextLabel")
+MasteryTitle.Position = UDim2.fromOffset(13, 7)
+MasteryTitle.Size = UDim2.new(1, -55, 0, 19)
+MasteryTitle.BackgroundTransparency = 1
+MasteryTitle.Text = "SELECT MASTERY WEAPON"
+MasteryTitle.Font = Enum.Font.GothamBlack
+MasteryTitle.TextSize = 10
+MasteryTitle.TextColor3 = Color3.fromRGB(255, 211, 65)
+MasteryTitle.TextXAlignment = Enum.TextXAlignment.Left
+MasteryTitle.Parent = MasteryButton
+
+local MasteryValue = Instance.new("TextLabel")
+MasteryValue.Position = UDim2.fromOffset(13, 29)
+MasteryValue.Size = UDim2.new(1, -65, 0, 21)
+MasteryValue.BackgroundTransparency = 1
+MasteryValue.Text = SelectedMasteryWeapon ~= "" and SelectedMasteryWeapon or "No weapon selected"
+MasteryValue.Font = Enum.Font.GothamBold
+MasteryValue.TextSize = 9
+MasteryValue.TextColor3 = Color3.fromRGB(240, 242, 247)
+MasteryValue.TextXAlignment = Enum.TextXAlignment.Left
+MasteryValue.Parent = MasteryButton
+
+local MasteryArrow = Instance.new("TextLabel")
+MasteryArrow.Size = UDim2.fromOffset(28, 58)
+MasteryArrow.Position = UDim2.new(1, -36, 0, 0)
+MasteryArrow.BackgroundTransparency = 1
+MasteryArrow.Text = "▾"
+MasteryArrow.Font = Enum.Font.GothamBold
+MasteryArrow.TextSize = 16
+MasteryArrow.TextColor3 = Color3.fromRGB(180, 186, 198)
+MasteryArrow.Parent = MasteryButton
+
+local MasteryDrop = Instance.new("Frame")
+MasteryDrop.Name = "MasteryWeaponDropdown"
+MasteryDrop.Position = UDim2.fromOffset(4, 374)
+MasteryDrop.Size = UDim2.new(1, -8, 0, 0)
+MasteryDrop.BackgroundColor3 = Color3.fromRGB(27, 30, 38)
+MasteryDrop.BorderSizePixel = 0
+MasteryDrop.Visible = false
+MasteryDrop.ClipsDescendants = true
+MasteryDrop.ZIndex = 300
+MasteryDrop.Parent = farmPage
+
+local mdc = Instance.new("UICorner")
+mdc.CornerRadius = UDim.new(0, 9)
+mdc.Parent = MasteryDrop
+
+local MasteryDropOpen = false
+
+local function GetMasteryInventory()
+    local result = {}
+    local seen = {}
+
+    local function addTool(name, weaponType, mastery)
+        if not name or name == "" or seen[name] then return end
+        seen[name] = true
+        result[#result + 1] = {
+            Name = name,
+            Type = weaponType or "Weapon",
+            Mastery = tonumber(mastery) or 0,
+        }
+    end
+
+    local ok, inventory = pcall(function()
+        return ReplicatedStorage.Remotes.CommF_:InvokeServer("getInventory")
+    end)
+
+    if ok and type(inventory) == "table" then
+        for _, item in pairs(inventory) do
+            if type(item) == "table" and
+                (item.Type == "Sword" or item.Type == "Gun") then
+                addTool(item.Name, item.Type, item.Mastery)
+            end
+        end
+    end
+
+    local character = LocalPlayer.Character
+    local backpack = LocalPlayer:FindFirstChildOfClass("Backpack")
+
+    local function scan(container)
+        if not container then return end
+        for _, tool in ipairs(container:GetChildren()) do
+            if tool:IsA("Tool") then
+                local tooltip = tool.ToolTip
+                if tooltip == "Sword" or tooltip == "Gun" then
+                    addTool(tool.Name, tooltip, tool:GetAttribute("Mastery"))
+                end
+            end
+        end
+    end
+
+    scan(backpack)
+    scan(character)
+
+    table.sort(result, function(a, b)
+        return a.Name:lower() < b.Name:lower()
+    end)
+
+    return result
+end
+
+local function RefreshMasteryValue()
+    MasteryValue.Text = SelectedMasteryWeapon ~= "" and SelectedMasteryWeapon or "No weapon selected"
+    MasteryArrow.Text = MasteryDropOpen and "▴" or "▾"
+end
+
+local function RebuildMasteryOptions()
+    for _, child in ipairs(MasteryDrop:GetChildren()) do
+        if child:IsA("TextButton") then
+            child:Destroy()
+        end
+    end
+
+    local inventory = GetMasteryInventory()
+
+    if SelectedMasteryWeapon ~= "" then
+        local found = false
+        for _, item in ipairs(inventory) do
+            if item.Name == SelectedMasteryWeapon then
+                found = true
+                break
+            end
+        end
+        if not found then
+            SelectedMasteryWeapon = ""
+            _G.PhongdzMasteryWeapon = ""
+        end
+    end
+
+    if #inventory == 0 then
+        local empty = Instance.new("TextLabel")
+        empty.Size = UDim2.new(1, -10, 0, 34)
+        empty.Position = UDim2.fromOffset(5, 5)
+        empty.BackgroundTransparency = 1
+        empty.Text = "No Sword/Gun found"
+        empty.Font = Enum.Font.GothamMedium
+        empty.TextSize = 9
+        empty.TextColor3 = Color3.fromRGB(150, 155, 168)
+        empty.Parent = MasteryDrop
+    else
+        for index, item in ipairs(inventory) do
+            local option = Instance.new("TextButton")
+            option.Size = UDim2.new(1, -10, 0, 34)
+            option.Position = UDim2.fromOffset(5, (index - 1) * 38 + 5)
+            option.BackgroundColor3 =
+                item.Name == SelectedMasteryWeapon
+                and Color3.fromRGB(48, 53, 66)
+                or Color3.fromRGB(35, 39, 49)
+            option.BorderSizePixel = 0
+            option.Text = item.Name .. "  [" .. item.Type .. " | " .. tostring(item.Mastery) .. "]"
+            option.Font = Enum.Font.GothamMedium
+            option.TextSize = 9
+            option.TextColor3 = Color3.fromRGB(230, 233, 240)
+            option.AutoButtonColor = false
+            option.ZIndex = 310
+            option.Parent = MasteryDrop
+
+            local oc = Instance.new("UICorner")
+            oc.CornerRadius = UDim.new(0, 6)
+            oc.Parent = option
+
+            option.Activated:Connect(function()
+                if _G.PhongdzMasteryEnabled then return end
+
+                SelectedMasteryWeapon = item.Name
+                _G.PhongdzMasteryWeapon = item.Name
+
+                MasteryDropOpen = false
+                MasteryDrop.Visible = false
+                MasteryDrop.Size = UDim2.new(1, -8, 0, 0)
+
+                RebuildMasteryOptions()
+            end)
+        end
+    end
+
+    RefreshMasteryValue()
+end
+
+MasteryButton.Activated:Connect(function()
+    if _G.PhongdzMasteryEnabled or _G.PhongdzFarmEnabled then return end
+
+    MasteryDropOpen = not MasteryDropOpen
+    MasteryDrop.Visible = MasteryDropOpen
+
+    if MasteryDropOpen then
+        RebuildMasteryOptions()
+        local count = math.max(1, #GetMasteryInventory())
+        MasteryDrop.Size = UDim2.new(1, -8, 0, math.min(count * 38 + 10, 220))
+    else
+        MasteryDrop.Size = UDim2.new(1, -8, 0, 0)
+    end
+
+    RefreshMasteryValue()
+end)
+
+RebuildMasteryOptions()
+
+local AutoMasteryToggle = Instance.new("TextButton")
+AutoMasteryToggle.Name = "AutoFarmMastery"
+AutoMasteryToggle.Position = UDim2.fromOffset(4, 378)
+AutoMasteryToggle.Size = UDim2.new(1, -8, 0, 58)
+AutoMasteryToggle.BackgroundColor3 = Color3.fromRGB(55, 59, 70)
+AutoMasteryToggle.BorderSizePixel = 0
+AutoMasteryToggle.Text = ""
+AutoMasteryToggle.AutoButtonColor = false
+AutoMasteryToggle.ZIndex = 80
+AutoMasteryToggle.Active = true
+AutoMasteryToggle.Parent = farmPage
+
+local amc2 = Instance.new("UICorner")
+amc2.CornerRadius = UDim.new(0, 10)
+amc2.Parent = AutoMasteryToggle
+
+local AutoMasteryLabel = Instance.new("TextLabel")
+AutoMasteryLabel.Position = UDim2.fromOffset(13, 6)
+AutoMasteryLabel.Size = UDim2.new(1, -90, 0, 20)
+AutoMasteryLabel.BackgroundTransparency = 1
+AutoMasteryLabel.Text = "AUTO FARM MASTERY"
+AutoMasteryLabel.Font = Enum.Font.GothamBold
+AutoMasteryLabel.TextSize = 10
+AutoMasteryLabel.TextColor3 = Color3.fromRGB(240, 242, 247)
+AutoMasteryLabel.TextXAlignment = Enum.TextXAlignment.Left
+AutoMasteryLabel.Parent = AutoMasteryToggle
+
+local AutoMasteryStatus = Instance.new("TextLabel")
+AutoMasteryStatus.Position = UDim2.fromOffset(13, 28)
+AutoMasteryStatus.Size = UDim2.new(1, -90, 0, 17)
+AutoMasteryStatus.BackgroundTransparency = 1
+AutoMasteryStatus.Text = "● MASTERY FARM OFF"
+AutoMasteryStatus.Font = Enum.Font.GothamMedium
+AutoMasteryStatus.TextSize = 8
+AutoMasteryStatus.TextColor3 = Color3.fromRGB(130, 135, 148)
+AutoMasteryStatus.TextXAlignment = Enum.TextXAlignment.Left
+AutoMasteryStatus.Parent = AutoMasteryToggle
+
+local AutoMasteryPill = Instance.new("Frame")
+AutoMasteryPill.Size = UDim2.fromOffset(52, 29)
+AutoMasteryPill.Position = UDim2.new(1, -65, 0, 14)
+AutoMasteryPill.BackgroundColor3 = Color3.fromRGB(70, 74, 85)
+AutoMasteryPill.BorderSizePixel = 0
+AutoMasteryPill.Parent = AutoMasteryToggle
+
+local ampc2 = Instance.new("UICorner")
+ampc2.CornerRadius = UDim.new(1, 0)
+ampc2.Parent = AutoMasteryPill
+
+local AutoMasteryKnob = Instance.new("Frame")
+AutoMasteryKnob.Size = UDim2.fromOffset(23, 23)
+AutoMasteryKnob.Position = UDim2.fromOffset(3, 3)
+AutoMasteryKnob.BackgroundColor3 = Color3.fromRGB(230, 232, 238)
+AutoMasteryKnob.BorderSizePixel = 0
+AutoMasteryKnob.Parent = AutoMasteryPill
+
+local amkc2 = Instance.new("UICorner")
+amkc2.CornerRadius = UDim.new(1, 0)
+amkc2.Parent = AutoMasteryKnob
+
+local function UpdateMasteryToggle()
+    if _G.PhongdzMasteryEnabled then
+        AutoMasteryToggle.BackgroundColor3 = Color3.fromRGB(255, 211, 65)
+        AutoMasteryKnob.Position = UDim2.fromOffset(26, 3)
+        AutoMasteryKnob.BackgroundColor3 = Color3.fromRGB(16, 18, 24)
+        AutoMasteryStatus.Text = "● FARMING: " .. SelectedMasteryWeapon
+        AutoMasteryStatus.TextColor3 = Color3.fromRGB(16, 18, 24)
+    else
+        AutoMasteryToggle.BackgroundColor3 = Color3.fromRGB(55, 59, 70)
+        AutoMasteryKnob.Position = UDim2.fromOffset(3, 3)
+        AutoMasteryKnob.BackgroundColor3 = Color3.fromRGB(230, 232, 238)
+        AutoMasteryStatus.Text = "● MASTERY FARM OFF"
+        AutoMasteryStatus.TextColor3 = Color3.fromRGB(130, 135, 148)
+    end
+end
+
+AutoMasteryToggle.Activated:Connect(function()
+    if _G.PhongdzFarmEnabled or MaterialEnabled then return end
+
+    if not _G.PhongdzMasteryEnabled then
+        if SelectedMasteryWeapon == "" then
+            RebuildMasteryOptions()
+            return
+        end
+
+        _G.PhongdzMasteryEnabled = true
+        _G.FarmMastery_G = false
+        _G.FarmMastery_S = false
+        _G.FarmMastery_Dev = false
+        _G.AutoMaterial = false
+        _G.AutoLevel = true
+        _G.PhongdzFarmMethod = "Farm Mastery"
+    else
+        _G.PhongdzMasteryEnabled = false
+        _G.FarmMastery_G = false
+        _G.FarmMastery_S = false
+        _G.FarmMastery_Dev = false
+        _G.AutoLevel = false
+        _G.PhongdzFarmMethod = SelectedFarmMethod
+        ActiveTarget = nil
+        pcall(StopSourceMovement)
+    end
+
+    UpdateMasteryToggle()
+end)
+
+UpdateMasteryToggle()
+
+-- Source target positions and mob lists.
+local MasteryTargetData = {
+    Cake = {
+        Names = {"Cookie Crafter"},
+        Position = CFrame.new(-1943.676513671875, 251.5095672607422, -12337.880859375),
+    },
+    Bone = {
+        Names = {"Reborn Skeleton"},
+        Position = CFrame.new(-9495.6806640625, 453.58624267578125, 5977.3486328125),
+    },
+}
+
+local function FindMasteryTarget(data)
+    local enemies = workspace:FindFirstChild("Enemies")
+    if not enemies then return nil end
+
+    for _, name in ipairs(data.Names) do
+        for _, mob in ipairs(enemies:GetChildren()) do
+            if mob.Name == name and SourceFarmAlive(mob) then
+                return mob
+            end
+        end
+    end
+
+    return nil
+end
+
+local function GetSelectedMasteryType()
+    local character = LocalPlayer.Character
+    local backpack = LocalPlayer:FindFirstChildOfClass("Backpack")
+
+    local function inspect(container)
+        if not container then return nil end
+        local tool = container:FindFirstChild(SelectedMasteryWeapon)
+        if tool and tool:IsA("Tool") then
+            if tool.ToolTip == "Sword" or tool.ToolTip == "Gun" then
+                return tool.ToolTip
+            end
+        end
+        return nil
+    end
+
+    return inspect(character) or inspect(backpack)
+end
+
+local function EquipSelectedMasteryWeapon()
+    if SelectedMasteryWeapon == "" then return false end
+
+    local character = LocalPlayer.Character
+    local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+    local backpack = LocalPlayer:FindFirstChildOfClass("Backpack")
+
+    if not humanoid or not backpack then return false end
+
+    local equipped = character:FindFirstChild(SelectedMasteryWeapon)
+    if equipped and equipped:IsA("Tool") then return true end
+
+    local tool = backpack:FindFirstChild(SelectedMasteryWeapon)
+    if tool and tool:IsA("Tool") then
+        pcall(function()
+            humanoid:EquipTool(tool)
+        end)
+        return character:FindFirstChild(SelectedMasteryWeapon) ~= nil
+    end
+
+    -- Match source behavior: load the selected inventory item when it is not
+    -- currently in the backpack.
+    pcall(function()
+        ReplicatedStorage.Remotes.CommF_:InvokeServer("LoadItem", SelectedMasteryWeapon)
+    end)
+
+    return false
+end
+
+local function RunSourceMasteryStep()
+    if not _G.PhongdzMasteryEnabled or not _G.AutoLevel then
+        return
+    end
+
+    local data = MasteryTargetData[(_G.PhongdzMasteryIsland or "Bone")]
+    if not data then return end
+
+    local target = FindMasteryTarget(data)
+    if not target then
+        ActiveTarget = nil
+        TweenTo(data.Position)
+        return
+    end
+
+    local root = target:FindFirstChild("HumanoidRootPart")
+    local humanoid = target:FindFirstChildOfClass("Humanoid")
+    if not root or not humanoid then return end
+
+    ActiveTarget = target
+    AutoHaki()
+    BringEnemy(target)
+
+    local weaponType = GetSelectedMasteryType()
+    if not weaponType then
+        EquipSelectedMasteryWeapon()
+        weaponType = GetSelectedMasteryType()
+    end
+
+    if weaponType == "Sword" then
+        -- Source Attack.Sword: bring mob, equip sword, stay above target.
+        EquipSelectedMasteryWeapon()
+        TweenTo(root.CFrame * CFrame.new(0, 30, 0))
+    elseif weaponType == "Gun" then
+        -- Source Attack.Masgun: use the low-health window for gun skills.
+        local healthThreshold = humanoid.MaxHealth * 0.70
+        if humanoid.Health <= healthThreshold then
+            EquipSelectedMasteryWeapon()
+            TweenTo(root.CFrame * CFrame.new(0, 35, 8))
+        else
+            -- Source first brings the target down before switching to gun damage.
+            local masteryCharacter = LocalPlayer.Character
+            local melee = masteryCharacter and masteryCharacter:FindFirstChildOfClass("Tool")
+            if not melee or melee.ToolTip ~= "Melee" then
+                pcall(EquipFarmWeapon)
+            end
+            TweenTo(root.CFrame * CFrame.new(0, 30, 0))
+        end
+    end
+
+    -- Keep the existing source-derived fast attack core active for the
+    -- selected Sword/Gun while the mastery routine owns the target.
+    if weaponType == "Sword" or weaponType == "Gun" then
+        pcall(ExecuteSourceFastAttack)
+        pcall(ExecuteSourceHitRegistration)
+    end
+end
+
+task.spawn(function()
+    while task.wait(0.12) do
+        pcall(RunSourceMasteryStep)
+    end
+end)
+
+-- Refresh the weapon list periodically, but never overwrite the user's
+-- selection while Mastery Farm is running.
+task.spawn(function()
+    while task.wait(2) do
+        if not _G.PhongdzMasteryEnabled and MasteryDropOpen then
+            pcall(RebuildMasteryOptions)
+        end
+    end
+end)
+
+
+end
+
+BuildMasteryUI()
+
 -- Keep controls above their cards/dropdowns clickable.
 WeaponButton.ZIndex = 70
 WeaponButton.Active = true
@@ -1709,19 +2561,16 @@ end
 Min.Activated:Connect(minimizeMenu)
 -- Allow the minimized launcher itself to be dragged.
 -- A click without movement still restores the menu.
-local launcherDragging = false
-local launcherMoved = false
-local launcherDragStart = Vector2.zero
-local launcherOrigin = Vector2.zero
+local launcherState = {dragging=false, moved=false, dragStart=Vector2.zero, origin=Vector2.zero}
 
 Launcher.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1
         or input.UserInputType == Enum.UserInputType.Touch then
 
-        launcherDragging = true
-        launcherMoved = false
-        launcherDragStart = input.Position
-        launcherOrigin = Vector2.new(
+        launcherState.dragging = true
+        launcherState.moved = false
+        launcherState.dragStart = input.Position
+        launcherState.origin = Vector2.new(
             Launcher.Position.X.Offset,
             Launcher.Position.Y.Offset
         )
@@ -1729,27 +2578,27 @@ Launcher.InputBegan:Connect(function(input)
 end)
 
 Launcher.InputChanged:Connect(function(input)
-    if not launcherDragging then
+    if not launcherState.dragging then
         return
     end
 
     if input.UserInputType == Enum.UserInputType.MouseMovement
         or input.UserInputType == Enum.UserInputType.Touch then
 
-        local delta = input.Position - launcherDragStart
+        local delta = input.Position - launcherState.dragStart
 
         if math.abs(delta.X) > 3 or math.abs(delta.Y) > 3 then
-            launcherMoved = true
+            launcherState.moved = true
         end
 
         local v = viewport()
         local x = math.clamp(
-            launcherOrigin.X + delta.X,
+            launcherState.origin.X + delta.X,
             0,
             math.max(0, v.X - Launcher.AbsoluteSize.X)
         )
         local y = math.clamp(
-            launcherOrigin.Y + delta.Y,
+            launcherState.origin.Y + delta.Y,
             0,
             math.max(0, v.Y - Launcher.AbsoluteSize.Y)
         )
@@ -1762,11 +2611,11 @@ UIS.InputEnded:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1
         or input.UserInputType == Enum.UserInputType.Touch then
 
-        if launcherDragging and not launcherMoved then
+        if launcherState.dragging and not launcherState.moved then
             restoreMenu()
         end
 
-        launcherDragging = false
+        launcherState.dragging = false
     end
 end)
 
@@ -1777,6 +2626,12 @@ end)
 
 Close.Activated:Connect(function()
     _G.AutoLevel = false
+    _G.AutoMaterial = false
+    _G.FarmMastery_G = false
+    _G.FarmMastery_S = false
+    _G.FarmMastery_Dev = false
+    MaterialEnabled = false
+    _G.PhongdzMasteryEnabled = false
     Gui:Destroy()
 end)
 
@@ -1787,7 +2642,7 @@ print("[PhongdzHub] UI READY")
 -- FARM SOURCE (isolated)
 --===========================================================================
 
-local FARM_SOURCE = [=[
+_G.PhongdzFarmSource = [=[
 ChooseWeapon = _G.ChooseWP or "Melee"
 SelectWeapon = _G.SelectWeapon
 FruitM1Enabled = _G.FruitM1Enabled == true
@@ -2075,7 +2930,7 @@ local BringEnemyWatchdogBusy = false
 task.spawn(function()
     while task.wait(0.05) do
         if BringEnemyWatchdogEnabled and _G.AutoLevel then
-            local target = ActiveTarget or BoneFarmTarget
+            local target = ActiveTarget or BoneFarmTarget or MaterialFarmTarget
             if target and target.Parent then
                 if not BringEnemyWatchdogBusy then
                     BringEnemyWatchdogBusy = true
@@ -2619,7 +3474,7 @@ end
 -- Farm Level flow transplanted from source.txt; runs only for Level Farm.
 task.spawn(function()
     while task.wait(Sec) do
-        if _G.AutoLevel and (_G.PhongdzFarmMethod or "Level Farm") == "Level Farm" then
+        if _G.AutoLevel and not _G.AutoMaterial and not _G.PhongdzMasteryEnabled and (_G.PhongdzFarmMethod or "Level Farm") == "Level Farm" then
             pcall(function()
                 local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
                 local Root = char:WaitForChild("HumanoidRootPart")
@@ -2758,6 +3613,61 @@ task.spawn(function()
 end)
 
 --===========================================================================
+-- FARM MATERIAL — source MaterialMon() mapping
+--===========================================================================
+local MaterialFarmTarget=nil
+local MaterialMap={
+ ["Angel Wings"]={{"Shanda","Royal Squad","Royal Soldier","Wysper","Thunder God"},CFrame.new(-4698,845,-1912),1},
+ ["Leather + Scrap Metal"]={{"Brute","Pirate"},CFrame.new(-1145,15,4350),1},
+ ["Magma Ore"]={{"Military Soldier","Military Spy","Magma Admiral"},CFrame.new(-5815,84,8820),1},
+ ["Fish Tail"]={{"Fishman Warrior","Fishman Commando","Fishman Lord"},CFrame.new(61123,19,1569),1},
+ ["Radioactive Material"]={{"Factory Staff"},CFrame.new(295,73,-56),2},
+ ["Ectoplasm"]={{"Ship Deckhand","Ship Engineer","Ship Steward","Ship Officer"},CFrame.new(911.35827636719,125.95812988281,33159.5390625),2},
+ ["Mystic Droplet"]={{"Water Fighter"},CFrame.new(-3385,239,-10542),2},
+ ["Vampire Fang"]={{"Vampire"},CFrame.new(-6033,7,-1317),2},
+ ["Leather + Scrap Metal W2"]={{"Marine Captain"},CFrame.new(-2010.5059814453125,73.00115966796875,-3326.620849609375),2},
+ ["Scrap Metal"]={{"Jungle Pirate","Forest Pirate"},CFrame.new(-11975.78515625,331.7734069824219,-10620.0302734375),3},
+ ["Conjured Cocoa"]={{"Chocolate Bar Battler","Cocoa Warrior"},CFrame.new(620.6344604492188,78.93644714355469,-12581.369140625),3},
+ ["Dragon Scale"]={{"Dragon Crew Archer","Dragon Crew Warrior"},CFrame.new(6594,383,139),3},
+ ["Gunpowder"]={{"Pistol Billionaire"},CFrame.new(-84.8556900024414,85.62061309814453,6132.0087890625),3},
+ ["Mini Tusk"]={{"Mythological Pirate"},CFrame.new(-13545,470,-6917),3},
+ ["Demonic Wisp"]={{"Demonic Soul"},CFrame.new(-9495.6806640625,453.58624267578125,5977.3486328125),3},
+}
+
+local function MaterialFindTarget(names)
+ local enemies=workspace:FindFirstChild("Enemies"); if not enemies then return nil end
+ for _,name in ipairs(names) do
+  for _,mob in ipairs(enemies:GetChildren()) do
+   if mob.Name==name and SourceFarmAlive(mob) then return mob end
+  end
+ end
+ return nil
+end
+
+local function RunMaterialFarmStep()
+ if not _G.AutoMaterial or not _G.AutoLevel then MaterialFarmTarget=nil; return end
+ local selected=_G.PhongdzSelectedMaterial
+ local data=selected and MaterialMap[selected]
+ if selected=="Leather + Scrap Metal" and CheckSea(2) then data=MaterialMap["Leather + Scrap Metal W2"] end
+ if not data or not CheckSea(data[3]) then MaterialFarmTarget=nil; return end
+
+ local target=MaterialFindTarget(data[1])
+ if target then
+  MaterialFarmTarget=target; ActiveTarget=target; AutoHaki()
+  local root=target:FindFirstChild("HumanoidRootPart")
+  if root then
+   TweenTo(root.CFrame*CFrame.new(0,20,0)); BringEnemy(target); EquipFarmWeapon(); SpamFruitSkillsFallback()
+  end
+ else
+  MaterialFarmTarget=nil; ActiveTarget=nil; TweenTo(data[2])
+ end
+end
+
+task.spawn(function()
+ while task.wait(0.12) do pcall(RunMaterialFarmStep) end
+end)
+
+--===========================================================================
 -- FARM BONES — source.txt logic adapted to the shared movement/attack core.
 -- The source uses these four enemy names and HauntedQuest variants.
 --===========================================================================
@@ -2784,7 +3694,7 @@ local function GetBoneMob()
 end
 
 local function RunBoneFarmStep()
-    if not _G.AutoLevel or (_G.PhongdzFarmMethod or "Level Farm") ~= "Farm Bones" then
+    if not _G.AutoLevel or _G.AutoMaterial or _G.PhongdzMasteryEnabled or (_G.PhongdzFarmMethod or "Level Farm") ~= "Farm Bones" then
         BoneFarmAlive = false
         BoneFarmTarget = nil
         return
@@ -2894,44 +3804,44 @@ end)
 
 ]=]
 
-local farmLoaded = false
-local farmError = nil
+_G.PhongdzFarmLoaded = false
+_G.PhongdzFarmError = nil
 
-local function loadFarm()
-    if farmLoaded then
+_G.PhongdzLoadFarm = function()
+    if _G.PhongdzFarmLoaded then
         return true
     end
 
     local loader = loadstring
 
     if type(loader) ~= "function" then
-        farmError = "loadstring unavailable"
+        _G.PhongdzFarmError = "loadstring unavailable"
         return false
     end
 
-    local okCompile, chunkOrError = pcall(loader, FARM_SOURCE)
+    local okCompile, chunkOrError = pcall(loader, _G.PhongdzFarmSource)
 
     if not okCompile or type(chunkOrError) ~= "function" then
-        farmError = tostring(chunkOrError)
-        warn("[PhongdzHub] Farm compile error:", farmError)
+        _G.PhongdzFarmError = tostring(chunkOrError)
+        warn("[PhongdzHub] Farm compile error:", _G.PhongdzFarmError)
         return false
     end
 
     local okRun, runtimeError = pcall(chunkOrError)
 
     if not okRun then
-        farmError = tostring(runtimeError)
-        warn("[PhongdzHub] Farm runtime error:", farmError)
+        _G.PhongdzFarmError = tostring(runtimeError)
+        warn("[PhongdzHub] Farm runtime error:", _G.PhongdzFarmError)
         return false
     end
 
-    farmLoaded = true
-    farmError = nil
+    _G.PhongdzFarmLoaded = true
+    _G.PhongdzFarmError = nil
     return true
 end
 
 local function updateToggle()
-    if farmEnabled then
+    if _G.PhongdzFarmEnabled then
         Toggle.BackgroundColor3 = Color3.fromRGB(255, 211, 65)
         Knob.Position = UDim2.fromOffset(26, 3)
         Knob.BackgroundColor3 = Color3.fromRGB(16, 18, 24)
@@ -2942,7 +3852,7 @@ local function updateToggle()
         Knob.Position = UDim2.fromOffset(3, 3)
         Knob.BackgroundColor3 = Color3.fromRGB(230, 232, 238)
 
-        if farmError then
+        if _G.PhongdzFarmError then
             Status.Text = "● FARM SOURCE ERROR"
             Status.TextColor3 = Color3.fromRGB(255, 95, 95)
         else
@@ -2953,12 +3863,13 @@ local function updateToggle()
 end
 
 Toggle.Activated:Connect(function()
-    local nextState = not farmEnabled
+    local nextState = not _G.PhongdzFarmEnabled
 
     if nextState then
-        if not farmLoaded then
-            if not loadFarm() then
-                farmEnabled = false
+        if MaterialEnabled or _G.PhongdzMasteryEnabled then return end
+        if not _G.PhongdzFarmLoaded then
+            if not _G.PhongdzLoadFarm() then
+                _G.PhongdzFarmEnabled = false
                 _G.AutoLevel = false
                 updateToggle()
                 return
@@ -2968,12 +3879,20 @@ Toggle.Activated:Connect(function()
         _G.PhongdzFarmMethod = SelectedFarmMethod
         _G.AutoFarm_Bone = (SelectedFarmMethod == "Farm Bones")
         _G.AutoLevel = true
-        farmEnabled = true
+        _G.PhongdzFarmEnabled = true
         pcall(StartSourceMovement)
     else
-        farmEnabled = false
+        _G.PhongdzFarmEnabled = false
         _G.AutoLevel = false
         _G.AutoFarm_Bone = false
+        _G.AutoMaterial = false
+        _G.FarmMastery_G = false
+        _G.FarmMastery_S = false
+        _G.FarmMastery_Dev = false
+        MaterialEnabled = false
+        _G.PhongdzMasteryEnabled = false
+        UpdateMaterialToggle()
+        if _G.PhongdzUpdateMasteryToggle then pcall(_G.PhongdzUpdateMasteryToggle) end
         pcall(StopSourceMovement)
     end
 
