@@ -1187,11 +1187,11 @@ end
 
 local localPlayerButton, localPlayerPage = makeCategory("LOCAL PLAYER", "◉", 1)
 local farmButton, farmPage = makeCategory("FARM", "⚔", 2)
-local questButton, questPage = makeCategory("QUEST AND GET ITEM", "◆", 3)
-local espButton, espPage = makeCategory("ESP", "◉", 4)
-local settingButton, settingPage = makeCategory("SETTING", "⚙", 5)
-local miscButton, miscPage = makeCategory("MISC", "✦", 6)
-local statusButton, statusPage = makeCategory("STATUS SERVER", "◌", 7)
+local espButton, espPage = makeCategory("ESP", "◉", 3)
+local settingButton, settingPage = makeCategory("SETTING", "⚙", 4)
+local miscButton, miscPage = makeCategory("MISC", "✦", 5)
+local statusButton, statusPage = makeCategory("STATUS SERVER", "◌", 6)
+local questItemButton, questItemPage = makeCategory("QUEST AND ITEM", "▣", 7)
 
 local function activateCategory(name)
     for pageName, page in pairs(CategoryPages) do
@@ -1211,11 +1211,11 @@ end
 
 localPlayerButton.Activated:Connect(function() activateCategory("LOCAL PLAYER") end)
 farmButton.Activated:Connect(function() activateCategory("FARM") end)
-questButton.Activated:Connect(function() activateCategory("QUEST AND GET ITEM") end)
 espButton.Activated:Connect(function() activateCategory("ESP") end)
 settingButton.Activated:Connect(function() activateCategory("SETTING") end)
 miscButton.Activated:Connect(function() activateCategory("MISC") end)
 statusButton.Activated:Connect(function() activateCategory("STATUS SERVER") end)
+questItemButton.Activated:Connect(function() activateCategory("QUEST AND ITEM") end)
 
 -- Function-level scroll helpers: one independent scrollbar per section.
 local function ScrollFunctions(page, delta)
@@ -1287,45 +1287,6 @@ for _, page in pairs(CategoryPages) do
     end)
 end
 
-
---===========================================================================
--- QUEST AND GET ITEM
---===========================================================================
-local questHeader = Instance.new("Frame")
-questHeader.Size = UDim2.new(1, -6, 0, 70)
-questHeader.Position = UDim2.fromOffset(3, 2)
-questHeader.BackgroundColor3 = Color3.fromRGB(22, 25, 33)
-questHeader.BorderSizePixel = 0
-questHeader.ZIndex = 45
-questHeader.Parent = questPage
-
-local qhc = Instance.new("UICorner")
-qhc.CornerRadius = UDim.new(0, 10)
-qhc.Parent = questHeader
-
-local qhTitle = Instance.new("TextLabel")
-qhTitle.Position = UDim2.fromOffset(12, 10)
-qhTitle.Size = UDim2.new(1, -24, 0, 22)
-qhTitle.BackgroundTransparency = 1
-qhTitle.Text = "QUEST AND GET ITEM"
-qhTitle.Font = Enum.Font.GothamBlack
-qhTitle.TextSize = 13
-qhTitle.TextColor3 = Color3.fromRGB(255, 211, 65)
-qhTitle.TextXAlignment = Enum.TextXAlignment.Left
-qhTitle.ZIndex = 46
-qhTitle.Parent = questHeader
-
-local qhDesc = Instance.new("TextLabel")
-qhDesc.Position = UDim2.fromOffset(12, 35)
-qhDesc.Size = UDim2.new(1, -24, 0, 20)
-qhDesc.BackgroundTransparency = 1
-qhDesc.Text = "Quest và lấy item sẽ được đặt trong mục này"
-qhDesc.Font = Enum.Font.Gotham
-qhDesc.TextSize = 8
-qhDesc.TextColor3 = Color3.fromRGB(143, 149, 162)
-qhDesc.TextXAlignment = Enum.TextXAlignment.Left
-qhDesc.ZIndex = 46
-qhDesc.Parent = questHeader
 
 local function sectionCard(parent, title, subtitle)
     local card = Instance.new("Frame")
@@ -4290,3 +4251,4 @@ task.spawn(function()
         end)
     end
 end)
+
