@@ -2,7 +2,6 @@
 -- PHONGDZ HUB — CLEAN / ROBUST UI + FARM LEVEL + FAST ATTACK
 -- UI được khởi tạo độc lập; Farm chỉ chạy sau khi UI đã hiện.
 --=============================================================================
-print("v4.5")
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -1192,7 +1191,6 @@ local espButton, espPage = makeCategory("ESP", "◉", 3)
 local settingButton, settingPage = makeCategory("SETTING", "⚙", 4)
 local miscButton, miscPage = makeCategory("MISC", "✦", 5)
 local statusButton, statusPage = makeCategory("STATUS SERVER", "◌", 6)
-local questItemButton, questItemPage = makeCategory("QUEST AND ITEM", "▣", 7)
 
 local function activateCategory(name)
     for pageName, page in pairs(CategoryPages) do
@@ -1216,7 +1214,6 @@ espButton.Activated:Connect(function() activateCategory("ESP") end)
 settingButton.Activated:Connect(function() activateCategory("SETTING") end)
 miscButton.Activated:Connect(function() activateCategory("MISC") end)
 statusButton.Activated:Connect(function() activateCategory("STATUS SERVER") end)
-questItemButton.Activated:Connect(function() activateCategory("QUEST AND ITEM") end)
 
 -- Function-level scroll helpers: one independent scrollbar per section.
 local function ScrollFunctions(page, delta)
@@ -1329,7 +1326,6 @@ end
 
 sectionCard(espPage, "ESP", "ESP controls can be placed here.")
 sectionCard(miscPage, "MISC", "Miscellaneous controls can be placed here.")
-sectionCard(questItemPage, "QUEST AND ITEM", "Quest and item controls can be added here.")
 
 --===========================================================================
 -- STATUS SERVER
@@ -2293,6 +2289,62 @@ for _, obj in ipairs(WeaponDrop:GetDescendants()) do
 end
 
 activateCategory("FARM")
+
+
+--===========================================================================
+-- QUEST & ITEM
+-- Added after the original v4.4 category system is initialized.
+--===========================================================================
+
+do
+    local ok, err = pcall(function()
+        local questItemButton, questItemPage =
+            makeCategory("QUEST & ITEM", "▣", 6)
+
+        local card = Instance.new("Frame")
+        card.Name = "QuestItemIntro"
+        card.Size = UDim2.new(1, -8, 0, 68)
+        card.BackgroundColor3 = Color3.fromRGB(22, 25, 33)
+        card.BorderSizePixel = 0
+        card.ZIndex = 45
+        card.Parent = questItemPage
+
+        local corner = Instance.new("UICorner")
+        corner.CornerRadius = UDim.new(0, 10)
+        corner.Parent = card
+
+        local title = Instance.new("TextLabel")
+        title.Position = UDim2.fromOffset(12, 10)
+        title.Size = UDim2.new(1, -24, 0, 20)
+        title.BackgroundTransparency = 1
+        title.Text = "QUEST & ITEM"
+        title.Font = Enum.Font.GothamBlack
+        title.TextSize = 11
+        title.TextColor3 = Color3.fromRGB(255, 211, 65)
+        title.TextXAlignment = Enum.TextXAlignment.Left
+        title.Parent = card
+
+        local desc = Instance.new("TextLabel")
+        desc.Position = UDim2.fromOffset(12, 34)
+        desc.Size = UDim2.new(1, -24, 0, 18)
+        desc.BackgroundTransparency = 1
+        desc.Text = "Quest / Item functions will be placed here."
+        desc.Font = Enum.Font.Gotham
+        desc.TextSize = 8
+        desc.TextColor3 = Color3.fromRGB(140, 146, 160)
+        desc.TextXAlignment = Enum.TextXAlignment.Left
+        desc.Parent = card
+
+        questItemButton.Activated:Connect(function()
+            activateCategory("QUEST & ITEM")
+        end)
+    end)
+
+    if not ok then
+        warn("[PhongdzHub][QuestItem] disabled safely:", err)
+    end
+end
+
 
 
 -- Circular launcher.
@@ -4253,4 +4305,3 @@ task.spawn(function()
         end)
     end
 end)
-
