@@ -331,7 +331,7 @@ local Title = Instance.new("TextLabel")
 Title.Position = UDim2.fromOffset(18, 7)
 Title.Size = UDim2.fromOffset(300, 25)
 Title.BackgroundTransparency = 1
-Title.Text = "PHONGDZ HUB  v4.6"
+Title.Text = "PHONGDZ HUB  v4.7"
 Title.Font = Enum.Font.GothamBlack
 Title.TextSize = 19
 Title.TextColor3 = Color3.fromRGB(255, 211, 65)
@@ -2296,9 +2296,11 @@ activateCategory("FARM")
 -- Added after the original v4.4 category system is initialized.
 --===========================================================================
 
+local questItemButton, questItemPage
+
 do
     local ok, err = pcall(function()
-        local questItemButton, questItemPage =
+        questItemButton, questItemPage =
             makeCategory("QUEST & ITEM", "▣", 6)
 
         local card = Instance.new("Frame")
@@ -2350,6 +2352,10 @@ end
 --===========================================================================
 do
     local questIndex = 0
+
+    if not questItemPage or not questItemPage.Parent then
+        warn("[PhongdzHub][QuestItem] Page creation failed; controls skipped safely.")
+    else
 
     local function makeQuestToggle(title, flagName)
         questIndex = questIndex + 1
@@ -4605,11 +4611,14 @@ task.spawn(function()
 
         local card = Instance.new("Frame")
         card.Name = "AutoStats"
+        card.Position = UDim2.fromOffset(3, 2)
         card.Size = UDim2.new(1, -6, 0, 296)
         card.BackgroundColor3 = Color3.fromRGB(22, 25, 33)
         card.BorderSizePixel = 0
         card.ZIndex = 45
         card.Parent = page
+        page.CanvasSize = UDim2.fromOffset(0, 315)
+        page.AutomaticCanvasSize = Enum.AutomaticSize.None
 
         local cardCorner = Instance.new("UICorner")
         cardCorner.CornerRadius = UDim.new(0, 10)
