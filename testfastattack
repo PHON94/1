@@ -331,7 +331,7 @@ local Title = Instance.new("TextLabel")
 Title.Position = UDim2.fromOffset(18, 7)
 Title.Size = UDim2.fromOffset(300, 25)
 Title.BackgroundTransparency = 1
-Title.Text = "PHONGDZ HUB  v5.2"
+Title.Text = "PHONGDZ HUB  v5.3"
 Title.Font = Enum.Font.GothamBlack
 Title.TextSize = 19
 Title.TextColor3 = Color3.fromRGB(255, 211, 65)
@@ -4454,40 +4454,83 @@ task.defer(function()
         -- Reset Bypass remains inside the existing TweenTo() path.
         -- Island Travel gets its own temporary follow flag and never enables Farm.
         local function moveTo(cf)
-            if type(TweenTo) ~= "function" then
-                return false
+            if typeof(cf) ~= "CFrame" then
+                return false, "INVALID_TARGET"
+            end
+
+            local character = LocalPlayer.Character
+            local root = character and character:FindFirstChild("HumanoidRootPart")
+            if not root then
+                return false, "NO_CHARACTER"
+            end
+
+            -- Source logic: Reset Bypass takes priority.
+            -- TweenTo() returns nil in this branch, so we do not wait for it.
+            if _G.PhongdzResetBypass
+                and _G.PhongdzResetBypass.IsEnabled
+                and _G.PhongdzResetBypass.IsEnabled() then
+
+                local ok, result = pcall(function()
+                    return _G.PhongdzResetBypass.Execute(cf)
+                end)
+
+                if not ok or result == false then
+                    return false, "RESET_BYPASS_FAILED"
+                end
+
+                return true, "RESET_BYPASS"
+            end
+
+            -- Normal source-style island flight.
+            if type(StartSourceMovement) ~= "function"
+                or type(TweenTo) ~= "function" then
+                return false, "MOVEMENT_CORE_MISSING"
             end
 
             _G.PhongdzIslandTravelActive = true
+            shouldTween = false
 
-            local ok, tween = pcall(function()
-                return TweenTo(cf)
+            local ok = pcall(function()
+                TweenTo(cf)
             end)
 
-            if not ok or not tween then
+            if not ok then
+                shouldTween = false
                 _G.PhongdzIslandTravelActive = false
-                return false
+                return false, "TWEEN_ERROR"
             end
 
-            local finished = false
-            local connection
+            -- The source moves the character through the invisible block.
+            -- Completion is therefore checked by real character position,
+            -- not by Tween.Completed.
+            local timeout = math.clamp(
+                ((cf.Position - root.Position).Magnitude / 300) + 5,
+                8,
+                90
+            )
 
-            if tween.Completed then
-                connection = tween.Completed:Connect(function()
-                    finished = true
-                end)
-            end
+            local started = os.clock()
+            local reached = false
 
-            while not finished and tween.PlaybackState == Enum.PlaybackState.Playing do
+            while os.clock() - started < timeout do
+                local currentCharacter = LocalPlayer.Character
+                local currentRoot = currentCharacter
+                    and currentCharacter:FindFirstChild("HumanoidRootPart")
+
+                if currentRoot then
+                    if (currentRoot.Position - cf.Position).Magnitude <= 18 then
+                        reached = true
+                        break
+                    end
+                end
+
                 task.wait()
             end
 
-            if connection then
-                connection:Disconnect()
-            end
-
+            shouldTween = false
             _G.PhongdzIslandTravelActive = false
-            return true
+
+            return reached, reached and "FLIGHT" or "FLIGHT_TIMEOUT"
         end
 
         local W = 0
@@ -4645,16 +4688,18 @@ task.defer(function()
             travel.BackgroundColor3 = Color3.fromRGB(64, 145, 91)
 
             task.spawn(function()
-                local success = pcall(function()
-                    moveTo(target)
-                end)
+                local success, mode = moveTo(target)
 
                 task.wait(0.25)
 
                 if success then
-                    travel.Text = "ĐÃ TỚI: " .. selectedName
+                    if mode == "RESET_BYPASS" then
+                        travel.Text = "RESET → " .. selectedName
+                    else
+                        travel.Text = "ĐÃ BAY TỚI: " .. selectedName
+                    end
                 else
-                    travel.Text = "DI CHUYỂN LỖI"
+                    travel.Text = "DI CHUYỂN LỖI: " .. tostring(mode)
                 end
 
                 task.wait(0.6)
