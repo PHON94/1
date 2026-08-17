@@ -331,7 +331,7 @@ local Title = Instance.new("TextLabel")
 Title.Position = UDim2.fromOffset(18, 7)
 Title.Size = UDim2.fromOffset(300, 25)
 Title.BackgroundTransparency = 1
-Title.Text = "PHONGDZ HUB  v4.8"
+Title.Text = "PHONGDZ HUB  v5.0"
 Title.Font = Enum.Font.GothamBlack
 Title.TextSize = 19
 Title.TextColor3 = Color3.fromRGB(255, 211, 65)
@@ -1754,7 +1754,7 @@ local akc=Instance.new("UICorner"); akc.CornerRadius=UDim.new(1,0); akc.Parent=a
 
 local function UpdateMaterialToggle()
  if MaterialEnabled then
-  AutoMaterialToggle.BackgroundColor3=Color3.fromRGB(255,211,65); amk.Position=UDim2.fromOffset(26,3)
+  AutoMaterialToggle.BackgroundColor3=Color3.fromRGB(255, 211, 65); amk.Position=UDim2.fromOffset(26,3)
   amk.BackgroundColor3=Color3.fromRGB(16,18,24); ams.Text="● FARMING: "..SelectedMaterial
   ams.TextColor3=Color3.fromRGB(16,18,24)
  else
@@ -2569,6 +2569,77 @@ local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local LocalPlayer = Players.LocalPlayer
 local plr = LocalPlayer
+
+--=========================================================================
+-- SOURCE HIGHLIGHT
+-- Exact visual values copied from source.txt.
+-- The highlight is attached to the character only while a Phongdz
+-- automation feature is active; it is removed when all tracked features stop.
+--=========================================================================
+local function PhongdzHasActiveFeature()
+    local flags = {
+        _G.PhongdzFarmEnabled,
+        _G.PhongdzMasteryEnabled,
+        _G.AutoLevel,
+        _G.AutoFarm_Bone,
+        _G.AutoMaterial,
+        _G.FruitM1Enabled,
+        _G.TravelDres,
+        _G.AutoZou,
+        _G.Auto_Tushita,
+        _G.Auto_Yama,
+        _G.Auto_Soul_Guitar,
+        _G.AutoMatSoul,
+        _G.CDK,
+        _G.CDK_YM,
+        _G.CDK_TS,
+        _G.PhongdzAutoStats and _G.PhongdzAutoStats.Enabled,
+    }
+    for _, enabled in ipairs(flags) do
+        if enabled == true then
+            return true
+        end
+    end
+    return false
+end
+
+local function PhongdzSetSourceHighlight(enabled)
+    local character = plr.Character
+    if not character then return end
+
+    if enabled then
+        if not character:FindFirstChild("highlight") then
+            local Test = Instance.new("Highlight")
+            Test.Name = "highlight"
+            Test.Enabled = true
+            Test.FillColor = Color3.fromRGB(0,255,254)
+            Test.OutlineColor = Color3.fromRGB(0,255,254)
+            Test.FillTransparency = 0.5
+            Test.OutlineTransparency = 0.2
+            Test.Parent = character
+        end
+    else
+        local highlight = character:FindFirstChild("highlight")
+        if highlight then
+            highlight:Destroy()
+        end
+    end
+end
+
+task.spawn(function()
+    while task.wait(0.1) do
+        pcall(function()
+            PhongdzSetSourceHighlight(PhongdzHasActiveFeature())
+        end)
+    end
+end)
+
+plr.CharacterAdded:Connect(function()
+    task.wait(0.5)
+    pcall(function()
+        PhongdzSetSourceHighlight(PhongdzHasActiveFeature())
+    end)
+end)
 local replicated = ReplicatedStorage
 local Sec = 0.1
 
