@@ -331,7 +331,7 @@ local Title = Instance.new("TextLabel")
 Title.Position = UDim2.fromOffset(18, 7)
 Title.Size = UDim2.fromOffset(300, 25)
 Title.BackgroundTransparency = 1
-Title.Text = "PHONGDZ HUB  v5.3"
+Title.Text = "PHONGDZ HUB  v5.4"
 Title.Font = Enum.Font.GothamBlack
 Title.TextSize = 19
 Title.TextColor3 = Color3.fromRGB(255, 211, 65)
@@ -2391,7 +2391,6 @@ do
 
     -- Startup diagnostic: if the script reaches here, the menu is alive.
     print("[PhongdzHub] UI READY v4.8")
-    _G.PhongdzUIReady = true
 end
 
 
@@ -4383,32 +4382,20 @@ end)
 
 --===========================================================================
 
--- PHONGDZ_ISLAND_TRAVEL_V52
--- Source-based island travel.
---
--- Source basis:
---   Sea1_Islands / Sea2_Islands / Sea3_Islands use named island CFrames.
---   The source moves with _tp(targetCFrame).
---
--- This extension intentionally uses the Hub's existing TweenTo(), whose
--- movement core is already based on the source-style TweenService movement.
--- If Reset Bypass is enabled, TweenTo can use that existing bridge for long
--- travel. No Farm/Quest/FastAttack logic is modified.
+--===========================================================================
+-- PHONGDZ HUB v5.4 :: ISLAND TRAVEL SAFE LATE LOAD
 --===========================================================================
 
-task.spawn(function()
-    -- Wait until the existing menu has completed its startup path.
-    -- This prevents Island Travel initialization from blocking the menu.
-    local deadline = os.clock() + 15
-    while not _G.PhongdzUIReady and os.clock() < deadline do
-        task.wait(0.1)
-    end
-
-    -- Even if the diagnostic flag is unavailable, give the UI one extra
-    -- scheduler cycle before loading this optional module.
+task.defer(function()
     task.wait()
 
     local ok, err = xpcall(function()
+        -- Base menu is already constructed before this optional loader runs.
+        -- If its Local Player page is unavailable, simply skip the extension.
+        if not localPlayerPage or not localPlayerPage.Parent then
+            return
+        end
+
         local IslandTravel = {
             Selected = nil,
             Busy = false
@@ -4694,12 +4681,9 @@ task.spawn(function()
 
         card:GetPropertyChangedSignal("AbsoluteSize"):Connect(refreshCanvas)
         task.defer(refreshCanvas)
-
     end, debug.traceback)
 
     if not ok then
-        warn("[PhongdzHub][IslandTravel] Disabled safely:", err)
+        warn("[PhongdzHub][IslandTravel] Optional module disabled safely:", err)
     end
 end)
-
-
