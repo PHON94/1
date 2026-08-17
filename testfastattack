@@ -331,7 +331,7 @@ local Title = Instance.new("TextLabel")
 Title.Position = UDim2.fromOffset(18, 7)
 Title.Size = UDim2.fromOffset(300, 25)
 Title.BackgroundTransparency = 1
-Title.Text = "PHONGDZ HUB  v4.3"
+Title.Text = "PHONGDZ HUB  v4.4"
 Title.Font = Enum.Font.GothamBlack
 Title.TextSize = 19
 Title.TextColor3 = Color3.fromRGB(255, 211, 65)
@@ -4202,6 +4202,51 @@ task.spawn(function()
 
     if not ok then
         warn("[PhongdzHub][ResetBypass] Disabled safely:", err)
+    end
+end)
+
+--===========================================================================
+-- PHONGDZ_CYAN_SOURCE_LOGIC_V44
+-- Exact visual behavior from source.txt, adapted only to the feature flags
+-- that actually exist in PhongdzHub. No toggle is added to the UI.
+--===========================================================================
+task.spawn(function()
+    while task.wait() do
+        pcall(function()
+            local active = _G.PhongdzFarmEnabled
+                or _G.AutoLevel
+                or _G.AutoFarm_Bone
+                or _G.AutoMaterial
+                or _G.PhongdzMasteryEnabled
+                or _G.FarmMastery_G
+                or _G.FarmMastery_S
+                or _G.FarmMastery_Dev
+                or _G.FastAttack
+                or _G.FruitM1Enabled
+
+            local character = LocalPlayer.Character
+            if not character then
+                return
+            end
+
+            if active then
+                -- Same source Highlight settings.
+                if not character:FindFirstChild("highlight") then
+                    local Test = Instance.new("Highlight")
+                    Test.Name = "highlight"
+                    Test.Enabled = true
+                    Test.FillColor = Color3.fromRGB(0,255,254)
+                    Test.OutlineColor = Color3.fromRGB(0,255,254)
+                    Test.FillTransparency = 0.5
+                    Test.OutlineTransparency = 0.2
+                    Test.Parent = character
+                end
+            else
+                if character:FindFirstChild("highlight") then
+                    character:FindFirstChild("highlight"):Destroy()
+                end
+            end
+        end)
     end
 end)
 
