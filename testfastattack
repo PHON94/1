@@ -331,7 +331,7 @@ local Title = Instance.new("TextLabel")
 Title.Position = UDim2.fromOffset(18, 7)
 Title.Size = UDim2.fromOffset(300, 25)
 Title.BackgroundTransparency = 1
-Title.Text = "PHONGDZ HUB  v5.2"
+Title.Text = "PHONGDZ HUB  v5.3"
 Title.Font = Enum.Font.GothamBlack
 Title.TextSize = 19
 Title.TextColor3 = Color3.fromRGB(255, 211, 65)
@@ -2391,6 +2391,7 @@ do
 
     -- Startup diagnostic: if the script reaches here, the menu is alive.
     print("[PhongdzHub] UI READY v4.8")
+    _G.PhongdzUIReady = true
 end
 
 
@@ -4381,6 +4382,7 @@ end)
 
 
 --===========================================================================
+
 -- PHONGDZ_ISLAND_TRAVEL_V52
 -- Source-based island travel.
 --
@@ -4395,6 +4397,17 @@ end)
 --===========================================================================
 
 task.spawn(function()
+    -- Wait until the existing menu has completed its startup path.
+    -- This prevents Island Travel initialization from blocking the menu.
+    local deadline = os.clock() + 15
+    while not _G.PhongdzUIReady and os.clock() < deadline do
+        task.wait(0.1)
+    end
+
+    -- Even if the diagnostic flag is unavailable, give the UI one extra
+    -- scheduler cycle before loading this optional module.
+    task.wait()
+
     local ok, err = xpcall(function()
         local IslandTravel = {
             Selected = nil,
@@ -4688,4 +4701,5 @@ task.spawn(function()
         warn("[PhongdzHub][IslandTravel] Disabled safely:", err)
     end
 end)
+
 
