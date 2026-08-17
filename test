@@ -331,7 +331,7 @@ local Title = Instance.new("TextLabel")
 Title.Position = UDim2.fromOffset(18, 7)
 Title.Size = UDim2.fromOffset(300, 25)
 Title.BackgroundTransparency = 1
-Title.Text = "PHONGDZ HUB  v4.5"
+Title.Text = "PHONGDZ HUB  v4.6"
 Title.Font = Enum.Font.GothamBlack
 Title.TextSize = 19
 Title.TextColor3 = Color3.fromRGB(255, 211, 65)
@@ -2345,6 +2345,141 @@ do
     end
 end
 
+--===========================================================================
+-- QUEST & ITEM CONTROLS
+--===========================================================================
+do
+    local questIndex = 0
+
+    local function makeQuestToggle(title, flagName)
+        questIndex = questIndex + 1
+
+        local card = Instance.new("Frame")
+        card.Name = "QuestToggle_" .. questIndex
+        card.Size = UDim2.new(1, -8, 0, 58)
+        card.Position = UDim2.fromOffset(4, 82 + ((questIndex - 1) * 64))
+        card.BackgroundColor3 = Color3.fromRGB(22, 25, 33)
+        card.BorderSizePixel = 0
+        card.ZIndex = 45
+        card.Parent = questItemPage
+
+        local cc = Instance.new("UICorner")
+        cc.CornerRadius = UDim.new(0, 10)
+        cc.Parent = card
+
+        local button = Instance.new("TextButton")
+        button.Name = "Toggle"
+        button.Size = UDim2.new(1, -12, 1, -12)
+        button.Position = UDim2.fromOffset(6, 6)
+        button.BackgroundColor3 = Color3.fromRGB(55, 59, 70)
+        button.BorderSizePixel = 0
+        button.Text = ""
+        button.AutoButtonColor = false
+        button.ZIndex = 46
+        button.Parent = card
+
+        local bc = Instance.new("UICorner")
+        bc.CornerRadius = UDim.new(0, 8)
+        bc.Parent = button
+
+        local label = Instance.new("TextLabel")
+        label.Position = UDim2.fromOffset(12, 6)
+        label.Size = UDim2.new(1, -85, 0, 20)
+        label.BackgroundTransparency = 1
+        label.Text = title
+        label.Font = Enum.Font.GothamBold
+        label.TextSize = 9
+        label.TextColor3 = Color3.fromRGB(240, 242, 247)
+        label.TextXAlignment = Enum.TextXAlignment.Left
+        label.ZIndex = 47
+        label.Parent = button
+
+        local status = Instance.new("TextLabel")
+        status.Position = UDim2.fromOffset(12, 28)
+        status.Size = UDim2.new(1, -90, 0, 16)
+        status.BackgroundTransparency = 1
+        status.Text = "● OFF"
+        status.Font = Enum.Font.GothamMedium
+        status.TextSize = 8
+        status.TextColor3 = Color3.fromRGB(130, 135, 148)
+        status.TextXAlignment = Enum.TextXAlignment.Left
+        status.ZIndex = 47
+        status.Parent = button
+
+        local pill = Instance.new("Frame")
+        pill.Size = UDim2.fromOffset(52, 29)
+        pill.Position = UDim2.new(1, -65, 0, 14)
+        pill.BackgroundColor3 = Color3.fromRGB(70, 74, 85)
+        pill.BorderSizePixel = 0
+        pill.ZIndex = 47
+        pill.Parent = button
+
+        local pc = Instance.new("UICorner")
+        pc.CornerRadius = UDim.new(1, 0)
+        pc.Parent = pill
+
+        local knob = Instance.new("Frame")
+        knob.Size = UDim2.fromOffset(23, 23)
+        knob.Position = UDim2.fromOffset(3, 3)
+        knob.BackgroundColor3 = Color3.fromRGB(230, 232, 238)
+        knob.BorderSizePixel = 0
+        knob.ZIndex = 48
+        knob.Parent = pill
+
+        local kc = Instance.new("UICorner")
+        kc.CornerRadius = UDim.new(1, 0)
+        kc.Parent = knob
+
+        local enabled = _G[flagName] == true
+
+        local function update()
+            _G[flagName] = enabled
+            if enabled then
+                button.BackgroundColor3 = Color3.fromRGB(255, 211, 65)
+                knob.Position = UDim2.fromOffset(26, 3)
+                knob.BackgroundColor3 = Color3.fromRGB(16, 18, 24)
+                status.Text = "● ON"
+                status.TextColor3 = Color3.fromRGB(16, 18, 24)
+            else
+                button.BackgroundColor3 = Color3.fromRGB(55, 59, 70)
+                knob.Position = UDim2.fromOffset(3, 3)
+                knob.BackgroundColor3 = Color3.fromRGB(230, 232, 238)
+                status.Text = "● OFF"
+                status.TextColor3 = Color3.fromRGB(130, 135, 148)
+            end
+        end
+
+        button.Activated:Connect(function()
+            local nextState = not enabled
+            if nextState and not _G.PhongdzFarmLoaded and _G.PhongdzLoadFarm then
+                local ok = _G.PhongdzLoadFarm()
+                if not ok then
+                    enabled = false
+                    update()
+                    warn("[PhongdzHub][QuestItem] Farm source unavailable:", _G.PhongdzFarmError)
+                    return
+                end
+            end
+            enabled = nextState
+            update()
+        end)
+
+        update()
+    end
+
+    makeQuestToggle("AUTO QUEST SEA 2", "TravelDres")
+    makeQuestToggle("AUTO QUEST SEA 3", "AutoZou")
+    makeQuestToggle("AUTO TUSHITA", "Auto_Tushita")
+    makeQuestToggle("AUTO YAMA", "Auto_Yama")
+    makeQuestToggle("AUTO SKULL GUITAR", "Auto_Soul_Guitar")
+    makeQuestToggle("AUTO FARM MATERIAL SKULL GUITAR", "AutoMatSoul")
+    makeQuestToggle("AUTO GET CDK", "CDK")
+    makeQuestToggle("AUTO YAMA CDK", "CDK_YM")
+    makeQuestToggle("AUTO TUSHITA CDK", "CDK_TS")
+
+    questItemPage.CanvasSize = UDim2.new(0, 0, 0, 82 + questIndex * 64 + 18)
+end
+
 
 
 -- Circular launcher.
@@ -2504,6 +2639,16 @@ Close.Activated:Connect(function()
     _G.FarmMastery_G = false
     _G.FarmMastery_S = false
     _G.FarmMastery_Dev = false
+    _G.TravelDres = false
+    _G.AutoZou = false
+    _G.Auto_Tushita = false
+    _G.Auto_Yama = false
+    _G.Auto_Soul_Guitar = false
+    _G.AutoMatSoul = false
+    _G.CDK = false
+    _G.CDK_YM = false
+    _G.CDK_TS = false
+    _G.AutoRaidCastle = false
     MaterialEnabled = false
     _G.PhongdzMasteryEnabled = false
     Gui:Destroy()
@@ -3681,6 +3826,583 @@ LocalPlayer.CharacterAdded:Connect(function()
                 DisableFarmGravity()
             end
         end)
+    end
+end)
+
+
+--===========================================================================
+-- QUEST & ITEM SOURCE RUNTIME
+--===========================================================================
+local World1, World2, World3 = Sea1, Sea2, Sea3
+local Root = GetRoot()
+
+local PosMsList = local PosMsList = {["Pirate Millionaire"] = CFrame.new(-712.8272705078125, 98.5770492553711, 5711.9541015625),["Pistol Billionaire"] = CFrame.new(-723.4331665039062, 147.42906188964844, 5931.9931640625),["Dragon Crew Warrior"] = CFrame.new(7021.50439453125, 55.76270294189453, -730.1290893554688),["Dragon Crew Archer"] = CFrame.new(6625, 378, 244),["Female Islander"] = CFrame.new(4692.7939453125, 797.9766845703125, 858.8480224609375),["Venomous Assailant"] = CFrame.new(4902, 670, 39), ["Marine Commodore"] = CFrame.new(2401, 123, -7589),["Marine Rear Admiral"] = CFrame.new(3588, 229, -7085),["Fishman Raider"] = CFrame.new(-10941, 332, -8760),["Fishman Captain"] = CFrame.new(-11035, 332, -9087),["Forest Pirate"] = CFrame.new(-13446, 413, -7760),["Mythological Pirate"] = CFrame.new(-13510, 584, -6987),["Jungle Pirate"] = CFrame.new(-11778, 426, -10592),["Musketeer Pirate"] = CFrame.new(-13282, 496, -9565),["Reborn Skeleton"] = CFrame.new(-8764, 142, 5963),["Living Zombie"] = CFrame.new(-10227, 421, 6161),["Demonic Soul"] = CFrame.new(-9579, 6, 6194),["Posessed Mummy"] = CFrame.new(-9579, 6, 6194),["Peanut Scout"] = CFrame.new(-1993, 187, -10103),["Peanut President"] = CFrame.new(-2215, 159, -10474),["Ice Cream Chef"] = CFrame.new(-877, 118, -11032),["Ice Cream Commander"] = CFrame.new(-877, 118, -11032),["Cookie Crafter"] = CFrame.new(-2021, 38, -12028),["Cake Guard"] = CFrame.new(-2024, 38, -12026),["Baking Staff"] = CFrame.new(-1932, 38, -12848),["Head Baker"] = CFrame.new(-1932, 38, -12848),["Cocoa Warrior"] = CFrame.new(95, 73, -12309),["Chocolate Bar Battler"] = CFrame.new(647, 42, -12401),["Sweet Thief"] = CFrame.new(116, 36, -12478),["Candy Rebel"] = CFrame.new(47, 61, -12889),["Ghost"] = CFrame.new(5251, 5, 1111)}
+
+local function QuestAlive(model)
+    local hum = model and model:FindFirstChildOfClass("Humanoid")
+    local root = model and model:FindFirstChild("HumanoidRootPart")
+    return hum ~= nil and root ~= nil and hum.Health > 0
+end
+
+local Attack = {}
+
+function Attack.Alive(model)
+    return QuestAlive(model)
+end
+
+function Attack.Kill(model, enabledFlag)
+    if not enabledFlag or not QuestAlive(model) then return end
+    local root = model:FindFirstChild("HumanoidRootPart")
+    if not root then return end
+    AutoHaki()
+    TweenTo(root.CFrame * CFrame.new(0, 20, 0))
+    BringEnemy(model)
+    EquipFarmWeapon()
+end
+
+local _tp = TweenTo
+local notween = TweenTo
+
+local function QuestRoot()
+    local r = GetRoot()
+    if r then Root = r end
+    return Root
+end
+
+local function GetConnectionEnemies(nameOrList)
+    local function matches(model)
+        if type(nameOrList) == "table" then
+            return table.find(nameOrList, model.Name) ~= nil
+        end
+        return model.Name == nameOrList
+    end
+
+    for _, folder in ipairs({workspace:FindFirstChild("Enemies"), replicated}) do
+        if folder then
+            for _, model in ipairs(folder:GetChildren()) do
+                if matches(model) and QuestAlive(model) then
+                    return model
+                end
+            end
+        end
+    end
+end
+
+local function EquipWeapon(name)
+    if not name then return end
+    local char = plr.Character
+    local hum = char and char:FindFirstChildOfClass("Humanoid")
+    local backpack = plr:FindFirstChildOfClass("Backpack")
+    if not hum or not backpack then return end
+    local tool = (char and char:FindFirstChild(name)) or backpack:FindFirstChild(name)
+    if tool and tool:IsA("Tool") and tool.Parent ~= char then
+        pcall(function() hum:EquipTool(tool) end)
+    end
+end
+
+local function GetBP(name)
+    local char = plr.Character
+    if char and char:FindFirstChild(name) then return char:FindFirstChild(name) end
+    local backpack = plr:FindFirstChildOfClass("Backpack")
+    return backpack and backpack:FindFirstChild(name)
+end
+
+local function GetWP(name)
+    return GetBP(name) ~= nil
+end
+
+local function GetM(name)
+    local ok, inv = pcall(function()
+        return replicated.Remotes.CommF_:InvokeServer("getInventory")
+    end)
+    if not ok or type(inv) ~= "table" then return 0 end
+    for _, item in pairs(inv) do
+        if type(item) == "table" and item.Type == "Material" and item.Name == name then
+            return tonumber(item.Count) or 0
+        end
+    end
+    return 0
+end
+
+local function SafeClick(detector)
+    if type(fireclickdetector) == "function" and detector then
+        pcall(function() fireclickdetector(detector) end)
+    end
+end
+
+local function SafePrompt(prompt)
+    if type(fireproximityprompt) == "function" and prompt then
+        pcall(function() fireproximityprompt(prompt) end)
+    end
+end
+
+local function Hop()
+    return
+end
+
+_G.TravelDres = _G.TravelDres == true
+_G.AutoZou = _G.AutoZou == true
+_G.Auto_Tushita = _G.Auto_Tushita == true
+_G.Auto_Yama = _G.Auto_Yama == true
+_G.Auto_Soul_Guitar = _G.Auto_Soul_Guitar == true
+_G.AutoMatSoul = _G.AutoMatSoul == true
+_G.CDK = _G.CDK == true
+_G.CDK_YM = _G.CDK_YM == true
+_G.CDK_TS = _G.CDK_TS == true
+_G.AutoRaidCastle = _G.AutoRaidCastle == true
+
+local QuestYama_1, QuestYama_2, QuestYama_3 = false, false, false
+local QuestTushita_1, QuestTushita_2, QuestTushita_3 = false, false, false
+local T1Yama, T2Yama, T3Yama = false, false, false
+
+-- SEA 2
+task.spawn(function()
+    while task.wait(Sec) do
+        if _G.TravelDres then
+            pcall(function()
+                local root = QuestRoot()
+                if not root or plr.Data.Level.Value < 700 then return end
+
+                local door = workspace.Map.Ice.Door
+                if door.CanCollide and door.Transparency == 0 then
+                    replicated.Remotes.CommF_:InvokeServer("DressrosaQuestProgress","Detective")
+                    EquipWeapon("Key")
+                    repeat
+                        task.wait()
+                        TweenTo(CFrame.new(1347.7124,37.3751602,-1325.6488))
+                        root = QuestRoot()
+                    until not _G.TravelDres or not root or (root.Position-CFrame.new(1347.7124,37.3751602,-1325.6488).Position).Magnitude <= 8
+                elseif not door.CanCollide and door.Transparency == 1 then
+                    local ice = GetConnectionEnemies("Ice Admiral")
+                    if ice then
+                        repeat
+                            task.wait()
+                            Attack.Kill(ice,_G.TravelDres)
+                        until not _G.TravelDres or not ice.Parent or ice.Humanoid.Health <= 0
+                        replicated.Remotes.CommF_:InvokeServer("TravelDressrosa")
+                    else
+                        TweenTo(CFrame.new(1347.7124,37.3751602,-1325.6488))
+                    end
+                else
+                    replicated.Remotes.CommF_:InvokeServer("TravelDressrosa")
+                end
+            end)
+        end
+    end
+end)
+
+-- SEA 3
+task.spawn(function()
+    while task.wait(Sec) do
+        if _G.AutoZou then
+            pcall(function()
+                local root = QuestRoot()
+                if not root or plr.Data.Level.Value < 1500 then return end
+                local bartilo = replicated.Remotes.CommF_:InvokeServer("BartiloQuestProgress","Bartilo")
+
+                if bartilo == 3 then
+                    local unlocks = replicated.Remotes.CommF_:InvokeServer("GetUnlockables")
+                    if unlocks and unlocks.FlamingoAccess ~= nil then
+                        replicated.Remotes.CommF_:InvokeServer("F_","TravelZou")
+                        local z = replicated.Remotes.CommF_:InvokeServer("ZQuestProgress","Check")
+                        if z == 0 then
+                            local indra = GetConnectionEnemies("rip_indra")
+                            if indra then
+                                repeat task.wait(); Attack.Kill(indra,_G.AutoZou)
+                                until not _G.AutoZou or not indra.Parent or indra.Humanoid.Health <= 0
+                            else
+                                replicated.Remotes.CommF_:InvokeServer("F_","ZQuestProgress","Check")
+                                replicated.Remotes.CommF_:InvokeServer("F_","ZQuestProgress","Begin")
+                            end
+                        elseif z == 1 then
+                            replicated.Remotes.CommF_:InvokeServer("F_","TravelZou")
+                        else
+                            local swan = GetConnectionEnemies("Don Swan")
+                            if swan then
+                                repeat task.wait(); Attack.Kill(swan,_G.AutoZou)
+                                until not _G.AutoZou or not swan.Parent or swan.Humanoid.Health <= 0
+                            else
+                                TweenTo(CFrame.new(2288.802,15.1870775,863.034607))
+                            end
+                        end
+                    else
+                        replicated.Remotes.CommF_:InvokeServer("F_","TalkTrevor","1")
+                        replicated.Remotes.CommF_:InvokeServer("F_","TalkTrevor","2")
+                        replicated.Remotes.CommF_:InvokeServer("F_","TalkTrevor","3")
+                    end
+                elseif bartilo == 0 then
+                    local quest = plr.PlayerGui.Main.Quest
+                    local title = quest.Visible and quest.Container.QuestTitle.Title.Text or ""
+                    if string.find(title,"Swan Pirates") and string.find(title,"50") then
+                        local mob = GetConnectionEnemies("Swan Pirate")
+                        if mob then
+                            repeat task.wait(); Attack.Kill(mob,_G.AutoZou)
+                            until not _G.AutoZou or not mob.Parent or mob.Humanoid.Health <= 0 or not quest.Visible
+                        else
+                            TweenTo(CFrame.new(1057.92761,137.614319,1242.08069))
+                        end
+                    else
+                        TweenTo(CFrame.new(-456.28952,73.0200958,299.895966))
+                    end
+                elseif bartilo == 1 then
+                    local jeremy = GetConnectionEnemies("Jeremy")
+                    if jeremy then
+                        repeat task.wait(); Attack.Kill(jeremy,_G.AutoZou)
+                        until not _G.AutoZou or not jeremy.Parent or jeremy.Humanoid.Health <= 0
+                    else
+                        TweenTo(CFrame.new(2099.88159,448.931,648.997375))
+                    end
+                elseif bartilo == 2 then
+                    for _,cf in ipairs({
+                        CFrame.new(-1836,11,1714),
+                        CFrame.new(-1850.49329,13.1789551,1750.89685),
+                        CFrame.new(-1858.87305,19.3777466,1712.01807),
+                        CFrame.new(-1803.94324,16.5789185,1750.89685),
+                        CFrame.new(-1858.55835,16.8604317,1724.79541),
+                        CFrame.new(-1869.54224,15.987854,1681.00659),
+                        CFrame.new(-1800.0979,16.4978027,1684.52368),
+                    }) do
+                        if not _G.AutoZou then break end
+                        TweenTo(cf); task.wait(0.1)
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+-- TUSHITA
+task.spawn(function()
+    while task.wait(Sec) do
+        if _G.Auto_Tushita then
+            pcall(function()
+                local gate = workspace.Map.Turtle:FindFirstChild("TushitaGate")
+                if gate then
+                    if not GetBP("Holy Torch") then
+                        TweenTo(CFrame.new(5148.03613,162.352493,910.548218))
+                    else
+                        EquipWeapon("Holy Torch")
+                        for _,cf in ipairs({
+                            CFrame.new(-10752,417,-9366),
+                            CFrame.new(-11672,334,-9474),
+                            CFrame.new(-12132,521,-10655),
+                            CFrame.new(-13336,486,-6985),
+                            CFrame.new(-13489,332,-7925),
+                        }) do
+                            if not _G.Auto_Tushita then break end
+                            TweenTo(cf); task.wait(0.7)
+                        end
+                    end
+                else
+                    local longma = GetConnectionEnemies("Longma")
+                    if longma then
+                        repeat task.wait(); Attack.Kill(longma,_G.Auto_Tushita)
+                        until not _G.Auto_Tushita or not longma.Parent or longma.Humanoid.Health <= 0
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+-- YAMA
+task.spawn(function()
+    while task.wait(Sec) do
+        if _G.Auto_Yama then
+            pcall(function()
+                local progress = tonumber(replicated.Remotes.CommF_:InvokeServer("EliteHunter","Progress")) or 0
+                if progress > 30 then
+                    local handle = workspace.Map.Waterfall.SealedKatana.Handle
+                    TweenTo(handle.CFrame)
+                    local ghost = GetConnectionEnemies("Ghost")
+                    if ghost then
+                        repeat task.wait(); Attack.Kill(ghost,_G.Auto_Yama)
+                        until not _G.Auto_Yama or not ghost.Parent or ghost.Humanoid.Health <= 0
+                        SafeClick(handle.ClickDetector)
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+-- SKULL GUITAR
+local Quest1, Quest2, Quest3, Quest4 = false,false,false,false
+
+local function getT(num)
+    local map = workspace.Map["Haunted Castle"].Tablet
+    local seg = ({[1]=1,[3]=3,[4]=4,[7]=7,[10]=10})[num]
+    local obj = seg and map:FindFirstChild("Segment"..seg)
+    return obj and obj:FindFirstChild("Line") and obj.Line.Rotation.Z
+end
+
+local function getRT(num)
+    local trophies = workspace.Map["Haunted Castle"].Trophies.Quest
+    local obj = trophies:FindFirstChild("Trophy"..num)
+    return obj and obj:FindFirstChild("Handle") and obj.Handle.Rotation.Z
+end
+
+local function GetFirePlacard(number, side)
+    local p = workspace.Map["Haunted Castle"]:FindFirstChild("Placard"..number)
+    local s = p and p:FindFirstChild(side)
+    if s and s:FindFirstChild("Indicator") and s:FindFirstChild("ClickDetector")
+        and tostring(s.Indicator.BrickColor) ~= "Pearl" then
+        SafeClick(s.ClickDetector)
+    end
+end
+
+task.spawn(function()
+    while task.wait(Sec) do
+        if _G.Auto_Soul_Guitar then
+            pcall(function()
+                if not World3 then return end
+                local progress = replicated.Remotes.CommF_:InvokeServer("GuitarPuzzleProgress","Check")
+                if not progress then return end
+
+                if progress.Swamp == false then
+                    Quest1,Quest2,Quest3,Quest4 = true,false,false,false
+                    local mob = GetConnectionEnemies("Living Zombie")
+                    if mob then
+                        repeat task.wait(); Attack.Kill(mob,_G.Auto_Soul_Guitar)
+                        until not _G.Auto_Soul_Guitar or not mob.Parent or mob.Humanoid.Health <= 0
+                    else
+                        TweenTo(CFrame.new(-10170.7275390625,138.6524658203125,5934.26513671875))
+                    end
+                elseif progress.Gravestones == false then
+                    Quest1,Quest2,Quest3,Quest4 = false,true,false,false
+                    GetFirePlacard("7","Left"); GetFirePlacard("6","Left"); GetFirePlacard("5","Left")
+                    GetFirePlacard("4","Right"); GetFirePlacard("3","Left"); GetFirePlacard("2","Right"); GetFirePlacard("1","Right")
+                elseif progress.Ghost == false then
+                    replicated.Remotes.CommF_:InvokeServer("GuitarPuzzleProgress","Ghost")
+                    replicated.Remotes.CommF_:InvokeServer("GuitarPuzzleProgress","Ghost",true)
+                elseif progress.Trophies == false then
+                    Quest1,Quest2,Quest3,Quest4 = false,false,true,false
+                    for _,pair in ipairs({{1,1},{2,3},{3,4},{4,7},{5,10}}) do
+                        if not _G.Auto_Soul_Guitar then break end
+                        local a,b = pair[1],pair[2]
+                        local seg = workspace.Map["Haunted Castle"].Tablet:FindFirstChild("Segment"..b)
+                        if seg and seg:FindFirstChild("ClickDetector") then
+                            SafeClick(seg.ClickDetector)
+                        end
+                        task.wait(0.15)
+                    end
+                    for _,n in ipairs({2,5,6,8,9}) do
+                        local seg=workspace.Map["Haunted Castle"].Tablet:FindFirstChild("Segment"..n)
+                        if seg and seg:FindFirstChild("ClickDetector") then SafeClick(seg.ClickDetector) end
+                    end
+                elseif progress.Pipes == false then
+                    Quest1,Quest2,Quest3,Quest4 = false,false,false,true
+                    local model = workspace.Map["Haunted Castle"]["Lab Puzzle"].ColorFloor.Model
+                    for _,n in ipairs({3,4,6,8,10}) do
+                        local part=model:FindFirstChild("Part"..n)
+                        if part and part:FindFirstChild("ClickDetector") then
+                            TweenTo(part.CFrame)
+                            SafeClick(part.ClickDetector)
+                            task.wait(0.1)
+                        end
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+-- SKULL GUITAR MATERIAL
+task.spawn(function()
+    while task.wait(Sec) do
+        if _G.AutoMatSoul then
+            pcall(function()
+                if GetWP("Skull Guitar") then return end
+                if GetM("Bones") >= 500 and GetM("Ectoplasm") >= 250 and GetM("Dark Fragment") >= 1 then
+                    replicated.Remotes.CommF_:InvokeServer("soulGuitarBuy",true)
+                elseif GetM("Ectoplasm") < 250 then
+                    local mob = World2 and GetConnectionEnemies({"Ship Deckhand","Ship Engineer","Ship Steward","Ship Officer","Arctic Warrior"})
+                    if mob then Attack.Kill(mob,_G.AutoMatSoul)
+                    else replicated.Remotes.CommF_:InvokeServer("requestEntrance",Vector3.new(923.2125,126.976,32852.83)) end
+                elseif GetM("Dark Fragment") < 1 then
+                    local mob = World2 and GetConnectionEnemies("Darkbeard")
+                    if mob then Attack.Kill(mob,_G.AutoMatSoul)
+                    else TweenTo(CFrame.new(3798.4575,13.8267,-3399.8066)) end
+                elseif GetM("Bones") < 500 then
+                    local mob = World3 and GetConnectionEnemies({"Reborn Skeleton","Living Zombie","Demonic Soul","Posessed Mummy"})
+                    if mob then Attack.Kill(mob,_G.AutoMatSoul)
+                    else TweenTo(CFrame.new(-9504.8564,172.1429,6057.2598)) end
+                end
+            end)
+        end
+    end
+end)
+
+-- CDK LAST QUEST
+task.spawn(function()
+    while task.wait(Sec) do
+        if _G.CDK then
+            pcall(function()
+                replicated.Remotes.CommF_:InvokeServer("CDKQuest","Progress","Good")
+                replicated.Remotes.CommF_:InvokeServer("CDKQuest","Progress","Evil")
+                replicated.Remotes.CommF_:InvokeServer("CDKQuest","StartTrial","Boss")
+                local boss=GetConnectionEnemies("Cursed Skeleton Boss")
+                if boss then
+                    if GetBP("Yama") then EquipWeapon("Yama") elseif GetBP("Tushita") then EquipWeapon("Tushita") end
+                    TweenTo(boss.HumanoidRootPart.CFrame*CFrame.new(0,20,0))
+                    Attack.Kill(boss,_G.CDK)
+                else
+                    TweenTo(CFrame.new(-12318.1934,601.9518,-6538.6621))
+                end
+            end)
+        end
+    end
+end)
+
+-- YAMA CDK
+task.spawn(function()
+    while task.wait(0.12) do
+        if _G.CDK_YM then
+            pcall(function()
+                local progress=replicated.Remotes.CommF_:InvokeServer("CDKQuest","Progress")
+                if type(progress)~="table" then return end
+                if tostring(replicated.Remotes.CommF_:InvokeServer("CDKQuest","OpenDoor"))~="opened" then
+                    replicated.Remotes.CommF_:InvokeServer("CDKQuest","OpenDoor")
+                    replicated.Remotes.CommF_:InvokeServer("CDKQuest","OpenDoor",true)
+                    return
+                end
+                if progress.Finished==nil then
+                    replicated.Remotes.CommF_:InvokeServer("CDKQuest","StartTrial","Evil")
+                elseif progress.Finished==false then
+                    local evil=tonumber(progress.Evil)
+                    if evil==-3 then
+                        QuestYama_1,QuestYama_2,QuestYama_3=true,false,false
+                        local fp=GetConnectionEnemies("Forest Pirate")
+                        if fp then TweenTo(fp.HumanoidRootPart.CFrame)
+                        else TweenTo(CFrame.new(-13223.5215,428.1938,-7766.0679)) end
+                    elseif evil==-4 then
+                        QuestYama_1,QuestYama_2,QuestYama_3=false,true,false
+                        local haze=plr:FindFirstChild("QuestHaze")
+                        if haze then
+                            for _,hit in ipairs(haze:GetChildren()) do
+                                for name,cf in pairs(PosMsList) do
+                                    if string.find(name,hit.Name) and tonumber(hit.Value) and hit.Value>0 then
+                                        local mob=GetConnectionEnemies(name)
+                                        if mob then Attack.Kill(mob,_G.CDK_YM) else TweenTo(cf) end
+                                    end
+                                end
+                            end
+                        end
+                    elseif evil==-5 then
+                        QuestYama_1,QuestYama_2,QuestYama_3=false,false,true
+                        local hell=workspace.Map:FindFirstChild("HellDimension")
+                        if hell then
+                            local exit=hell:FindFirstChild("Exit")
+                            if exit and QuestRoot() then QuestRoot().CFrame=exit.CFrame end
+                            for _,n in ipairs({1,2,3}) do
+                                local torch=hell:FindFirstChild("Torch"..n)
+                                local p= torch and torch:FindFirstChild("Particles")
+                                if p then
+                                    TweenTo(p.CFrame)
+                                    for _,prompt in ipairs(hell:GetDescendants()) do
+                                        if prompt:IsA("ProximityPrompt") then SafePrompt(prompt) end
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+-- TUSHITA CDK
+task.spawn(function()
+    while task.wait(0.12) do
+        if _G.CDK_TS then
+            pcall(function()
+                local progress=replicated.Remotes.CommF_:InvokeServer("CDKQuest","Progress")
+                if type(progress)~="table" then return end
+                if tostring(replicated.Remotes.CommF_:InvokeServer("CDKQuest","OpenDoor"))~="opened" then
+                    replicated.Remotes.CommF_:InvokeServer("CDKQuest","OpenDoor")
+                    replicated.Remotes.CommF_:InvokeServer("CDKQuest","OpenDoor",true)
+                    return
+                end
+                if progress.Finished==nil then
+                    replicated.Remotes.CommF_:InvokeServer("CDKQuest","StartTrial","Good")
+                elseif progress.Finished==false then
+                    local good=tonumber(progress.Good)
+                    if good==-3 then
+                        QuestTushita_1,QuestTushita_2,QuestTushita_3=true,false,false
+                        for _,cf in ipairs({
+                            CFrame.new(-4602.5107,16.4465,-2880.9980),
+                            CFrame.new(4001.1853,10.0894,-2654.8633),
+                            CFrame.new(-9530.7637,7.2452,-8375.5088)
+                        }) do
+                            if not _G.CDK_TS then break end
+                            TweenTo(cf)
+                            task.wait(0.6)
+                            local dealer=workspace.NPCs:FindFirstChild("Luxury Boat Dealer")
+                            if dealer then
+                                replicated.Remotes.CommF_:InvokeServer("CDKQuest","BoatQuest",dealer,"Check")
+                                replicated.Remotes.CommF_:InvokeServer("CDKQuest","BoatQuest",dealer)
+                            end
+                        end
+                    elseif good==-4 then
+                        QuestTushita_1,QuestTushita_2,QuestTushita_3=false,true,false
+                        -- Source waits on the Pirate Raid flag. The local
+                        -- raid worker below handles the nearby enemies.
+                        _G.AutoRaidCastle=true
+                        local timeout=tick()
+                        repeat
+                            task.wait(0.5)
+                            progress=replicated.Remotes.CommF_:InvokeServer("CDKQuest","Progress")
+                        until not _G.CDK_TS or type(progress)~="table" or tonumber(progress.Good)==2 or tick()-timeout>180
+                        _G.AutoRaidCastle=false
+                    elseif good==-5 then
+                        QuestTushita_1,QuestTushita_2,QuestTushita_3=false,false,true
+                        local cake=GetConnectionEnemies("Cake Queen")
+                        if cake then
+                            repeat task.wait(); Attack.Kill(cake,_G.CDK_TS)
+                            until not _G.CDK_TS or not cake.Parent or cake.Humanoid.Health<=0
+                        else
+                            local heaven=workspace.Map:FindFirstChild("HeavenlyDimension")
+                            if heaven then
+                                for _,cf in ipairs({
+                                    CFrame.new(-22529.6172,5275.7739,3873.5713),
+                                    CFrame.new(-22637.2910,5281.3652,3749.2886),
+                                    CFrame.new(-22791.1445,5277.1655,3764.5701)
+                                }) do
+                                    if not _G.CDK_TS then break end
+                                    TweenTo(cf)
+                                    for _,prompt in ipairs(heaven:GetDescendants()) do
+                                        if prompt:IsA("ProximityPrompt") then SafePrompt(prompt) end
+                                    end
+                                    task.wait(0.5)
+                                end
+                            end
+                        end
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+-- Minimal Auto Pirate Raid dependency required by the source Tushita CDK flow.
+task.spawn(function()
+    while task.wait(Sec) do
+        if _G.AutoRaidCastle then
+            pcall(function()
+                local root=QuestRoot()
+                if not root then return end
+                for _,enemy in ipairs(workspace.Enemies:GetChildren()) do
+                    local hum=enemy:FindFirstChildOfClass("Humanoid")
+                    local eroot=enemy:FindFirstChild("HumanoidRootPart")
+                    if hum and eroot and hum.Health>0 and (eroot.Position-root.Position).Magnitude<=2000 then
+                        repeat task.wait(); Attack.Kill(enemy,true)
+                        until not _G.AutoRaidCastle or not enemy.Parent or hum.Health<=0
+                    end
+                    if not _G.AutoRaidCastle then break end
+                end
+            end)
+        end
     end
 end)
 
