@@ -331,7 +331,7 @@ local Title = Instance.new("TextLabel")
 Title.Position = UDim2.fromOffset(18, 7)
 Title.Size = UDim2.fromOffset(300, 25)
 Title.BackgroundTransparency = 1
-Title.Text = "PHONGDZ HUB  v5.4"
+Title.Text = "PHONGDZ HUB  v5.1"
 Title.Font = Enum.Font.GothamBlack
 Title.TextSize = 19
 Title.TextColor3 = Color3.fromRGB(255, 211, 65)
@@ -1187,11 +1187,10 @@ end
 
 local localPlayerButton, localPlayerPage = makeCategory("LOCAL PLAYER", "◉", 1)
 local farmButton, farmPage = makeCategory("FARM", "⚔", 2)
-local questItemButton, questItemPage = makeCategory("QUEST AND GET ITEM", "◆", 3)
-local espButton, espPage = makeCategory("ESP", "◉", 4)
-local settingButton, settingPage = makeCategory("SETTING", "⚙", 5)
-local miscButton, miscPage = makeCategory("MISC", "✦", 6)
-local statusButton, statusPage = makeCategory("STATUS SERVER", "◌", 7)
+local espButton, espPage = makeCategory("ESP", "◉", 3)
+local settingButton, settingPage = makeCategory("SETTING", "⚙", 4)
+local miscButton, miscPage = makeCategory("MISC", "✦", 5)
+local statusButton, statusPage = makeCategory("STATUS SERVER", "◌", 6)
 
 local function activateCategory(name)
     for pageName, page in pairs(CategoryPages) do
@@ -1211,7 +1210,6 @@ end
 
 localPlayerButton.Activated:Connect(function() activateCategory("LOCAL PLAYER") end)
 farmButton.Activated:Connect(function() activateCategory("FARM") end)
-questItemButton.Activated:Connect(function() activateCategory("QUEST AND GET ITEM") end)
 espButton.Activated:Connect(function() activateCategory("ESP") end)
 settingButton.Activated:Connect(function() activateCategory("SETTING") end)
 miscButton.Activated:Connect(function() activateCategory("MISC") end)
@@ -1326,8 +1324,6 @@ local function sectionCard(parent, title, subtitle)
     sub.Parent = card
 end
 
-sectionCard(questItemPage, "QUEST AND GET ITEM",
-    "Quest / item functions from source.txt will be placed here.")
 sectionCard(espPage, "ESP", "ESP controls can be placed here.")
 sectionCard(miscPage, "MISC", "Miscellaneous controls can be placed here.")
 
@@ -4379,168 +4375,145 @@ task.spawn(function()
     end
 end)
 
-
 --===========================================================================
-
---===========================================================================
--- PHONGDZ HUB v5.4 :: ISLAND TRAVEL SAFE LATE LOAD
+-- PHONGDZ HUB v5.1 :: ISLAND TRAVEL
+-- Base: exact PhongdzHub_v5.0_SourceHighlight_NoGreen.lua
+-- Loaded only AFTER the v5.0 menu has yielded once.
 --===========================================================================
 
 task.defer(function()
     task.wait()
 
     local ok, err = xpcall(function()
-        -- Base menu is already constructed before this optional loader runs.
-        -- If its Local Player page is unavailable, simply skip the extension.
         if not localPlayerPage or not localPlayerPage.Parent then
+            warn("[PhongdzHub][IslandTravel] Local Player page unavailable; skipped.")
             return
         end
 
-        local IslandTravel = {
-            Selected = nil,
-            Busy = false
-        }
+        local Players = game:GetService("Players")
+        local LocalPlayer = Players.LocalPlayer
 
-        local World1 = game.PlaceId == 2753915549
-        local World2 = game.PlaceId == 4442272183
-        local World3 = game.PlaceId == 7449423635
-
-        -- Exact island destinations from source.txt.
-        local Sea1 = {
-            ["Pirates"] = CFrame.new(-2709.67944, 24.5206585, 2104.24585),
-            ["Marine"] = CFrame.new(-2709.67944, 24.5206585, 2104.24585),
-            ["Jungle"] = CFrame.new(-1600, 36, 150),
-            ["Pirate Village"] = CFrame.new(-1100, 4, 3850),
-            ["Desert"] = CFrame.new(1090, 7, 4370),
-            ["Frozen Village"] = CFrame.new(1200, 28, -1500),
-            ["Marine Fortress"] = CFrame.new(-4500, 20, 4250),
-            ["Skylands Lower"] = CFrame.new(-5000, 700, -2500),
-            ["Prison"] = CFrame.new(4875, 6, 735),
-            ["Colosseum"] = CFrame.new(-1500, 60, -290),
-            ["Magma Village"] = CFrame.new(-5200, 8, 8400),
-            ["Underwater City"] = CFrame.new(61160, 5, 1819),
-            ["Skylands Upper"] = CFrame.new(-7880, 5545, -380)
-        }
-
-        local Sea2 = {
-            ["Kingdom of Rose"] = CFrame.new(-321, 73, 297),
-            ["Green Zone"] = CFrame.new(-2447, 73, -3211),
-            ["Graveyard Island"] = CFrame.new(-9515, 142, 5536),
-            ["Snow Mountain"] = CFrame.new(561, 401, -5306),
-            ["Hot and Cold (Cold)"] = CFrame.new(-6026, 15, -5062),
-            ["Hot and Cold (Hot)"] = CFrame.new(-5478, 15, -5240),
-            ["Cursed Ship"] = CFrame.new(902, 126, 33071),
-            ["Ice Castle"] = CFrame.new(6137, 294, -6747),
-            ["Forgotten Island"] = CFrame.new(-3043, 238, -10191)
-        }
-
-        local Sea3 = {
-            ["Port Town"] = CFrame.new(-290, 44, 5450),
-            ["Hydra Island"] = CFrame.new(5228, 604, 345),
-            ["Great Tree"] = CFrame.new(2682, 1682, -7190),
-            ["Floating Turtle"] = CFrame.new(-12000, 331, -8500),
-            ["Haunted Castle"] = CFrame.new(-9515, 142, 5536),
-            ["Sea of Treats"] = CFrame.new(-1145, 13, -14450),
-            ["Tiki Outpost"] = CFrame.new(-16200, 90, -17300),
-            ["Submerged Island"] = CFrame.new(-3200, -10, -10000)
-        }
-
-        local IslandData
-        if World1 then
-            IslandData = Sea1
-        elseif World2 then
-            IslandData = Sea2
-        elseif World3 then
-            IslandData = Sea3
-        else
-            IslandData = Sea1
+        local function getWorld()
+            local id = game.PlaceId
+            if id == 2753915549 then return 1 end
+            if id == 4442272183 then return 2 end
+            if id == 7449423635 then return 3 end
+            return 1
         end
 
-        local IslandNames = {}
-        for name in pairs(IslandData) do
-            table.insert(IslandNames, name)
+        -- Destinations are isolated here; no existing Farm/Quest code is changed.
+        local Islands = {
+            [1] = {
+                ["Pirates"] = CFrame.new(-2709.67944, 24.5206585, 2104.24585),
+                ["Jungle"] = CFrame.new(-1600, 36, 150),
+                ["Pirate Village"] = CFrame.new(-1100, 4, 3850),
+                ["Desert"] = CFrame.new(1090, 7, 4370),
+                ["Frozen Village"] = CFrame.new(1200, 28, -1500),
+                ["Marine Fortress"] = CFrame.new(-4500, 20, 4250),
+                ["Prison"] = CFrame.new(4875, 6, 735),
+                ["Colosseum"] = CFrame.new(-1500, 60, -290),
+                ["Magma Village"] = CFrame.new(-5200, 8, 8400),
+                ["Underwater City"] = CFrame.new(61160, 5, 1819),
+                ["Skylands"] = CFrame.new(-5000, 700, -2500)
+            },
+            [2] = {
+                ["Kingdom of Rose"] = CFrame.new(-321, 73, 297),
+                ["Green Zone"] = CFrame.new(-2447, 73, -3211),
+                ["Graveyard"] = CFrame.new(-9515, 142, 5536),
+                ["Snow Mountain"] = CFrame.new(561, 401, -5306),
+                ["Hot and Cold"] = CFrame.new(-6026, 15, -5062),
+                ["Cursed Ship"] = CFrame.new(902, 126, 33071),
+                ["Ice Castle"] = CFrame.new(6137, 294, -6747),
+                ["Forgotten Island"] = CFrame.new(-3043, 238, -10191)
+            },
+            [3] = {
+                ["Port Town"] = CFrame.new(-290, 44, 5450),
+                ["Hydra Island"] = CFrame.new(5228, 604, 345),
+                ["Great Tree"] = CFrame.new(2682, 1682, -7190),
+                ["Floating Turtle"] = CFrame.new(-12000, 331, -8500),
+                ["Haunted Castle"] = CFrame.new(-9515, 142, 5536),
+                ["Sea of Treats"] = CFrame.new(-1145, 13, -14450),
+                ["Tiki Outpost"] = CFrame.new(-16200, 90, -17300)
+            }
+        }
+
+        local world = getWorld()
+        local destinations = Islands[world]
+        local names = {}
+
+        for name in pairs(destinations) do
+            names[#names + 1] = name
         end
-        table.sort(IslandNames)
+        table.sort(names)
 
-        IslandTravel.Selected = IslandNames[1]
+        local selectedName = names[1] or "N/A"
+        local moving = false
 
-        local page = localPlayerPage
-        if not page or not page.Parent then
-            error("LocalPlayerPage không tồn tại")
+        -- Use the existing movement function from the v5.0 base when present.
+        local function moveTo(cf)
+            if type(TweenTo) == "function" then
+                return TweenTo(cf)
+            end
+
+            local character = LocalPlayer.Character
+            local root = character and character:FindFirstChild("HumanoidRootPart")
+            if not root then return false end
+
+            root.CFrame = cf
+            return true
         end
 
-        -- Positioned below the existing Auto Stats card.
+        local W = 0
+        pcall(function()
+            W = localPlayerPage.AbsoluteSize.X
+        end)
+        if W <= 0 then W = 330 end
+
         local card = Instance.new("Frame")
         card.Name = "IslandTravel"
         card.Position = UDim2.fromOffset(3, 310)
-        card.Size = UDim2.new(1, -6, 0, 166)
+        card.Size = UDim2.new(1, -6, 0, 132)
         card.BackgroundColor3 = Color3.fromRGB(22, 25, 33)
         card.BorderSizePixel = 0
-        card.ZIndex = 45
-        card.Parent = page
+        card.ZIndex = 80
+        card.Parent = localPlayerPage
 
-        local corner = Instance.new("UICorner")
-        corner.CornerRadius = UDim.new(0, 10)
-        corner.Parent = card
+        local cc = Instance.new("UICorner")
+        cc.CornerRadius = UDim.new(0, 10)
+        cc.Parent = card
 
         local title = Instance.new("TextLabel")
         title.BackgroundTransparency = 1
         title.Position = UDim2.fromOffset(13, 9)
-        title.Size = UDim2.new(1, -26, 0, 22)
+        title.Size = UDim2.new(1, -26, 0, 20)
         title.Text = "ISLAND TRAVEL"
         title.Font = Enum.Font.GothamBlack
-        title.TextSize = 12
+        title.TextSize = 11
         title.TextColor3 = Color3.fromRGB(255, 211, 65)
         title.TextXAlignment = Enum.TextXAlignment.Left
-        title.ZIndex = 46
+        title.ZIndex = 81
         title.Parent = card
 
-        local desc = Instance.new("TextLabel")
-        desc.BackgroundTransparency = 1
-        desc.Position = UDim2.fromOffset(13, 31)
-        desc.Size = UDim2.new(1, -26, 0, 18)
-        desc.Text = "Chọn đảo rồi di chuyển theo CFrame của source"
-        desc.Font = Enum.Font.Gotham
-        desc.TextSize = 8
-        desc.TextColor3 = Color3.fromRGB(140, 146, 158)
-        desc.TextXAlignment = Enum.TextXAlignment.Left
-        desc.ZIndex = 46
-        desc.Parent = card
+        local selector = Instance.new("TextButton")
+        selector.Position = UDim2.fromOffset(13, 36)
+        selector.Size = UDim2.new(1, -26, 0, 36)
+        selector.BackgroundColor3 = Color3.fromRGB(34, 38, 48)
+        selector.BorderSizePixel = 0
+        selector.Text = "ISLAND: " .. selectedName .. "  ▾"
+        selector.Font = Enum.Font.GothamBold
+        selector.TextSize = 9
+        selector.TextColor3 = Color3.fromRGB(225, 228, 235)
+        selector.AutoButtonColor = false
+        selector.ZIndex = 90
+        selector.Parent = card
 
-        local selected = Instance.new("TextButton")
-        selected.Position = UDim2.fromOffset(13, 57)
-        selected.Size = UDim2.new(1, -26, 0, 36)
-        selected.BackgroundColor3 = Color3.fromRGB(34, 38, 48)
-        selected.BorderSizePixel = 0
-        selected.Text = "ĐẢO: " .. tostring(IslandTravel.Selected) .. "  ▾"
-        selected.Font = Enum.Font.GothamBold
-        selected.TextSize = 9
-        selected.TextColor3 = Color3.fromRGB(225, 228, 235)
-        selected.AutoButtonColor = false
-        selected.ZIndex = 50
-        selected.Parent = card
-
-        local selectedCorner = Instance.new("UICorner")
-        selectedCorner.CornerRadius = UDim.new(0, 7)
-        selectedCorner.Parent = selected
-
-        local drop = Instance.new("Frame")
-        drop.Position = UDim2.fromOffset(13, 96)
-        drop.Size = UDim2.new(1, -26, 0, 0)
-        drop.BackgroundColor3 = Color3.fromRGB(27, 30, 38)
-        drop.BorderSizePixel = 0
-        drop.Visible = false
-        drop.ClipsDescendants = true
-        drop.ZIndex = 200
-        drop.Parent = card
-
-        local dropCorner = Instance.new("UICorner")
-        dropCorner.CornerRadius = UDim.new(0, 7)
-        dropCorner.Parent = drop
+        local sc = Instance.new("UICorner")
+        sc.CornerRadius = UDim.new(0, 7)
+        sc.Parent = selector
 
         local travel = Instance.new("TextButton")
-        travel.Position = UDim2.fromOffset(13, 104)
-        travel.Size = UDim2.new(1, -26, 0, 40)
+        travel.Position = UDim2.fromOffset(13, 80)
+        travel.Size = UDim2.new(1, -26, 0, 36)
         travel.BackgroundColor3 = Color3.fromRGB(48, 52, 63)
         travel.BorderSizePixel = 0
         travel.Text = "DI CHUYỂN ĐẾN ĐẢO"
@@ -4548,142 +4521,124 @@ task.defer(function()
         travel.TextSize = 9
         travel.TextColor3 = Color3.fromRGB(225, 228, 235)
         travel.AutoButtonColor = false
-        travel.ZIndex = 50
+        travel.ZIndex = 90
         travel.Parent = card
 
-        local travelCorner = Instance.new("UICorner")
-        travelCorner.CornerRadius = UDim.new(0, 8)
-        travelCorner.Parent = travel
+        local tc = Instance.new("UICorner")
+        tc.CornerRadius = UDim.new(0, 7)
+        tc.Parent = travel
 
-        local status = Instance.new("TextLabel")
-        status.BackgroundTransparency = 1
-        status.Position = UDim2.fromOffset(13, 146)
-        status.Size = UDim2.new(1, -26, 0, 16)
-        status.Text = "● READY  •  " .. tostring(IslandTravel.Selected)
-        status.Font = Enum.Font.GothamMedium
-        status.TextSize = 8
-        status.TextColor3 = Color3.fromRGB(140, 146, 158)
-        status.TextXAlignment = Enum.TextXAlignment.Center
-        status.ZIndex = 46
-        status.Parent = card
+        local drop = Instance.new("ScrollingFrame")
+        drop.Name = "IslandDropdown"
+        drop.Position = UDim2.fromOffset(13, 74)
+        drop.Size = UDim2.new(1, -26, 0, 0)
+        drop.BackgroundColor3 = Color3.fromRGB(27, 30, 38)
+        drop.BorderSizePixel = 0
+        drop.Visible = false
+        drop.ScrollBarThickness = 3
+        drop.CanvasSize = UDim2.fromOffset(0, 0)
+        drop.ZIndex = 200
+        drop.Parent = card
 
-        local function refresh()
-            selected.Text = "ĐẢO: " .. tostring(IslandTravel.Selected) .. "  ▾"
-            status.Text = "● READY  •  " .. tostring(IslandTravel.Selected)
-        end
+        local dc = Instance.new("UICorner")
+        dc.CornerRadius = UDim.new(0, 7)
+        dc.Parent = drop
 
         local function rebuild()
             for _, child in ipairs(drop:GetChildren()) do
-                if child:IsA("TextButton") then
-                    child:Destroy()
-                end
+                if child:IsA("TextButton") then child:Destroy() end
             end
 
-            local rowH = 31
-            local maxRows = math.min(#IslandNames, 7)
-
-            for i = 1, #IslandNames do
-                local name = IslandNames[i]
-                local option = Instance.new("TextButton")
-                option.Position = UDim2.fromOffset(4, (i - 1) * rowH)
-                option.Size = UDim2.new(1, -8, 0, rowH - 2)
-                option.BackgroundColor3 = name == IslandTravel.Selected
+            local row = 31
+            for i, name in ipairs(names) do
+                local b = Instance.new("TextButton")
+                b.Position = UDim2.fromOffset(4, (i - 1) * row + 4)
+                b.Size = UDim2.new(1, -8, 0, row - 3)
+                b.BackgroundColor3 = name == selectedName
                     and Color3.fromRGB(64, 145, 91)
                     or Color3.fromRGB(35, 39, 49)
-                option.BorderSizePixel = 0
-                option.Text = name
-                option.Font = Enum.Font.GothamMedium
-                option.TextSize = 8
-                option.TextColor3 = Color3.fromRGB(230, 233, 240)
-                option.AutoButtonColor = false
-                option.ZIndex = 210
-                option.Parent = drop
+                b.BorderSizePixel = 0
+                b.Text = name
+                b.Font = Enum.Font.GothamMedium
+                b.TextSize = 8
+                b.TextColor3 = Color3.fromRGB(230, 233, 240)
+                b.AutoButtonColor = false
+                b.ZIndex = 210
+                b.Parent = drop
 
-                local oc = Instance.new("UICorner")
-                oc.CornerRadius = UDim.new(0, 5)
-                oc.Parent = option
+                local bc = Instance.new("UICorner")
+                bc.CornerRadius = UDim.new(0, 5)
+                bc.Parent = b
 
-                option.Activated:Connect(function()
-                    IslandTravel.Selected = name
+                b.Activated:Connect(function()
+                    selectedName = name
+                    selector.Text = "ISLAND: " .. selectedName .. "  ▾"
                     drop.Visible = false
-                    drop.Size = UDim2.fromOffset(0, 0)
                     drop.Size = UDim2.new(1, -26, 0, 0)
-                    travel.Position = UDim2.fromOffset(13, 104)
-                    refresh()
-                    rebuild()
+                    travel.Position = UDim2.fromOffset(13, 80)
+                    card.Size = UDim2.new(1, -6, 0, 132)
                 end)
             end
 
-            local shownHeight = math.min(#IslandNames, 7) * rowH + 4
-            drop.Size = UDim2.new(1, -26, 0, shownHeight)
+            drop.CanvasSize = UDim2.fromOffset(0, #names * row + 8)
         end
 
-        selected.Activated:Connect(function()
-            drop.Visible = not drop.Visible
-            if drop.Visible then
+        selector.Activated:Connect(function()
+            if moving then return end
+
+            if not drop.Visible then
                 rebuild()
+                drop.Visible = true
+                drop.Size = UDim2.new(1, -26, 0, math.min(#names * 31 + 8, 155))
                 travel.Position = UDim2.fromOffset(
                     13,
-                    104 + math.min(#IslandNames, 7) * 31 + 8
+                    80 + math.min(#names * 31 + 8, 155) + 7
                 )
                 card.Size = UDim2.new(
-                    1, -6, 0,
-                    166 + math.min(#IslandNames, 7) * 31 + 8
+                    1, -6,
+                    0,
+                    132 + math.min(#names * 31 + 8, 155) + 7
                 )
             else
+                drop.Visible = false
                 drop.Size = UDim2.new(1, -26, 0, 0)
-                travel.Position = UDim2.fromOffset(13, 104)
-                card.Size = UDim2.new(1, -6, 0, 166)
+                travel.Position = UDim2.fromOffset(13, 80)
+                card.Size = UDim2.new(1, -6, 0, 132)
             end
         end)
 
         travel.Activated:Connect(function()
-            local targetCF = IslandData[IslandTravel.Selected]
-            if not targetCF or IslandTravel.Busy then
-                return
-            end
+            if moving then return end
 
-            IslandTravel.Busy = true
+            local target = destinations[selectedName]
+            if not target then return end
+
+            moving = true
             travel.Text = "ĐANG DI CHUYỂN..."
             travel.BackgroundColor3 = Color3.fromRGB(64, 145, 91)
-            status.Text = "● MOVING  •  " .. tostring(IslandTravel.Selected)
 
             task.spawn(function()
-                local moved = pcall(function()
-                    -- Existing TweenTo owns movement and Reset Bypass integration.
-                    TweenTo(targetCF)
+                local success = pcall(function()
+                    moveTo(target)
                 end)
 
-                if moved then
-                    status.Text = "● MOVING  •  " .. tostring(IslandTravel.Selected)
+                task.wait(0.25)
+
+                if success then
+                    travel.Text = "ĐÃ TỚI: " .. selectedName
                 else
-                    status.Text = "● ERROR  •  không thể di chuyển"
+                    travel.Text = "DI CHUYỂN LỖI"
                 end
 
-                task.wait(0.5)
-                IslandTravel.Busy = false
+                task.wait(0.6)
                 travel.Text = "DI CHUYỂN ĐẾN ĐẢO"
                 travel.BackgroundColor3 = Color3.fromRGB(48, 52, 63)
+                moving = false
             end)
         end)
-
-        refresh()
-
-        -- Extend only this page's canvas. Existing menu scroll behavior remains.
-        local function refreshCanvas()
-            if page and page.Parent then
-                page.CanvasSize = UDim2.fromOffset(
-                    0,
-                    math.max(page.AbsoluteWindowSize.Y, card.Position.Y.Offset + card.AbsoluteSize.Y + 12)
-                )
-            end
-        end
-
-        card:GetPropertyChangedSignal("AbsoluteSize"):Connect(refreshCanvas)
-        task.defer(refreshCanvas)
     end, debug.traceback)
 
     if not ok then
-        warn("[PhongdzHub][IslandTravel] Optional module disabled safely:", err)
+        warn("[PhongdzHub][IslandTravel] Disabled safely:", err)
     end
 end)
