@@ -277,17 +277,6 @@ if not parentOK then
     end
 end
 
--- Detect the existing minimize button only after Main has been created.
-for _, descendant in ipairs(Main:GetDescendants()) do
-    if descendant:IsA("TextButton") or descendant:IsA("ImageButton") then
-        local n = string.lower(descendant.Name)
-        if n == "minimize" or n == "minbutton" or n == "collapse" then
-            descendant.Activated:Connect(hideHub)
-            break
-        end
-    end
-end
-
 local function viewport()
     local camera = workspace.CurrentCamera
     if camera then
@@ -331,7 +320,7 @@ local Title = Instance.new("TextLabel")
 Title.Position = UDim2.fromOffset(18, 7)
 Title.Size = UDim2.fromOffset(300, 25)
 Title.BackgroundTransparency = 1
-Title.Text = "PHONGDZ HUB  v4.5"
+Title.Text = "PHONGDZ HUB  v4.6"
 Title.Font = Enum.Font.GothamBlack
 Title.TextSize = 19
 Title.TextColor3 = Color3.fromRGB(255, 211, 65)
@@ -384,6 +373,23 @@ Close.Parent = Header
 local cc = Instance.new("UICorner")
 cc.CornerRadius = UDim.new(0, 9)
 cc.Parent = Close
+
+-- Connect the real minimize button directly. This avoids scanning the
+-- partially-built UI tree and makes the startup path deterministic.
+Min.Activated:Connect(hideHub)
+Close.Activated:Connect(function()
+    _G.PhongdzFarmEnabled = false
+    _G.AutoLevel = false
+    _G.AutoMaterial = false
+    _G.AutoFarm_Bone = false
+    _G.PhongdzMasteryEnabled = false
+    pcall(function()
+        if _G.PhongdzStopFarm then
+            _G.PhongdzStopFarm()
+        end
+    end)
+    Gui:Destroy()
+end)
 
 --===========================================================================
 -- SETTING FARM
@@ -1192,6 +1198,11 @@ local settingButton, settingPage = makeCategory("SETTING", "⚙", 4)
 local miscButton, miscPage = makeCategory("MISC", "✦", 5)
 local statusButton, statusPage = makeCategory("STATUS SERVER", "◌", 6)
 local questItemButton, questItemPage = makeCategory("QUEST AND ITEM", "▣", 7)
+
+-- QUEST AND ITEM is a normal CategoryPage, using the same page lifecycle
+-- as every other category. Keep it empty until actual quest/item controls
+-- are added; an empty page must never affect the rest of the UI.
+questItemPage.CanvasPosition = Vector2.new(0, 0)
 
 local function activateCategory(name)
     for pageName, page in pairs(CategoryPages) do
