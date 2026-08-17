@@ -331,7 +331,7 @@ local Title = Instance.new("TextLabel")
 Title.Position = UDim2.fromOffset(18, 7)
 Title.Size = UDim2.fromOffset(300, 25)
 Title.BackgroundTransparency = 1
-Title.Text = "PHONGDZ HUB  v4.4"
+Title.Text = "PHONGDZ HUB  v5.0"
 Title.Font = Enum.Font.GothamBlack
 Title.TextSize = 19
 Title.TextColor3 = Color3.fromRGB(255, 211, 65)
@@ -1754,7 +1754,7 @@ local akc=Instance.new("UICorner"); akc.CornerRadius=UDim.new(1,0); akc.Parent=a
 
 local function UpdateMaterialToggle()
  if MaterialEnabled then
-  AutoMaterialToggle.BackgroundColor3=Color3.fromRGB(255,211,65); amk.Position=UDim2.fromOffset(26,3)
+  AutoMaterialToggle.BackgroundColor3=Color3.fromRGB(255, 211, 65); amk.Position=UDim2.fromOffset(26,3)
   amk.BackgroundColor3=Color3.fromRGB(16,18,24); ams.Text="● FARMING: "..SelectedMaterial
   ams.TextColor3=Color3.fromRGB(16,18,24)
  else
@@ -2290,6 +2290,105 @@ end
 
 activateCategory("FARM")
 
+--===========================================================================
+-- QUEST & ITEM UI — SAFE V4.8
+-- IMPORTANT: UI only. No quest runtime is executed during startup.
+-- Each switch only changes its flag; quest workers can be attached later
+-- without putting the menu startup at risk.
+--===========================================================================
+do
+    local questButton, questPage = makeCategory("QUEST & ITEM", "▣", 7)
+
+    questButton.Activated:Connect(function()
+        activateCategory("QUEST & ITEM")
+    end)
+
+    local title = Instance.new("TextLabel")
+    title.Name = "QuestItemTitle"
+    title.Position = UDim2.fromOffset(8, 8)
+    title.Size = UDim2.new(1, -16, 0, 30)
+    title.BackgroundTransparency = 1
+    title.Text = "QUEST & ITEM"
+    title.Font = Enum.Font.GothamBlack
+    title.TextSize = 13
+    title.TextColor3 = Color3.fromRGB(255, 211, 65)
+    title.TextXAlignment = Enum.TextXAlignment.Left
+    title.ZIndex = 50
+    title.Parent = questPage
+
+    local note = Instance.new("TextLabel")
+    note.Position = UDim2.fromOffset(8, 36)
+    note.Size = UDim2.new(1, -16, 0, 24)
+    note.BackgroundTransparency = 1
+    note.Text = "Quest & Item controls"
+    note.Font = Enum.Font.Gotham
+    note.TextSize = 8
+    note.TextColor3 = Color3.fromRGB(140, 146, 158)
+    note.TextXAlignment = Enum.TextXAlignment.Left
+    note.ZIndex = 50
+    note.Parent = questPage
+
+    local flags = {
+        {"AUTO QUEST SEA 2", "TravelDres"},
+        {"AUTO QUEST SEA 3", "AutoZou"},
+        {"AUTO TUSHITA", "Auto_Tushita"},
+        {"AUTO YAMA", "Auto_Yama"},
+        {"AUTO SKULL GUITAR", "Auto_Soul_Guitar"},
+        {"AUTO FARM MATERIAL SKULL GUITAR", "AutoMatSoul"},
+        {"AUTO GET CDK", "CDK"},
+        {"AUTO YAMA CDK", "CDK_YM"},
+        {"AUTO TUSHITA CDK", "CDK_TS"},
+    }
+
+    for i, item in ipairs(flags) do
+        local name, flag = item[1], item[2]
+        local b = Instance.new("TextButton")
+        b.Name = "QuestToggle_" .. i
+        b.Position = UDim2.fromOffset(8, 66 + (i-1)*48)
+        b.Size = UDim2.new(1, -16, 0, 40)
+        b.BackgroundColor3 = Color3.fromRGB(34, 38, 48)
+        b.BorderSizePixel = 0
+        b.Text = "● OFF   " .. name
+        b.Font = Enum.Font.GothamBold
+        b.TextSize = 9
+        b.TextColor3 = Color3.fromRGB(225, 228, 235)
+        b.TextXAlignment = Enum.TextXAlignment.Left
+        b.AutoButtonColor = false
+        b.ZIndex = 50
+        b.Parent = questPage
+
+        local c = Instance.new("UICorner")
+        c.CornerRadius = UDim.new(0, 8)
+        c.Parent = b
+
+        local state = _G[flag] == true
+        local function refresh()
+            _G[flag] = state
+            b.Text = (state and "● ON   " or "● OFF   ") .. name
+            b.BackgroundColor3 = state
+                and Color3.fromRGB(64, 145, 91)
+                or Color3.fromRGB(34, 38, 48)
+            b.TextColor3 = state
+                and Color3.fromRGB(16, 18, 24)
+                or Color3.fromRGB(225, 228, 235)
+        end
+
+        b.Activated:Connect(function()
+            state = not state
+            refresh()
+        end)
+        refresh()
+    end
+
+    questPage.CanvasSize = UDim2.fromOffset(0, 66 + #flags*48 + 12)
+    questPage.AutomaticCanvasSize = Enum.AutomaticSize.None
+    questPage.ScrollingDirection = Enum.ScrollingDirection.Y
+    questPage.Active = true
+
+    -- Startup diagnostic: if the script reaches here, the menu is alive.
+    print("[PhongdzHub] UI READY v4.8")
+end
+
 
 -- Circular launcher.
 local Launcher = Instance.new("TextButton")
@@ -2470,6 +2569,77 @@ local RunService = game:GetService("RunService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local LocalPlayer = Players.LocalPlayer
 local plr = LocalPlayer
+
+--=========================================================================
+-- SOURCE HIGHLIGHT
+-- Exact visual values copied from source.txt.
+-- The highlight is attached to the character only while a Phongdz
+-- automation feature is active; it is removed when all tracked features stop.
+--=========================================================================
+local function PhongdzHasActiveFeature()
+    local flags = {
+        _G.PhongdzFarmEnabled,
+        _G.PhongdzMasteryEnabled,
+        _G.AutoLevel,
+        _G.AutoFarm_Bone,
+        _G.AutoMaterial,
+        _G.FruitM1Enabled,
+        _G.TravelDres,
+        _G.AutoZou,
+        _G.Auto_Tushita,
+        _G.Auto_Yama,
+        _G.Auto_Soul_Guitar,
+        _G.AutoMatSoul,
+        _G.CDK,
+        _G.CDK_YM,
+        _G.CDK_TS,
+        _G.PhongdzAutoStats and _G.PhongdzAutoStats.Enabled,
+    }
+    for _, enabled in ipairs(flags) do
+        if enabled == true then
+            return true
+        end
+    end
+    return false
+end
+
+local function PhongdzSetSourceHighlight(enabled)
+    local character = plr.Character
+    if not character then return end
+
+    if enabled then
+        if not character:FindFirstChild("highlight") then
+            local Test = Instance.new("Highlight")
+            Test.Name = "highlight"
+            Test.Enabled = true
+            Test.FillColor = Color3.fromRGB(0,255,254)
+            Test.OutlineColor = Color3.fromRGB(0,255,254)
+            Test.FillTransparency = 0.5
+            Test.OutlineTransparency = 0.2
+            Test.Parent = character
+        end
+    else
+        local highlight = character:FindFirstChild("highlight")
+        if highlight then
+            highlight:Destroy()
+        end
+    end
+end
+
+task.spawn(function()
+    while task.wait(0.1) do
+        pcall(function()
+            PhongdzSetSourceHighlight(PhongdzHasActiveFeature())
+        end)
+    end
+end)
+
+plr.CharacterAdded:Connect(function()
+    task.wait(0.5)
+    pcall(function()
+        PhongdzSetSourceHighlight(PhongdzHasActiveFeature())
+    end)
+end)
 local replicated = ReplicatedStorage
 local Sec = 0.1
 
@@ -4204,49 +4374,3 @@ task.spawn(function()
         warn("[PhongdzHub][ResetBypass] Disabled safely:", err)
     end
 end)
-
---===========================================================================
--- PHONGDZ_CYAN_SOURCE_LOGIC_V44
--- Exact visual behavior from source.txt, adapted only to the feature flags
--- that actually exist in PhongdzHub. No toggle is added to the UI.
---===========================================================================
-task.spawn(function()
-    while task.wait() do
-        pcall(function()
-            local active = _G.PhongdzFarmEnabled
-                or _G.AutoLevel
-                or _G.AutoFarm_Bone
-                or _G.AutoMaterial
-                or _G.PhongdzMasteryEnabled
-                or _G.FarmMastery_G
-                or _G.FarmMastery_S
-                or _G.FarmMastery_Dev
-                or _G.FastAttack
-                or _G.FruitM1Enabled
-
-            local character = LocalPlayer.Character
-            if not character then
-                return
-            end
-
-            if active then
-                -- Same source Highlight settings.
-                if not character:FindFirstChild("highlight") then
-                    local Test = Instance.new("Highlight")
-                    Test.Name = "highlight"
-                    Test.Enabled = true
-                    Test.FillColor = Color3.fromRGB(0,255,254)
-                    Test.OutlineColor = Color3.fromRGB(0,255,254)
-                    Test.FillTransparency = 0.5
-                    Test.OutlineTransparency = 0.2
-                    Test.Parent = character
-                end
-            else
-                if character:FindFirstChild("highlight") then
-                    character:FindFirstChild("highlight"):Destroy()
-                end
-            end
-        end)
-    end
-end)
-
