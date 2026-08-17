@@ -320,7 +320,7 @@ local Title = Instance.new("TextLabel")
 Title.Position = UDim2.fromOffset(18, 7)
 Title.Size = UDim2.fromOffset(300, 25)
 Title.BackgroundTransparency = 1
-Title.Text = "PHONGDZ HUB  v4.6"
+Title.Text = "PHONGDZ HUB  v4.7"
 Title.Font = Enum.Font.GothamBlack
 Title.TextSize = 19
 Title.TextColor3 = Color3.fromRGB(255, 211, 65)
@@ -373,23 +373,6 @@ Close.Parent = Header
 local cc = Instance.new("UICorner")
 cc.CornerRadius = UDim.new(0, 9)
 cc.Parent = Close
-
--- Connect the real minimize button directly. This avoids scanning the
--- partially-built UI tree and makes the startup path deterministic.
-Min.Activated:Connect(hideHub)
-Close.Activated:Connect(function()
-    _G.PhongdzFarmEnabled = false
-    _G.AutoLevel = false
-    _G.AutoMaterial = false
-    _G.AutoFarm_Bone = false
-    _G.PhongdzMasteryEnabled = false
-    pcall(function()
-        if _G.PhongdzStopFarm then
-            _G.PhongdzStopFarm()
-        end
-    end)
-    Gui:Destroy()
-end)
 
 --===========================================================================
 -- SETTING FARM
@@ -1887,19 +1870,11 @@ local function GetMasteryInventory()
         }
     end
 
-    local ok, inventory = pcall(function()
-        return ReplicatedStorage.Remotes.CommF_:InvokeServer("getInventory")
-    end)
-
-    if ok and type(inventory) == "table" then
-        for _, item in pairs(inventory) do
-            if type(item) == "table" and
-                (item.Type == "Sword" or item.Type == "Gun") then
-                addTool(item.Name, item.Type, item.Mastery)
-            end
-        end
-    end
-
+    -- Do NOT invoke CommF_ while the main UI is being constructed.
+    -- The old startup call could yield on getInventory and prevent the menu
+    -- from ever reaching activateCategory()/UI READY. Inventory is refreshed
+    -- from the actual Backpack/Character instead; the server query is not
+    -- required just to render the selector.
     local character = LocalPlayer.Character
     local backpack = LocalPlayer:FindFirstChildOfClass("Backpack")
 
@@ -2020,7 +1995,7 @@ MasteryButton.Activated:Connect(function()
     RefreshMasteryValue()
 end)
 
-RebuildMasteryOptions()
+pcall(RebuildMasteryOptions)
 
 local AutoMasteryToggle = Instance.new("TextButton")
 AutoMasteryToggle.Name = "AutoFarmMastery"
