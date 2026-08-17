@@ -331,7 +331,7 @@ local Title = Instance.new("TextLabel")
 Title.Position = UDim2.fromOffset(18, 7)
 Title.Size = UDim2.fromOffset(300, 25)
 Title.BackgroundTransparency = 1
-Title.Text = "PHONGDZ HUB  v5.1"
+Title.Text = "PHONGDZ HUB  v5.2"
 Title.Font = Enum.Font.GothamBlack
 Title.TextSize = 19
 Title.TextColor3 = Color3.fromRGB(255, 211, 65)
@@ -2724,7 +2724,7 @@ local function StartSourceMovement()
             local primary = character and character.PrimaryPart
             if not character or not primary then return end
 
-            if _G.AutoLevel and shouldTween then
+            if (_G.AutoLevel or _G.PhongdzIslandTravelActive) and shouldTween then
                 if block and block.Parent == workspace then
                     if (primary.Position - block.Position).Magnitude <= 200 then
                         primary.CFrame = block.CFrame
@@ -4448,18 +4448,45 @@ task.defer(function()
 
         local selectedName = names[1] or "N/A"
         local moving = false
+        _G.PhongdzIslandTravelActive = false
 
-        -- Use the existing movement function from the v5.0 base when present.
+        -- Source-style island movement.
+        -- Reset Bypass remains inside the existing TweenTo() path.
+        -- Island Travel gets its own temporary follow flag and never enables Farm.
         local function moveTo(cf)
-            if type(TweenTo) == "function" then
-                return TweenTo(cf)
+            if type(TweenTo) ~= "function" then
+                return false
             end
 
-            local character = LocalPlayer.Character
-            local root = character and character:FindFirstChild("HumanoidRootPart")
-            if not root then return false end
+            _G.PhongdzIslandTravelActive = true
 
-            root.CFrame = cf
+            local ok, tween = pcall(function()
+                return TweenTo(cf)
+            end)
+
+            if not ok or not tween then
+                _G.PhongdzIslandTravelActive = false
+                return false
+            end
+
+            local finished = false
+            local connection
+
+            if tween.Completed then
+                connection = tween.Completed:Connect(function()
+                    finished = true
+                end)
+            end
+
+            while not finished and tween.PlaybackState == Enum.PlaybackState.Playing do
+                task.wait()
+            end
+
+            if connection then
+                connection:Disconnect()
+            end
+
+            _G.PhongdzIslandTravelActive = false
             return true
         end
 
