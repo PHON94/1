@@ -2726,7 +2726,9 @@ local function StartSourceMovement()
 
             if (_G.AutoLevel or _G.PhongdzIslandTravelActive) and shouldTween then
                 if block and block.Parent == workspace then
-                    if (primary.Position - block.Position).Magnitude <= 200 then
+                    if _G.PhongdzIslandTravelActive then
+                        primary.CFrame = block.CFrame
+                    elseif (primary.Position - block.Position).Magnitude <= 200 then
                         primary.CFrame = block.CFrame
                     else
                         block.CFrame = primary.CFrame
@@ -4391,7 +4393,7 @@ task.spawn(function()
     end
 end)
 
--- PHONGDZ HUB v5.5 :: ISLAND TRAVEL
+-- PHONGDZ HUB v5.6 :: ISLAND TRAVEL
 -- Base: exact PhongdzHub_v5.0_SourceHighlight_NoGreen.lua
 -- Loaded only AFTER the v5.0 menu has yielded once.
 --===========================================================================
@@ -4725,16 +4727,16 @@ task.defer(function()
             travel.BackgroundColor3 = Color3.fromRGB(64, 145, 91)
 
             task.spawn(function()
-                local success = pcall(function()
-                    moveTo(target)
+                local callOk, reached, reason = pcall(function()
+                    return moveTo(target)
                 end)
 
-                task.wait(0.25)
-
-                if success then
+                if not callOk then
+                    travel.Text = "DI CHUYỂN LỖI"
+                elseif reached then
                     travel.Text = "ĐÃ TỚI: " .. selectedName
                 else
-                    travel.Text = "DI CHUYỂN LỖI"
+                    travel.Text = "DI CHUYỂN LỖI: " .. tostring(reason or "TIMEOUT")
                 end
 
                 task.wait(0.6)
