@@ -331,7 +331,7 @@ local Title = Instance.new("TextLabel")
 Title.Position = UDim2.fromOffset(18, 7)
 Title.Size = UDim2.fromOffset(300, 25)
 Title.BackgroundTransparency = 1
-Title.Text = "PHONGDZ HUB  v5.3"
+Title.Text = "PHONGDZ HUB  v5.5"
 Title.Font = Enum.Font.GothamBlack
 Title.TextSize = 19
 Title.TextColor3 = Color3.fromRGB(255, 211, 65)
@@ -4239,9 +4239,7 @@ task.spawn(function()
         local function execute(targetCF)
             if not ResetBypass.Enabled
                 or ResetBypass.Busy
-                or not targetCF
-                or sameTarget(targetCF)
-                or os.clock() - ResetBypass.LastUse < ResetBypass.Cooldown then
+                or not targetCF then
                 return false
             end
 
@@ -4253,7 +4251,21 @@ task.spawn(function()
                 return false
             end
 
-            if (targetCF.Position - root.Position).Magnitude <= 3500 then
+            local currentDistance = (targetCF.Position - root.Position).Magnitude
+            if currentDistance <= 3500 then
+                return false
+            end
+
+            -- Multi-hop source behavior: the same destination is allowed to
+            -- trigger another reset while it is still a long distance away.
+            -- This is what lets the player respawn at an intermediate island,
+            -- recalculate the distance, and then take another reset hop.
+            if sameTarget(targetCF)
+                and os.clock() - ResetBypass.LastUse < ResetBypass.Cooldown then
+                return false
+            end
+
+            if os.clock() - ResetBypass.LastUse < ResetBypass.Cooldown then
                 return false
             end
 
@@ -4288,6 +4300,10 @@ task.spawn(function()
 
             task.delay(8, function()
                 ResetBypass.Busy = false
+                -- Release the target lock after the respawn cycle so the
+                -- source can choose another intermediate spawn if the same
+                -- destination is still farther than the long-distance limit.
+                ResetBypass.LastTarget = nil
             end)
 
             return success
@@ -4375,8 +4391,7 @@ task.spawn(function()
     end
 end)
 
---===========================================================================
--- PHONGDZ HUB v5.1 :: ISLAND TRAVEL
+-- PHONGDZ HUB v5.5 :: ISLAND TRAVEL
 -- Base: exact PhongdzHub_v5.0_SourceHighlight_NoGreen.lua
 -- Loaded only AFTER the v5.0 menu has yielded once.
 --===========================================================================
@@ -4458,81 +4473,103 @@ task.defer(function()
                 return false, "INVALID_TARGET"
             end
 
-            local character = LocalPlayer.Character
-            local root = character and character:FindFirstChild("HumanoidRootPart")
-            if not root then
-                return false, "NO_CHARACTER"
-            end
-
-            -- Source logic: Reset Bypass takes priority.
-            -- TweenTo() returns nil in this branch, so we do not wait for it.
-            if _G.PhongdzResetBypass
-                and _G.PhongdzResetBypass.IsEnabled
-                and _G.PhongdzResetBypass.IsEnabled() then
-
-                local ok, result = pcall(function()
-                    return _G.PhongdzResetBypass.Execute(cf)
-                end)
-
-                if not ok or result == false then
-                    return false, "RESET_BYPASS_FAILED"
-                end
-
-                return true, "RESET_BYPASS"
-            end
-
-            -- Normal source-style island flight.
-            if type(StartSourceMovement) ~= "function"
-                or type(TweenTo) ~= "function" then
-                return false, "MOVEMENT_CORE_MISSING"
-            end
-
             _G.PhongdzIslandTravelActive = true
             shouldTween = false
 
-            local ok = pcall(function()
-                TweenTo(cf)
-            end)
+            local travelDeadline = os.clock() + 180
+            local resetHops = 0
 
-            if not ok then
-                shouldTween = false
-                _G.PhongdzIslandTravelActive = false
-                return false, "TWEEN_ERROR"
-            end
-
-            -- The source moves the character through the invisible block.
-            -- Completion is therefore checked by real character position,
-            -- not by Tween.Completed.
-            local timeout = math.clamp(
-                ((cf.Position - root.Position).Magnitude / 300) + 5,
-                8,
-                90
-            )
-
-            local started = os.clock()
-            local reached = false
-
-            while os.clock() - started < timeout do
-                local currentCharacter = LocalPlayer.Character
-                local currentRoot = currentCharacter
-                    and currentCharacter:FindFirstChild("HumanoidRootPart")
-
-                if currentRoot then
-                    if (currentRoot.Position - cf.Position).Magnitude <= 18 then
-                        reached = true
-                        break
-                    end
+            -- Multi-hop phase: exactly the source-style idea. A long trip
+            -- may use several reset hops. After every respawn, distance is
+            -- recalculated against the SAME destination CFrame.
+            while os.clock() < travelDeadline do
+                local character = LocalPlayer.Character
+                local root = character and character:FindFirstChild("HumanoidRootPart")
+                if not root then
+                    task.wait(0.2)
+                    continue
                 end
 
-                task.wait()
+                local distance = (cf.Position - root.Position).Magnitude
+
+                if distance <= 120 then
+                    shouldTween = false
+                    _G.PhongdzIslandTravelActive = false
+                    return true, resetHops > 0 and "RESET_FLIGHT" or "FLIGHT"
+                end
+
+                if _G.PhongdzResetBypass
+                    and _G.PhongdzResetBypass.IsEnabled
+                    and _G.PhongdzResetBypass.IsEnabled()
+                    and distance > 3500 then
+
+                    local ok, used = pcall(function()
+                        return _G.PhongdzResetBypass.Execute(cf)
+                    end)
+
+                    if ok and used then
+                        resetHops += 1
+
+                        -- Wait for the respawn cycle to settle. Do NOT declare
+                        -- success here: the next loop recalculates the distance
+                        -- and may perform another hop, just like the source.
+                        local respawnDeadline = os.clock() + 9
+                        repeat
+                            task.wait(0.15)
+                            character = LocalPlayer.Character
+                            root = character and character:FindFirstChild("HumanoidRootPart")
+                        until os.clock() >= respawnDeadline or root ~= nil
+
+                        task.wait(0.5)
+                        continue
+                    end
+
+                    -- Execute() can reject a hop during its cooldown/busy
+                    -- window. Just wait and retry the same destination.
+                    task.wait(0.5)
+                    continue
+                end
+
+                -- Final/remaining leg: use the Hub's source-style flight.
+                if type(StartSourceMovement) ~= "function"
+                    or type(TweenTo) ~= "function" then
+                    shouldTween = false
+                    _G.PhongdzIslandTravelActive = false
+                    return false, "MOVEMENT_CORE_MISSING"
+                end
+
+                shouldTween = true
+                local tweenOk = pcall(function()
+                    TweenTo(cf)
+                end)
+
+                if not tweenOk then
+                    shouldTween = false
+                    _G.PhongdzIslandTravelActive = false
+                    return false, "TWEEN_ERROR"
+                end
+
+                local flightDeadline = os.clock() + math.clamp((distance / 300) + 8, 10, 100)
+                while os.clock() < flightDeadline do
+                    character = LocalPlayer.Character
+                    root = character and character:FindFirstChild("HumanoidRootPart")
+                    if root and (root.Position - cf.Position).Magnitude <= 120 then
+                        shouldTween = false
+                        _G.PhongdzIslandTravelActive = false
+                        return true, resetHops > 0 and "RESET_FLIGHT" or "FLIGHT"
+                    end
+                    task.wait()
+                end
+
+                -- Re-enter the main loop so the actual distance is measured
+                -- again before another flight/reset decision.
+                shouldTween = false
             end
 
             shouldTween = false
             _G.PhongdzIslandTravelActive = false
-
-            return reached, reached and "FLIGHT" or "FLIGHT_TIMEOUT"
+            return false, "TRAVEL_TIMEOUT"
         end
-
         local W = 0
         pcall(function()
             W = localPlayerPage.AbsoluteSize.X
@@ -4688,18 +4725,16 @@ task.defer(function()
             travel.BackgroundColor3 = Color3.fromRGB(64, 145, 91)
 
             task.spawn(function()
-                local success, mode = moveTo(target)
+                local success = pcall(function()
+                    moveTo(target)
+                end)
 
                 task.wait(0.25)
 
                 if success then
-                    if mode == "RESET_BYPASS" then
-                        travel.Text = "RESET → " .. selectedName
-                    else
-                        travel.Text = "ĐÃ BAY TỚI: " .. selectedName
-                    end
+                    travel.Text = "ĐÃ TỚI: " .. selectedName
                 else
-                    travel.Text = "DI CHUYỂN LỖI: " .. tostring(mode)
+                    travel.Text = "DI CHUYỂN LỖI"
                 end
 
                 task.wait(0.6)
