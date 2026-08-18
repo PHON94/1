@@ -331,7 +331,7 @@ local Title = Instance.new("TextLabel")
 Title.Position = UDim2.fromOffset(18, 7)
 Title.Size = UDim2.fromOffset(300, 25)
 Title.BackgroundTransparency = 1
-Title.Text = "PHONGDZ HUB  v5.6"
+Title.Text = "PHONGDZ HUB  v5.7"
 Title.Font = Enum.Font.GothamBlack
 Title.TextSize = 19
 Title.TextColor3 = Color3.fromRGB(255, 211, 65)
@@ -4474,6 +4474,190 @@ task.defer(function()
             end
 
             _G.PhongdzIslandTravelActive = true
+            shouldTween = true
+            StartSourceMovement()
+
+            local deadline = os.clock() + 180
+            local resetHops = 0
+
+            while os.clock() < deadline do
+                local character = LocalPlayer.Character
+                local root = character and character:FindFirstChild("HumanoidRootPart")
+
+                if not root then
+                    task.wait(0.2)
+                    continue
+                end
+
+                local distance = (cf.Position - root.Position).Magnitude
+
+                if distance <= 120 then
+                    shouldTween = false
+                    _G.PhongdzIslandTravelActive = false
+                    return true, resetHops > 0 and "RESET_FLIGHT" or "FLIGHT"
+                end
+
+                -- Use the source Reset Bypass directly instead of relying on
+                -- TweenTo()'s nil return value. This removes the ambiguity that
+                -- caused Island Travel to enter the error path.
+                if _G.PhongdzResetBypass
+                    and _G.PhongdzResetBypass.IsEnabled
+                    and _G.PhongdzResetBypass.IsEnabled()
+                    and distance > 3500 then
+
+                    local beforeCharacter = character
+                    local beforePosition = root.Position
+
+                    local resetOK, resetUsed = pcall(function()
+                        return _G.PhongdzResetBypass.Execute(cf)
+                    end)
+
+                    if resetOK and resetUsed then
+                        local hopDeadline = os.clock() + 10
+                        local hopped = false
+
+                        while os.clock() < hopDeadline do
+                            task.wait(0.15)
+
+                            local charNow = LocalPlayer.Character
+                            local rootNow = charNow
+                                and charNow:FindFirstChild("HumanoidRootPart")
+
+                            if rootNow
+                                and (
+                                    charNow ~= beforeCharacter
+                                    or (rootNow.Position - beforePosition).Magnitude > 300
+                                ) then
+                                hopped = true
+                                break
+                            end
+                        end
+
+                        if hopped then
+                            resetHops += 1
+                            -- The source ResetBypass releases Busy/LastTarget
+                            -- after its respawn cycle. Recalculate distance and
+                            -- allow another intermediate reset hop.
+                            task.wait(0.4)
+                            shouldTween = true
+                            continue
+                        end
+
+                        -- Execute succeeded but the character did not move yet.
+                        -- Give the source respawn cycle a little more time.
+                        task.wait(1)
+                        continue
+                    end
+
+                    -- Reset unavailable/cooldown: fall through to normal source
+                    -- movement instead of reporting an immediate error.
+                end
+
+                -- Exact source-style block movement, without calling TweenTo().
+                -- TweenTo() itself contains Reset Bypass and can return nil,
+                -- which was the root of the previous Island Travel failure.
+                if not block or block.Parent ~= workspace then
+                    shouldTween = false
+                    StartSourceMovement()
+                    task.wait(0.1)
+                end
+
+                shouldTween = true
+
+                local currentRoot = LocalPlayer.Character
+                    and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+
+                if not currentRoot then
+                    task.wait(0.2)
+                    continue
+                end
+
+                local legDistance = (cf.Position - currentRoot.Position).Magnitude
+                if legDistance <= 120 then
+                    shouldTween = false
+                    _G.PhongdzIslandTravelActive = false
+                    return true, resetHops > 0 and "RESET_FLIGHT" or "FLIGHT"
+                end
+
+                local tweenInfo = TweenInfo.new(
+                    math.max(0.15, legDistance / 300),
+                    Enum.EasingStyle.Linear
+                )
+
+                local tweenOK, tween = pcall(function()
+                    return TweenService:Create(
+                        block,
+                        tweenInfo,
+                        {CFrame = cf}
+                    )
+                end)
+
+                if not tweenOK or not tween then
+                    shouldTween = false
+                    task.wait(0.25)
+                    continue
+                end
+
+                local completed = false
+                local connection
+
+                connection = tween.Completed:Connect(function()
+                    completed = true
+                    if connection then
+                        connection:Disconnect()
+                        connection = nil
+                    end
+                end)
+
+                tween:Play()
+
+                local legDeadline = os.clock()
+                    + math.clamp((legDistance / 300) + 8, 10, 110)
+
+                while os.clock() < legDeadline do
+                    local charNow = LocalPlayer.Character
+                    local rootNow = charNow
+                        and charNow:FindFirstChild("HumanoidRootPart")
+
+                    if rootNow
+                        and (rootNow.Position - cf.Position).Magnitude <= 120 then
+                        pcall(function() tween:Cancel() end)
+                        if connection then connection:Disconnect() end
+
+                        shouldTween = false
+                        _G.PhongdzIslandTravelActive = false
+                        return true, resetHops > 0 and "RESET_FLIGHT" or "FLIGHT"
+                    end
+
+                    if completed then
+                        break
+                    end
+
+                    task.wait()
+                end
+
+                if connection then
+                    connection:Disconnect()
+                    connection = nil
+                end
+
+                pcall(function()
+                    tween:Cancel()
+                end)
+
+                -- Recalculate from the real HRP position. If the leg was
+                -- interrupted, the next loop starts a fresh source-style leg.
+                shouldTween = true
+                task.wait(0.1)
+            end
+
+            shouldTween = false
+            _G.PhongdzIslandTravelActive = false
+            return false, "TRAVEL_TIMEOUT"
+        end "INVALID_TARGET"
+            end
+
+            _G.PhongdzIslandTravelActive = true
             StartSourceMovement()
 
             local deadline = os.clock() + 180
@@ -4726,7 +4910,7 @@ task.defer(function()
                 if ok and reached then
                     travel.Text = "ĐÃ TỚI: " .. selectedName
                 else
-                    travel.Text = "DI CHUYỂN LỖI: " .. tostring(mode or reached)
+                    travel.Text = "LỖI:" .. tostring(mode or reached)
                 end
 
                 task.wait(0.8)
