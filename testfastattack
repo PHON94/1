@@ -331,7 +331,7 @@ local Title = Instance.new("TextLabel")
 Title.Position = UDim2.fromOffset(18, 7)
 Title.Size = UDim2.fromOffset(300, 25)
 Title.BackgroundTransparency = 1
-Title.Text = "PHONGDZ HUB  v5.8"
+Title.Text = "PHONGDZ HUB  v5.5"
 Title.Font = Enum.Font.GothamBlack
 Title.TextSize = 19
 Title.TextColor3 = Color3.fromRGB(255, 211, 65)
@@ -2726,7 +2726,9 @@ local function StartSourceMovement()
 
             if (_G.AutoLevel or _G.PhongdzIslandTravelActive) and shouldTween then
                 if block and block.Parent == workspace then
-                    if (primary.Position - block.Position).Magnitude <= 200 then
+                    if _G.PhongdzIslandTravelActive then
+                        primary.CFrame = block.CFrame
+                    elseif (primary.Position - block.Position).Magnitude <= 200 then
                         primary.CFrame = block.CFrame
                     else
                         block.CFrame = primary.CFrame
@@ -2808,6 +2810,15 @@ local function TweenTo(target)
     tween:Play()
     return tween
 end
+
+-- Movement bridge for Island Travel.
+-- Island Travel is declared before FARM_SOURCE, so it cannot access these
+-- local movement functions directly.
+_G.PhongdzMovementCore = {
+    Start = StartSourceMovement,
+    TweenTo = TweenTo,
+    Stop = StopSourceMovement,
+}
 
 StartSourceMovement()
 
@@ -3800,6 +3811,171 @@ end)
 
 -- FARM_SOURCE ends after its persistent workers are installed.
 
+
+--===========================================================================
+-- SOURCE AUTO QUEST SEA 2 / SEA 3
+-- Runtime workers only; existing Quest & Item UI is preserved.
+--===========================================================================
+local function QuestMove(target)
+    local movement = _G.PhongdzMovementCore
+    if not movement or type(movement.TweenTo) ~= "function" then return false end
+    local ok = pcall(function() movement.Start(); movement.TweenTo(target) end)
+    return ok
+end
+local function QuestCombat(enable)
+    _G.FastAttack = enable == true
+end
+
+spawn(function()
+  while wait(Sec) do
+    pcall(function()
+      if _G.TravelDres then
+        if plr.Data.Level.Value >= 700 then
+          if workspace.Map.Ice.Door.CanCollide == true and workspace.Map.Ice.Door.Transparency == 0 then
+            replicated.Remotes.CommF_:InvokeServer("DressrosaQuestProgress","Detective")
+		    EquipWeapon("Key")
+		    repeat wait() QuestMove(CFrame.new(1347.7124, 37.3751602, -1325.6488)) until not _G.TravelDres or (Root.Position == CFrame.new(1347.7124, 37.3751602, -1325.6488).Position)
+	      elseif workspace.Map.Ice.Door.CanCollide == false and workspace.Map.Ice.Door.Transparency == 1 then
+            if Enemies:FindFirstChild("Ice Admiral") then
+              for _,xz in pairs(Enemies:GetChildren()) do
+                if xz.Name == "Ice Admiral" and Attack.Alive(xz) then
+              	  repeat task.wait() QuestMove(xz.HumanoidRootPart.CFrame * CFrame.new(0,20,0)); QuestCombat(true) until _G.TravelDres == false or xz.Humanoid.Health <= 0 or not xz.Parent
+                  QuestCombat(false)
+                  replicated.Remotes.CommF_:InvokeServer("TravelDressrosa")
+                end
+              end
+            else
+              QuestMove(CFrame.new(1347.7124, 37.3751602, -1325.6488))
+            end
+	      else
+		    replicated.Remotes.CommF_:InvokeServer("TravelDressrosa")
+	      end
+        end
+      end
+    end)
+  end
+end)
+
+local Check = 0
+spawn(function()
+  while wait(Sec) do
+    pcall(function()
+      if _G.AutoZou then
+   	    if plr.Data.Level.Value >= 1500 then
+          if replicated.Remotes.CommF_:InvokeServer("BartiloQuestProgress","Bartilo") == 3 then
+            if replicated.Remotes.CommF_:InvokeServer("GetUnlockables").FlamingoAccess ~= nil then
+              replicated.Remotes.CommF_:InvokeServer("F_","TravelZou")
+              if replicated.Remotes.CommF_:InvokeServer("ZQuestProgress", "Check") == 0 then
+                local v = GetConnectionEnemies("rip_indra")
+                if v then
+                  repeat wait() QuestMove(v.HumanoidRootPart.CFrame * CFrame.new(0,20,0)); QuestCombat(true) until not _G.AutoZou or not v.Parent or v.Humanoid.Health <= 0
+                  QuestCombat(false)
+                  Check = 2
+                  repeat wait()replicated.Remotes.CommF_:InvokeServer("F_","TravelZou")until Check == 1                   
+                else
+                  replicated.Remotes.CommF_:InvokeServer("F_","ZQuestProgress","Check") wait(.1)
+                  replicated.Remotes.CommF_:InvokeServer("F_","ZQuestProgress","Begin")
+                end
+              elseif replicated.Remotes["CommF_"]:InvokeServer("ZQuestProgress", "Check") == 1 then
+                replicated.Remotes.CommF_:InvokeServer("F_","TravelZou")
+              else
+                local v = GetConnectionEnemies("Don Swan")
+                if v then
+                  repeat wait() QuestMove(v.HumanoidRootPart.CFrame * CFrame.new(0,20,0)); QuestCombat(true)until not _G.AutoZou or not v.Parent or v.Humanoid.Health<=0                  
+                else
+                  repeat wait() QuestMove(CFrame.new(2288.802, 15.1870775, 863.034607)) until not _G.AutoZou or (Root.Position == CFrame.new(2288.802, 15.1870775, 863.034607).Position)
+                  if (Root.CFrame == CFrame.new(2288.802, 15.1870775, 863.034607)) then QuestMove(CFrame.new(2288.802, 15.1870775, 863.034607)) end
+                end
+              end
+            else
+            if replicated.Remotes.CommF_:InvokeServer("GetUnlockables").FlamingoAccess == nil then
+              TabelDevilFruitStore = {}
+              TabelDevilFruitOpen = {}
+              for i,v in pairs(replicated.Remotes["CommF_"]:InvokeServer("getInventoryFruits")) do
+                for i1,v1 in pairs(v) do
+                  if i1 == "Name" then table.insert(TabelDevilFruitStore,v1)end
+                end
+              end
+              for i,v in next, game.ReplicatedStorage:WaitForChild("Remotes").CommF_:InvokeServer("GetFruits") do
+                if v.Price >= 1000000 then table.insert(TabelDevilFruitOpen,v.Name) end
+              end
+              for i,DevilFruitOpenDoor in pairs(TabelDevilFruitOpen) do
+                for i1,DevilFruitStore in pairs(TabelDevilFruitStore) do
+                  if DevilFruitOpenDoor == DevilFruitStore and replicated.Remotes.CommF_:InvokeServer("GetUnlockables").FlamingoAccess == nil then
+                    if not plr.Backpack:FindFirstChild(DevilFruitStore) then
+                      replicated.Remotes.CommF_:InvokeServer("F_","LoadFruit",DevilFruitStore)
+                    else
+                      replicated.Remotes.CommF_:InvokeServer("F_","TalkTrevor","1")
+                      replicated.Remotes.CommF_:InvokeServer("F_","TalkTrevor","2")
+                      replicated.Remotes.CommF_:InvokeServer("F_","TalkTrevor","3")
+                    end
+                  end
+                end
+              end
+                replicated.Remotes.CommF_:InvokeServer("F_","TalkTrevor","1")
+                replicated.Remotes.CommF_:InvokeServer("F_","TalkTrevor","2")
+                replicated.Remotes.CommF_:InvokeServer("F_","TalkTrevor","3")
+              end
+            end
+          else
+            if replicated.Remotes.CommF_:InvokeServer("BartiloQuestProgress","Bartilo") == 0 then
+              if string.find(plr.PlayerGui.Main.Quest.Container.QuestTitle.Title.Text, "Swan Pirates") and string.find(plr.PlayerGui.Main.Quest.Container.QuestTitle.Title.Text, "50") and plr.PlayerGui.Main.Quest.Visible == true then                
+                local v = GetConnectionEnemies("Swan Pirate")
+                if v then
+                  pcall(function() repeat wait() QuestMove(v.HumanoidRootPart.CFrame * CFrame.new(0,20,0)); QuestCombat(true) until not v.Parent or v.Humanoid.Health <= 0 or _G.AutoZou == false or plr.PlayerGui.Main.Quest.Visible == false
+                    QuestCombat(false)
+                  end)                    
+                else
+                  QuestMove(CFrame.new(1057.92761, 137.614319, 1242.08069))
+                end
+              else
+                QuestMove(CFrame.new(-456.28952, 73.0200958, 299.895966))
+              end
+            elseif replicated.Remotes.CommF_:InvokeServer("BartiloQuestProgress","Bartilo") == 1 then
+              local v = GetConnectionEnemies("Jeremy")
+              if v then
+                repeat wait() QuestMove(v.HumanoidRootPart.CFrame * CFrame.new(0,20,0)); QuestCombat(true) until not v.Parent or v.Humanoid.Health <= 0 or _G.AutoZou == false
+              else
+                QuestMove(CFrame.new(2099.88159, 448.931, 648.997375))
+              end
+            elseif replicated.Remotes.CommF_:InvokeServer("BartiloQuestProgress","Bartilo") == 2 then
+              repeat wait() QuestMove(CFrame.new(-1836, 11, 1714)) until not _G.AutoZou or (Root.Position == CFrame.new(-1836, 11, 1714).Position)
+              if (Root.CFrame == CFrame.new(-1836, 11, 1714)) then QuestMove(CFrame.new(-1836, 11, 1714))end
+              notween(CFrame.new(-1850.49329, 13.1789551, 1750.89685))
+              wait(.1)
+              notween(CFrame.new(-1858.87305, 19.3777466, 1712.01807))
+              wait(.1)
+              notween(CFrame.new(-1803.94324, 16.5789185, 1750.89685))
+              wait(.1)
+              notween(CFrame.new(-1858.55835, 16.8604317, 1724.79541))
+              wait(.1)
+              notween(CFrame.new(-1869.54224, 15.987854, 1681.00659))
+              wait(.1)
+              notween(CFrame.new(-1800.0979, 16.4978027, 1684.52368))
+              wait(.1)
+              notween(CFrame.new(-1819.26343, 14.795166, 1717.90625))
+              wait(.1)
+              notween(CFrame.new(-1813.51843, 14.8604736, 1724.79541))
+            end
+          end
+        end
+      end
+    end)
+  end
+end)
+
+
+
+
+
+
+task.spawn(function()
+    while task.wait(0.1) do
+        if not _G.TravelDres and not _G.AutoZou and not _G.PhongdzFarmEnabled and not _G.AutoLevel then
+            _G.FastAttack = false
+        end
+    end
+end)
 ]=]
 
 _G.PhongdzFarmLoaded = false
@@ -4391,172 +4567,378 @@ task.spawn(function()
     end
 end)
 
-
--- PHONGDZ HUB v5.8 :: ISLAND TRAVEL (LATE LOADED)
--- This module is intentionally initialized only after the main UI exists.
--- It does not modify the menu bootstrap or the Farm/Quest/Local Player UI.
+-- PHONGDZ HUB v5.8 :: ISLAND TRAVEL
+-- Base: exact PhongdzHub_v5.0_SourceHighlight_NoGreen.lua
+-- Loaded only AFTER the v5.0 menu has yielded once.
+--===========================================================================
 
 task.defer(function()
-    task.wait(0.25)
+    task.wait()
 
-    local function getCharacter()
-        local c = LocalPlayer.Character
-        if not c then return nil, nil end
-        return c, c:FindFirstChild("HumanoidRootPart")
-    end
-
-    local function sourceTravel(targetCF, resetEnabled)
-        if typeof(targetCF) ~= "CFrame" then
-            return false, "INVALID_TARGET"
+    local ok, err = xpcall(function()
+        if not localPlayerPage or not localPlayerPage.Parent then
+            warn("[PhongdzHub][IslandTravel] Local Player page unavailable; skipped.")
+            return
         end
 
-        _G.PhongdzIslandTravelActive = true
+        local Players = game:GetService("Players")
+        local LocalPlayer = Players.LocalPlayer
 
-        local deadline = os.clock() + 180
-        local hops = 0
+        local function getWorld()
+            local id = game.PlaceId
+            if id == 2753915549 then return 1 end
+            if id == 4442272183 then return 2 end
+            if id == 7449423635 then return 3 end
+            return 1
+        end
 
-        while os.clock() < deadline do
-            local character, root = getCharacter()
-            if not root then
-                task.wait(0.25)
-                continue
+        -- Destinations are isolated here; no existing Farm/Quest code is changed.
+        local Islands = {
+            [1] = {
+                ["Pirates"] = CFrame.new(-2709.67944, 24.5206585, 2104.24585),
+                ["Jungle"] = CFrame.new(-1600, 36, 150),
+                ["Pirate Village"] = CFrame.new(-1100, 4, 3850),
+                ["Desert"] = CFrame.new(1090, 7, 4370),
+                ["Frozen Village"] = CFrame.new(1200, 28, -1500),
+                ["Marine Fortress"] = CFrame.new(-4500, 20, 4250),
+                ["Prison"] = CFrame.new(4875, 6, 735),
+                ["Colosseum"] = CFrame.new(-1500, 60, -290),
+                ["Magma Village"] = CFrame.new(-5200, 8, 8400),
+                ["Underwater City"] = CFrame.new(61160, 5, 1819),
+                ["Skylands"] = CFrame.new(-5000, 700, -2500)
+            },
+            [2] = {
+                ["Kingdom of Rose"] = CFrame.new(-321, 73, 297),
+                ["Green Zone"] = CFrame.new(-2447, 73, -3211),
+                ["Graveyard"] = CFrame.new(-9515, 142, 5536),
+                ["Snow Mountain"] = CFrame.new(561, 401, -5306),
+                ["Hot and Cold"] = CFrame.new(-6026, 15, -5062),
+                ["Cursed Ship"] = CFrame.new(902, 126, 33071),
+                ["Ice Castle"] = CFrame.new(6137, 294, -6747),
+                ["Forgotten Island"] = CFrame.new(-3043, 238, -10191)
+            },
+            [3] = {
+                ["Port Town"] = CFrame.new(-290, 44, 5450),
+                ["Hydra Island"] = CFrame.new(5228, 604, 345),
+                ["Great Tree"] = CFrame.new(2682, 1682, -7190),
+                ["Floating Turtle"] = CFrame.new(-12000, 331, -8500),
+                ["Haunted Castle"] = CFrame.new(-9515, 142, 5536),
+                ["Sea of Treats"] = CFrame.new(-1145, 13, -14450),
+                ["Tiki Outpost"] = CFrame.new(-16200, 90, -17300)
+            }
+        }
+
+        local world = getWorld()
+        local destinations = Islands[world]
+        local names = {}
+
+        for name in pairs(destinations) do
+            names[#names + 1] = name
+        end
+        table.sort(names)
+
+        local selectedName = names[1] or "N/A"
+        local moving = false
+        _G.PhongdzIslandTravelActive = false
+
+        -- Source-style island movement.
+        -- Reset Bypass remains inside the existing TweenTo() path.
+        -- Island Travel gets its own temporary follow flag and never enables Farm.
+        local function moveTo(cf)
+            if typeof(cf) ~= "CFrame" then
+                return false, "INVALID_TARGET"
             end
 
-            local distance = (root.Position - targetCF.Position).Magnitude
-            if distance <= 120 then
-                _G.PhongdzIslandTravelActive = false
-                return true, "ARRIVED"
-            end
+            _G.PhongdzIslandTravelActive = true
+            shouldTween = false
 
-            -- Source-style reset hop. The ResetBypass module itself chooses
-            -- the nearest useful intermediate spawn and respawns there.
-            if resetEnabled
-                and _G.PhongdzResetBypass
-                and _G.PhongdzResetBypass.IsEnabled
-                and _G.PhongdzResetBypass.IsEnabled()
-                and distance > 3500 then
+            local travelDeadline = os.clock() + 180
+            local resetHops = 0
 
-                local beforeCharacter = character
-                local beforePosition = root.Position
-
-                local ok, used = pcall(function()
-                    return _G.PhongdzResetBypass.Execute(targetCF)
-                end)
-
-                if ok and used then
-                    local changed = false
-                    local respawnDeadline = os.clock() + 10
-
-                    while os.clock() < respawnDeadline do
-                        task.wait(0.2)
-
-                        local c2, r2 = getCharacter()
-                        if r2 and (
-                            c2 ~= beforeCharacter
-                            or (r2.Position - beforePosition).Magnitude > 250
-                        ) then
-                            changed = true
-                            break
-                        end
-                    end
-
-                    if changed then
-                        hops += 1
-                        -- Re-enter the exact same target calculation.
-                        -- This is what permits island A -> island B -> target.
-                        task.wait(0.5)
-                        continue
-                    end
-                end
-
-                task.wait(0.5)
-            end
-
-            -- Use the existing source TweenTo only for the remaining leg.
-            -- Crucially, Island Travel owns the target and verifies real HRP
-            -- position; it never treats TweenTo() returning as arrival.
-            if type(TweenTo) == "function" then
-                shouldTween = true
-
-                local ok = pcall(function()
-                    TweenTo(targetCF)
-                end)
-
-                if not ok then
-                    shouldTween = false
-                    task.wait(0.3)
+            -- Multi-hop phase: exactly the source-style idea. A long trip
+            -- may use several reset hops. After every respawn, distance is
+            -- recalculated against the SAME destination CFrame.
+            while os.clock() < travelDeadline do
+                local character = LocalPlayer.Character
+                local root = character and character:FindFirstChild("HumanoidRootPart")
+                if not root then
+                    task.wait(0.2)
                     continue
                 end
 
-                local legDeadline = os.clock() + math.clamp(
-                    distance / 270 + 8,
-                    10,
-                    100
-                )
+                local distance = (cf.Position - root.Position).Magnitude
 
-                while os.clock() < legDeadline do
-                    local _, r3 = getCharacter()
-
-                    if r3 and (r3.Position - targetCF.Position).Magnitude <= 120 then
-                        shouldTween = false
-                        _G.PhongdzIslandTravelActive = false
-                        return true, hops > 0 and "RESET_THEN_FLIGHT" or "FLIGHT"
-                    end
-
-                    task.wait(0.1)
+                if distance <= 120 then
+                    shouldTween = false
+                    _G.PhongdzIslandTravelActive = false
+                    return true, resetHops > 0 and "RESET_FLIGHT" or "FLIGHT"
                 end
 
-                shouldTween = false
-            else
-                return false, "TWEEN_CORE_MISSING"
-            end
-        end
-
-        shouldTween = false
-        _G.PhongdzIslandTravelActive = false
-        return false, "TRAVEL_TIMEOUT"
-    end
-
-    -- Late binding: only attach the button logic if the Farm page created it.
-    -- No UI constructor is run here, so a movement failure can never prevent
-    -- the main menu from appearing.
-    local travelButton = _G.PhongdzIslandTravelButton
-    local getTarget = _G.PhongdzGetIslandTravelTarget
-
-    if travelButton and travelButton.MouseButton1Click and getTarget then
-        travelButton.MouseButton1Click:Connect(function()
-            if _G.PhongdzIslandTravelBusy then return end
-            _G.PhongdzIslandTravelBusy = true
-
-            task.spawn(function()
-                local targetName, targetCF = getTarget()
-
-                if not targetCF then
-                    travelButton.Text = "CHƯA CHỌN ĐẢO"
-                    task.wait(0.8)
-                    travelButton.Text = "DI CHUYỂN ĐẾN ĐẢO"
-                    _G.PhongdzIslandTravelBusy = false
-                    return
-                end
-
-                local resetEnabled =
-                    _G.PhongdzResetBypass
+                if _G.PhongdzResetBypass
                     and _G.PhongdzResetBypass.IsEnabled
                     and _G.PhongdzResetBypass.IsEnabled()
+                    and distance > 3500 then
 
-                local ok, result = sourceTravel(targetCF, resetEnabled)
+                    local ok, used = pcall(function()
+                        return _G.PhongdzResetBypass.Execute(cf)
+                    end)
 
-                if ok then
-                    travelButton.Text = "ĐÃ TỚI: " .. tostring(targetName)
-                else
-                    travelButton.Text = "LỖI: " .. tostring(result)
+                    if ok and used then
+                        resetHops += 1
+
+                        -- Wait for the respawn cycle to settle. Do NOT declare
+                        -- success here: the next loop recalculates the distance
+                        -- and may perform another hop, just like the source.
+                        local respawnDeadline = os.clock() + 9
+                        repeat
+                            task.wait(0.15)
+                            character = LocalPlayer.Character
+                            root = character and character:FindFirstChild("HumanoidRootPart")
+                        until os.clock() >= respawnDeadline or root ~= nil
+
+                        task.wait(0.5)
+                        continue
+                    end
+
+                    -- Execute() can reject a hop during its cooldown/busy
+                    -- window. Just wait and retry the same destination.
+                    task.wait(0.5)
+                    continue
                 end
 
-                task.wait(0.8)
-                travelButton.Text = "DI CHUYỂN ĐẾN ĐẢO"
-                _G.PhongdzIslandTravelBusy = false
+                -- Final/remaining leg: use the movement bridge exported by
+                -- FARM_SOURCE. The Island Travel block itself is above it.
+                local movement = _G.PhongdzMovementCore
+                if not movement
+                    or type(movement.Start) ~= "function"
+                    or type(movement.TweenTo) ~= "function" then
+                    local readyDeadline = os.clock() + 8
+                    repeat
+                        task.wait(0.1)
+                        movement = _G.PhongdzMovementCore
+                    until os.clock() >= readyDeadline
+                        or (movement
+                            and type(movement.Start) == "function"
+                            and type(movement.TweenTo) == "function")
+                end
+
+                if not movement
+                    or type(movement.Start) ~= "function"
+                    or type(movement.TweenTo) ~= "function" then
+                    shouldTween = false
+                    _G.PhongdzIslandTravelActive = false
+                    return false, "MOVEMENT_CORE_MISSING"
+                end
+
+                movement.Start()
+                shouldTween = true
+                local tweenOk = pcall(function()
+                    movement.TweenTo(cf)
+                end)
+
+                if not tweenOk then
+                    shouldTween = false
+                    _G.PhongdzIslandTravelActive = false
+                    return false, "TWEEN_ERROR"
+                end
+
+                local flightDeadline = os.clock() + math.clamp((distance / 300) + 8, 10, 100)
+                while os.clock() < flightDeadline do
+                    character = LocalPlayer.Character
+                    root = character and character:FindFirstChild("HumanoidRootPart")
+                    if root and (root.Position - cf.Position).Magnitude <= 120 then
+                        shouldTween = false
+                        _G.PhongdzIslandTravelActive = false
+                        return true, resetHops > 0 and "RESET_FLIGHT" or "FLIGHT"
+                    end
+                    task.wait()
+                end
+
+                -- Re-enter the main loop so the actual distance is measured
+                -- again before another flight/reset decision.
+                shouldTween = false
+            end
+
+            shouldTween = false
+            _G.PhongdzIslandTravelActive = false
+            return false, "TRAVEL_TIMEOUT"
+        end
+        local W = 0
+        pcall(function()
+            W = localPlayerPage.AbsoluteSize.X
+        end)
+        if W <= 0 then W = 330 end
+
+        local card = Instance.new("Frame")
+        card.Name = "IslandTravel"
+        card.Position = UDim2.fromOffset(3, 310)
+        card.Size = UDim2.new(1, -6, 0, 132)
+        card.BackgroundColor3 = Color3.fromRGB(22, 25, 33)
+        card.BorderSizePixel = 0
+        card.ZIndex = 80
+        card.Parent = localPlayerPage
+
+        local cc = Instance.new("UICorner")
+        cc.CornerRadius = UDim.new(0, 10)
+        cc.Parent = card
+
+        local title = Instance.new("TextLabel")
+        title.BackgroundTransparency = 1
+        title.Position = UDim2.fromOffset(13, 9)
+        title.Size = UDim2.new(1, -26, 0, 20)
+        title.Text = "ISLAND TRAVEL"
+        title.Font = Enum.Font.GothamBlack
+        title.TextSize = 11
+        title.TextColor3 = Color3.fromRGB(255, 211, 65)
+        title.TextXAlignment = Enum.TextXAlignment.Left
+        title.ZIndex = 81
+        title.Parent = card
+
+        local selector = Instance.new("TextButton")
+        selector.Position = UDim2.fromOffset(13, 36)
+        selector.Size = UDim2.new(1, -26, 0, 36)
+        selector.BackgroundColor3 = Color3.fromRGB(34, 38, 48)
+        selector.BorderSizePixel = 0
+        selector.Text = "ISLAND: " .. selectedName .. "  ▾"
+        selector.Font = Enum.Font.GothamBold
+        selector.TextSize = 9
+        selector.TextColor3 = Color3.fromRGB(225, 228, 235)
+        selector.AutoButtonColor = false
+        selector.ZIndex = 90
+        selector.Parent = card
+
+        local sc = Instance.new("UICorner")
+        sc.CornerRadius = UDim.new(0, 7)
+        sc.Parent = selector
+
+        local travel = Instance.new("TextButton")
+        travel.Position = UDim2.fromOffset(13, 80)
+        travel.Size = UDim2.new(1, -26, 0, 36)
+        travel.BackgroundColor3 = Color3.fromRGB(48, 52, 63)
+        travel.BorderSizePixel = 0
+        travel.Text = "DI CHUYỂN ĐẾN ĐẢO"
+        travel.Font = Enum.Font.GothamBlack
+        travel.TextSize = 9
+        travel.TextColor3 = Color3.fromRGB(225, 228, 235)
+        travel.AutoButtonColor = false
+        travel.ZIndex = 90
+        travel.Parent = card
+
+        local tc = Instance.new("UICorner")
+        tc.CornerRadius = UDim.new(0, 7)
+        tc.Parent = travel
+
+        local drop = Instance.new("ScrollingFrame")
+        drop.Name = "IslandDropdown"
+        drop.Position = UDim2.fromOffset(13, 74)
+        drop.Size = UDim2.new(1, -26, 0, 0)
+        drop.BackgroundColor3 = Color3.fromRGB(27, 30, 38)
+        drop.BorderSizePixel = 0
+        drop.Visible = false
+        drop.ScrollBarThickness = 3
+        drop.CanvasSize = UDim2.fromOffset(0, 0)
+        drop.ZIndex = 200
+        drop.Parent = card
+
+        local dc = Instance.new("UICorner")
+        dc.CornerRadius = UDim.new(0, 7)
+        dc.Parent = drop
+
+        local function rebuild()
+            for _, child in ipairs(drop:GetChildren()) do
+                if child:IsA("TextButton") then child:Destroy() end
+            end
+
+            local row = 31
+            for i, name in ipairs(names) do
+                local b = Instance.new("TextButton")
+                b.Position = UDim2.fromOffset(4, (i - 1) * row + 4)
+                b.Size = UDim2.new(1, -8, 0, row - 3)
+                b.BackgroundColor3 = name == selectedName
+                    and Color3.fromRGB(64, 145, 91)
+                    or Color3.fromRGB(35, 39, 49)
+                b.BorderSizePixel = 0
+                b.Text = name
+                b.Font = Enum.Font.GothamMedium
+                b.TextSize = 8
+                b.TextColor3 = Color3.fromRGB(230, 233, 240)
+                b.AutoButtonColor = false
+                b.ZIndex = 210
+                b.Parent = drop
+
+                local bc = Instance.new("UICorner")
+                bc.CornerRadius = UDim.new(0, 5)
+                bc.Parent = b
+
+                b.Activated:Connect(function()
+                    selectedName = name
+                    selector.Text = "ISLAND: " .. selectedName .. "  ▾"
+                    drop.Visible = false
+                    drop.Size = UDim2.new(1, -26, 0, 0)
+                    travel.Position = UDim2.fromOffset(13, 80)
+                    card.Size = UDim2.new(1, -6, 0, 132)
+                end)
+            end
+
+            drop.CanvasSize = UDim2.fromOffset(0, #names * row + 8)
+        end
+
+        selector.Activated:Connect(function()
+            if moving then return end
+
+            if not drop.Visible then
+                rebuild()
+                drop.Visible = true
+                drop.Size = UDim2.new(1, -26, 0, math.min(#names * 31 + 8, 155))
+                travel.Position = UDim2.fromOffset(
+                    13,
+                    80 + math.min(#names * 31 + 8, 155) + 7
+                )
+                card.Size = UDim2.new(
+                    1, -6,
+                    0,
+                    132 + math.min(#names * 31 + 8, 155) + 7
+                )
+            else
+                drop.Visible = false
+                drop.Size = UDim2.new(1, -26, 0, 0)
+                travel.Position = UDim2.fromOffset(13, 80)
+                card.Size = UDim2.new(1, -6, 0, 132)
+            end
+        end)
+
+        travel.Activated:Connect(function()
+            if moving then return end
+
+            local target = destinations[selectedName]
+            if not target then return end
+
+            moving = true
+            travel.Text = "ĐANG DI CHUYỂN..."
+            travel.BackgroundColor3 = Color3.fromRGB(64, 145, 91)
+
+            task.spawn(function()
+                local callOk, reached, reason = pcall(function()
+                    return moveTo(target)
+                end)
+
+                if not callOk then
+                    travel.Text = "DI CHUYỂN LỖI"
+                elseif reached then
+                    travel.Text = "ĐÃ TỚI: " .. selectedName
+                else
+                    travel.Text = "DI CHUYỂN LỖI: " .. tostring(reason or "TIMEOUT")
+                end
+
+                task.wait(0.6)
+                travel.Text = "DI CHUYỂN ĐẾN ĐẢO"
+                travel.BackgroundColor3 = Color3.fromRGB(48, 52, 63)
+                moving = false
             end)
         end)
+    end, debug.traceback)
+
+    if not ok then
+        warn("[PhongdzHub][IslandTravel] Disabled safely:", err)
     end
 end)
-
