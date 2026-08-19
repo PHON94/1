@@ -331,7 +331,7 @@ local Title = Instance.new("TextLabel")
 Title.Position = UDim2.fromOffset(18, 7)
 Title.Size = UDim2.fromOffset(300, 25)
 Title.BackgroundTransparency = 1
-Title.Text = "PHONGDZ HUB  v5.7"
+Title.Text = "PHONGDZ HUB  v5.8"
 Title.Font = Enum.Font.GothamBlack
 Title.TextSize = 19
 Title.TextColor3 = Color3.fromRGB(255, 211, 65)
@@ -4391,537 +4391,172 @@ task.spawn(function()
     end
 end)
 
--- PHONGDZ HUB v5.5 :: ISLAND TRAVEL
--- Base: exact PhongdzHub_v5.0_SourceHighlight_NoGreen.lua
--- Loaded only AFTER the v5.0 menu has yielded once.
---===========================================================================
+
+-- PHONGDZ HUB v5.8 :: ISLAND TRAVEL (LATE LOADED)
+-- This module is intentionally initialized only after the main UI exists.
+-- It does not modify the menu bootstrap or the Farm/Quest/Local Player UI.
 
 task.defer(function()
-    task.wait()
+    task.wait(0.25)
 
-    local ok, err = xpcall(function()
-        if not localPlayerPage or not localPlayerPage.Parent then
-            warn("[PhongdzHub][IslandTravel] Local Player page unavailable; skipped.")
-            return
+    local function getCharacter()
+        local c = LocalPlayer.Character
+        if not c then return nil, nil end
+        return c, c:FindFirstChild("HumanoidRootPart")
+    end
+
+    local function sourceTravel(targetCF, resetEnabled)
+        if typeof(targetCF) ~= "CFrame" then
+            return false, "INVALID_TARGET"
         end
 
-        local Players = game:GetService("Players")
-        local LocalPlayer = Players.LocalPlayer
+        _G.PhongdzIslandTravelActive = true
 
-        local function getWorld()
-            local id = game.PlaceId
-            if id == 2753915549 then return 1 end
-            if id == 4442272183 then return 2 end
-            if id == 7449423635 then return 3 end
-            return 1
-        end
+        local deadline = os.clock() + 180
+        local hops = 0
 
-        -- Destinations are isolated here; no existing Farm/Quest code is changed.
-        local Islands = {
-            [1] = {
-                ["Pirates"] = CFrame.new(-2709.67944, 24.5206585, 2104.24585),
-                ["Jungle"] = CFrame.new(-1600, 36, 150),
-                ["Pirate Village"] = CFrame.new(-1100, 4, 3850),
-                ["Desert"] = CFrame.new(1090, 7, 4370),
-                ["Frozen Village"] = CFrame.new(1200, 28, -1500),
-                ["Marine Fortress"] = CFrame.new(-4500, 20, 4250),
-                ["Prison"] = CFrame.new(4875, 6, 735),
-                ["Colosseum"] = CFrame.new(-1500, 60, -290),
-                ["Magma Village"] = CFrame.new(-5200, 8, 8400),
-                ["Underwater City"] = CFrame.new(61160, 5, 1819),
-                ["Skylands"] = CFrame.new(-5000, 700, -2500)
-            },
-            [2] = {
-                ["Kingdom of Rose"] = CFrame.new(-321, 73, 297),
-                ["Green Zone"] = CFrame.new(-2447, 73, -3211),
-                ["Graveyard"] = CFrame.new(-9515, 142, 5536),
-                ["Snow Mountain"] = CFrame.new(561, 401, -5306),
-                ["Hot and Cold"] = CFrame.new(-6026, 15, -5062),
-                ["Cursed Ship"] = CFrame.new(902, 126, 33071),
-                ["Ice Castle"] = CFrame.new(6137, 294, -6747),
-                ["Forgotten Island"] = CFrame.new(-3043, 238, -10191)
-            },
-            [3] = {
-                ["Port Town"] = CFrame.new(-290, 44, 5450),
-                ["Hydra Island"] = CFrame.new(5228, 604, 345),
-                ["Great Tree"] = CFrame.new(2682, 1682, -7190),
-                ["Floating Turtle"] = CFrame.new(-12000, 331, -8500),
-                ["Haunted Castle"] = CFrame.new(-9515, 142, 5536),
-                ["Sea of Treats"] = CFrame.new(-1145, 13, -14450),
-                ["Tiki Outpost"] = CFrame.new(-16200, 90, -17300)
-            }
-        }
-
-        local world = getWorld()
-        local destinations = Islands[world]
-        local names = {}
-
-        for name in pairs(destinations) do
-            names[#names + 1] = name
-        end
-        table.sort(names)
-
-        local selectedName = names[1] or "N/A"
-        local moving = false
-        _G.PhongdzIslandTravelActive = false
-
-        -- Source-style island movement.
-        -- Reset Bypass remains inside the existing TweenTo() path.
-        -- Island Travel gets its own temporary follow flag and never enables Farm.
-        local function moveTo(cf)
-            if typeof(cf) ~= "CFrame" then
-                return false, "INVALID_TARGET"
+        while os.clock() < deadline do
+            local character, root = getCharacter()
+            if not root then
+                task.wait(0.25)
+                continue
             end
 
-            _G.PhongdzIslandTravelActive = true
-            shouldTween = true
-            StartSourceMovement()
-
-            local deadline = os.clock() + 180
-            local resetHops = 0
-
-            while os.clock() < deadline do
-                local character = LocalPlayer.Character
-                local root = character and character:FindFirstChild("HumanoidRootPart")
-
-                if not root then
-                    task.wait(0.2)
-                    continue
-                end
-
-                local distance = (cf.Position - root.Position).Magnitude
-
-                if distance <= 120 then
-                    shouldTween = false
-                    _G.PhongdzIslandTravelActive = false
-                    return true, resetHops > 0 and "RESET_FLIGHT" or "FLIGHT"
-                end
-
-                -- Use the source Reset Bypass directly instead of relying on
-                -- TweenTo()'s nil return value. This removes the ambiguity that
-                -- caused Island Travel to enter the error path.
-                if _G.PhongdzResetBypass
-                    and _G.PhongdzResetBypass.IsEnabled
-                    and _G.PhongdzResetBypass.IsEnabled()
-                    and distance > 3500 then
-
-                    local beforeCharacter = character
-                    local beforePosition = root.Position
-
-                    local resetOK, resetUsed = pcall(function()
-                        return _G.PhongdzResetBypass.Execute(cf)
-                    end)
-
-                    if resetOK and resetUsed then
-                        local hopDeadline = os.clock() + 10
-                        local hopped = false
-
-                        while os.clock() < hopDeadline do
-                            task.wait(0.15)
-
-                            local charNow = LocalPlayer.Character
-                            local rootNow = charNow
-                                and charNow:FindFirstChild("HumanoidRootPart")
-
-                            if rootNow
-                                and (
-                                    charNow ~= beforeCharacter
-                                    or (rootNow.Position - beforePosition).Magnitude > 300
-                                ) then
-                                hopped = true
-                                break
-                            end
-                        end
-
-                        if hopped then
-                            resetHops += 1
-                            -- The source ResetBypass releases Busy/LastTarget
-                            -- after its respawn cycle. Recalculate distance and
-                            -- allow another intermediate reset hop.
-                            task.wait(0.4)
-                            shouldTween = true
-                            continue
-                        end
-
-                        -- Execute succeeded but the character did not move yet.
-                        -- Give the source respawn cycle a little more time.
-                        task.wait(1)
-                        continue
-                    end
-
-                    -- Reset unavailable/cooldown: fall through to normal source
-                    -- movement instead of reporting an immediate error.
-                end
-
-                -- Exact source-style block movement, without calling TweenTo().
-                -- TweenTo() itself contains Reset Bypass and can return nil,
-                -- which was the root of the previous Island Travel failure.
-                if not block or block.Parent ~= workspace then
-                    shouldTween = false
-                    StartSourceMovement()
-                    task.wait(0.1)
-                end
-
-                shouldTween = true
-
-                local currentRoot = LocalPlayer.Character
-                    and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-
-                if not currentRoot then
-                    task.wait(0.2)
-                    continue
-                end
-
-                local legDistance = (cf.Position - currentRoot.Position).Magnitude
-                if legDistance <= 120 then
-                    shouldTween = false
-                    _G.PhongdzIslandTravelActive = false
-                    return true, resetHops > 0 and "RESET_FLIGHT" or "FLIGHT"
-                end
-
-                local tweenInfo = TweenInfo.new(
-                    math.max(0.15, legDistance / 300),
-                    Enum.EasingStyle.Linear
-                )
-
-                local tweenOK, tween = pcall(function()
-                    return TweenService:Create(
-                        block,
-                        tweenInfo,
-                        {CFrame = cf}
-                    )
-                end)
-
-                if not tweenOK or not tween then
-                    shouldTween = false
-                    task.wait(0.25)
-                    continue
-                end
-
-                local completed = false
-                local connection
-
-                connection = tween.Completed:Connect(function()
-                    completed = true
-                    if connection then
-                        connection:Disconnect()
-                        connection = nil
-                    end
-                end)
-
-                tween:Play()
-
-                local legDeadline = os.clock()
-                    + math.clamp((legDistance / 300) + 8, 10, 110)
-
-                while os.clock() < legDeadline do
-                    local charNow = LocalPlayer.Character
-                    local rootNow = charNow
-                        and charNow:FindFirstChild("HumanoidRootPart")
-
-                    if rootNow
-                        and (rootNow.Position - cf.Position).Magnitude <= 120 then
-                        pcall(function() tween:Cancel() end)
-                        if connection then connection:Disconnect() end
-
-                        shouldTween = false
-                        _G.PhongdzIslandTravelActive = false
-                        return true, resetHops > 0 and "RESET_FLIGHT" or "FLIGHT"
-                    end
-
-                    if completed then
-                        break
-                    end
-
-                    task.wait()
-                end
-
-                if connection then
-                    connection:Disconnect()
-                    connection = nil
-                end
-
-                pcall(function()
-                    tween:Cancel()
-                end)
-
-                -- Recalculate from the real HRP position. If the leg was
-                -- interrupted, the next loop starts a fresh source-style leg.
-                shouldTween = true
-                task.wait(0.1)
+            local distance = (root.Position - targetCF.Position).Magnitude
+            if distance <= 120 then
+                _G.PhongdzIslandTravelActive = false
+                return true, "ARRIVED"
             end
 
-            shouldTween = false
-            _G.PhongdzIslandTravelActive = false
-            return false, "TRAVEL_TIMEOUT"
-        end "INVALID_TARGET"
-            end
+            -- Source-style reset hop. The ResetBypass module itself chooses
+            -- the nearest useful intermediate spawn and respawns there.
+            if resetEnabled
+                and _G.PhongdzResetBypass
+                and _G.PhongdzResetBypass.IsEnabled
+                and _G.PhongdzResetBypass.IsEnabled()
+                and distance > 3500 then
 
-            _G.PhongdzIslandTravelActive = true
-            StartSourceMovement()
-
-            local deadline = os.clock() + 180
-            local resetHops = 0
-
-            while os.clock() < deadline do
-                local character = LocalPlayer.Character
-                local root = character and character:FindFirstChild("HumanoidRootPart")
-                if not root then
-                    task.wait(0.2)
-                    continue
-                end
-
-                local distance = (cf.Position - root.Position).Magnitude
-                if distance <= 120 then
-                    shouldTween = false
-                    _G.PhongdzIslandTravelActive = false
-                    return true, resetHops > 0 and "RESET_FLIGHT" or "FLIGHT"
-                end
-
-                -- Use the source movement entry point for every leg. TweenTo()
-                -- itself decides whether Reset Bypass can perform the next long
-                -- distance hop or whether it should tween the source block.
                 local beforeCharacter = character
                 local beforePosition = root.Position
-                local beforeDistance = distance
 
-                local callOk, tweenOrNil = pcall(TweenTo, cf)
-                if not callOk then
-                    shouldTween = false
-                    _G.PhongdzIslandTravelActive = false
-                    return false, "TWEEN_ERROR"
-                end
+                local ok, used = pcall(function()
+                    return _G.PhongdzResetBypass.Execute(targetCF)
+                end)
 
-                if tweenOrNil == nil and _G.PhongdzResetBypass
-                    and _G.PhongdzResetBypass.IsEnabled
-                    and _G.PhongdzResetBypass.IsEnabled() then
+                if ok and used then
+                    local changed = false
+                    local respawnDeadline = os.clock() + 10
 
-                    -- Source Reset Bypass performed/attempted a respawn hop.
-                    -- Wait for a new character or a meaningful position change,
-                    -- then recalculate the same destination. This allows
-                    -- island -> intermediate island -> next reset -> target.
-                    local hopDeadline = os.clock() + 12
-                    local hopped = false
-                    while os.clock() < hopDeadline do
-                        task.wait(0.15)
-                        local charNow = LocalPlayer.Character
-                        local rootNow = charNow and charNow:FindFirstChild("HumanoidRootPart")
-                        if rootNow and (charNow ~= beforeCharacter
-                            or (rootNow.Position - beforePosition).Magnitude > 500) then
-                            hopped = true
+                    while os.clock() < respawnDeadline do
+                        task.wait(0.2)
+
+                        local c2, r2 = getCharacter()
+                        if r2 and (
+                            c2 ~= beforeCharacter
+                            or (r2.Position - beforePosition).Magnitude > 250
+                        ) then
+                            changed = true
                             break
                         end
                     end
 
-                    if hopped then
-                        resetHops += 1
-                        task.wait(0.35)
+                    if changed then
+                        hops += 1
+                        -- Re-enter the exact same target calculation.
+                        -- This is what permits island A -> island B -> target.
+                        task.wait(0.5)
                         continue
                     end
+                end
 
-                    -- Reset was unavailable/cooldown locked; retry through the
-                    -- source controller after a short delay instead of claiming
-                    -- arrival.
-                    task.wait(0.75)
+                task.wait(0.5)
+            end
+
+            -- Use the existing source TweenTo only for the remaining leg.
+            -- Crucially, Island Travel owns the target and verifies real HRP
+            -- position; it never treats TweenTo() returning as arrival.
+            if type(TweenTo) == "function" then
+                shouldTween = true
+
+                local ok = pcall(function()
+                    TweenTo(targetCF)
+                end)
+
+                if not ok then
+                    shouldTween = false
+                    task.wait(0.3)
                     continue
                 end
 
-                -- Normal source block tween. The Heartbeat controller follows
-                -- block while IslandTravelActive is true. Wait for REAL HRP
-                -- position, never for pcall success alone.
-                local flightDeadline = os.clock() + math.clamp((beforeDistance / 300) + 10, 12, 110)
-                while os.clock() < flightDeadline do
-                    local charNow = LocalPlayer.Character
-                    local rootNow = charNow and charNow:FindFirstChild("HumanoidRootPart")
-                    if rootNow and (rootNow.Position - cf.Position).Magnitude <= 120 then
+                local legDeadline = os.clock() + math.clamp(
+                    distance / 270 + 8,
+                    10,
+                    100
+                )
+
+                while os.clock() < legDeadline do
+                    local _, r3 = getCharacter()
+
+                    if r3 and (r3.Position - targetCF.Position).Magnitude <= 120 then
                         shouldTween = false
                         _G.PhongdzIslandTravelActive = false
-                        return true, resetHops > 0 and "RESET_FLIGHT" or "FLIGHT"
+                        return true, hops > 0 and "RESET_THEN_FLIGHT" or "FLIGHT"
                     end
-                    task.wait()
+
+                    task.wait(0.1)
                 end
 
-                -- A leg can be interrupted by a respawn/other source action.
-                -- Measure again rather than declaring success.
                 shouldTween = false
-            end
-
-            shouldTween = false
-            _G.PhongdzIslandTravelActive = false
-            return false, "TRAVEL_TIMEOUT"
-        end
-        local W = 0
-        pcall(function()
-            W = localPlayerPage.AbsoluteSize.X
-        end)
-        if W <= 0 then W = 330 end
-
-        local card = Instance.new("Frame")
-        card.Name = "IslandTravel"
-        card.Position = UDim2.fromOffset(3, 310)
-        card.Size = UDim2.new(1, -6, 0, 132)
-        card.BackgroundColor3 = Color3.fromRGB(22, 25, 33)
-        card.BorderSizePixel = 0
-        card.ZIndex = 80
-        card.Parent = localPlayerPage
-
-        local cc = Instance.new("UICorner")
-        cc.CornerRadius = UDim.new(0, 10)
-        cc.Parent = card
-
-        local title = Instance.new("TextLabel")
-        title.BackgroundTransparency = 1
-        title.Position = UDim2.fromOffset(13, 9)
-        title.Size = UDim2.new(1, -26, 0, 20)
-        title.Text = "ISLAND TRAVEL"
-        title.Font = Enum.Font.GothamBlack
-        title.TextSize = 11
-        title.TextColor3 = Color3.fromRGB(255, 211, 65)
-        title.TextXAlignment = Enum.TextXAlignment.Left
-        title.ZIndex = 81
-        title.Parent = card
-
-        local selector = Instance.new("TextButton")
-        selector.Position = UDim2.fromOffset(13, 36)
-        selector.Size = UDim2.new(1, -26, 0, 36)
-        selector.BackgroundColor3 = Color3.fromRGB(34, 38, 48)
-        selector.BorderSizePixel = 0
-        selector.Text = "ISLAND: " .. selectedName .. "  ▾"
-        selector.Font = Enum.Font.GothamBold
-        selector.TextSize = 9
-        selector.TextColor3 = Color3.fromRGB(225, 228, 235)
-        selector.AutoButtonColor = false
-        selector.ZIndex = 90
-        selector.Parent = card
-
-        local sc = Instance.new("UICorner")
-        sc.CornerRadius = UDim.new(0, 7)
-        sc.Parent = selector
-
-        local travel = Instance.new("TextButton")
-        travel.Position = UDim2.fromOffset(13, 80)
-        travel.Size = UDim2.new(1, -26, 0, 36)
-        travel.BackgroundColor3 = Color3.fromRGB(48, 52, 63)
-        travel.BorderSizePixel = 0
-        travel.Text = "DI CHUYỂN ĐẾN ĐẢO"
-        travel.Font = Enum.Font.GothamBlack
-        travel.TextSize = 9
-        travel.TextColor3 = Color3.fromRGB(225, 228, 235)
-        travel.AutoButtonColor = false
-        travel.ZIndex = 90
-        travel.Parent = card
-
-        local tc = Instance.new("UICorner")
-        tc.CornerRadius = UDim.new(0, 7)
-        tc.Parent = travel
-
-        local drop = Instance.new("ScrollingFrame")
-        drop.Name = "IslandDropdown"
-        drop.Position = UDim2.fromOffset(13, 74)
-        drop.Size = UDim2.new(1, -26, 0, 0)
-        drop.BackgroundColor3 = Color3.fromRGB(27, 30, 38)
-        drop.BorderSizePixel = 0
-        drop.Visible = false
-        drop.ScrollBarThickness = 3
-        drop.CanvasSize = UDim2.fromOffset(0, 0)
-        drop.ZIndex = 200
-        drop.Parent = card
-
-        local dc = Instance.new("UICorner")
-        dc.CornerRadius = UDim.new(0, 7)
-        dc.Parent = drop
-
-        local function rebuild()
-            for _, child in ipairs(drop:GetChildren()) do
-                if child:IsA("TextButton") then child:Destroy() end
-            end
-
-            local row = 31
-            for i, name in ipairs(names) do
-                local b = Instance.new("TextButton")
-                b.Position = UDim2.fromOffset(4, (i - 1) * row + 4)
-                b.Size = UDim2.new(1, -8, 0, row - 3)
-                b.BackgroundColor3 = name == selectedName
-                    and Color3.fromRGB(64, 145, 91)
-                    or Color3.fromRGB(35, 39, 49)
-                b.BorderSizePixel = 0
-                b.Text = name
-                b.Font = Enum.Font.GothamMedium
-                b.TextSize = 8
-                b.TextColor3 = Color3.fromRGB(230, 233, 240)
-                b.AutoButtonColor = false
-                b.ZIndex = 210
-                b.Parent = drop
-
-                local bc = Instance.new("UICorner")
-                bc.CornerRadius = UDim.new(0, 5)
-                bc.Parent = b
-
-                b.Activated:Connect(function()
-                    selectedName = name
-                    selector.Text = "ISLAND: " .. selectedName .. "  ▾"
-                    drop.Visible = false
-                    drop.Size = UDim2.new(1, -26, 0, 0)
-                    travel.Position = UDim2.fromOffset(13, 80)
-                    card.Size = UDim2.new(1, -6, 0, 132)
-                end)
-            end
-
-            drop.CanvasSize = UDim2.fromOffset(0, #names * row + 8)
-        end
-
-        selector.Activated:Connect(function()
-            if moving then return end
-
-            if not drop.Visible then
-                rebuild()
-                drop.Visible = true
-                drop.Size = UDim2.new(1, -26, 0, math.min(#names * 31 + 8, 155))
-                travel.Position = UDim2.fromOffset(
-                    13,
-                    80 + math.min(#names * 31 + 8, 155) + 7
-                )
-                card.Size = UDim2.new(
-                    1, -6,
-                    0,
-                    132 + math.min(#names * 31 + 8, 155) + 7
-                )
             else
-                drop.Visible = false
-                drop.Size = UDim2.new(1, -26, 0, 0)
-                travel.Position = UDim2.fromOffset(13, 80)
-                card.Size = UDim2.new(1, -6, 0, 132)
+                return false, "TWEEN_CORE_MISSING"
             end
-        end)
+        end
 
-        travel.Activated:Connect(function()
-            if moving then return end
+        shouldTween = false
+        _G.PhongdzIslandTravelActive = false
+        return false, "TRAVEL_TIMEOUT"
+    end
 
-            local target = destinations[selectedName]
-            if not target then return end
+    -- Late binding: only attach the button logic if the Farm page created it.
+    -- No UI constructor is run here, so a movement failure can never prevent
+    -- the main menu from appearing.
+    local travelButton = _G.PhongdzIslandTravelButton
+    local getTarget = _G.PhongdzGetIslandTravelTarget
 
-            moving = true
-            travel.Text = "ĐANG DI CHUYỂN..."
-            travel.BackgroundColor3 = Color3.fromRGB(64, 145, 91)
+    if travelButton and travelButton.MouseButton1Click and getTarget then
+        travelButton.MouseButton1Click:Connect(function()
+            if _G.PhongdzIslandTravelBusy then return end
+            _G.PhongdzIslandTravelBusy = true
 
             task.spawn(function()
-                local ok, reached, mode = pcall(moveTo, target)
+                local targetName, targetCF = getTarget()
 
-                if ok and reached then
-                    travel.Text = "ĐÃ TỚI: " .. selectedName
+                if not targetCF then
+                    travelButton.Text = "CHƯA CHỌN ĐẢO"
+                    task.wait(0.8)
+                    travelButton.Text = "DI CHUYỂN ĐẾN ĐẢO"
+                    _G.PhongdzIslandTravelBusy = false
+                    return
+                end
+
+                local resetEnabled =
+                    _G.PhongdzResetBypass
+                    and _G.PhongdzResetBypass.IsEnabled
+                    and _G.PhongdzResetBypass.IsEnabled()
+
+                local ok, result = sourceTravel(targetCF, resetEnabled)
+
+                if ok then
+                    travelButton.Text = "ĐÃ TỚI: " .. tostring(targetName)
                 else
-                    travel.Text = "LỖI:" .. tostring(mode or reached)
+                    travelButton.Text = "LỖI: " .. tostring(result)
                 end
 
                 task.wait(0.8)
-                travel.Text = "DI CHUYỂN ĐẾN ĐẢO"
-                travel.BackgroundColor3 = Color3.fromRGB(48, 52, 63)
-                moving = false
+                travelButton.Text = "DI CHUYỂN ĐẾN ĐẢO"
+                _G.PhongdzIslandTravelBusy = false
             end)
         end)
-    end, debug.traceback)
-
-    if not ok then
-        warn("[PhongdzHub][IslandTravel] Disabled safely:", err)
     end
 end)
+
