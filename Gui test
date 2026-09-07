@@ -49,3 +49,171 @@ Tabs.Farming:AddToggle("StartFarmToggle", {
 
 -- Ép menu tự động hiển thị tab đầu tiên ngay khi kích hoạt xong
 Window:SelectTab(1)
+
+-- =========================
+-- Minimizer (CHỈ GUI) - bắt đầu
+-- Dán ngay sau khi tạo Window/Tabs: tạo icon tròn draggable để thu nhỏ/hiện GUI Fluent
+-- =========================
+local Players = game:GetService("Players")
+local UIS = game:GetService("UserInputService")
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+local CoreGui = game:GetService("CoreGui")
+
+-- Tìm ScreenGui do Fluent tạo (không sửa GUI Fluent, chỉ dò để toggle)
+local function findFluentScreenGui()
+    local targets = { PlayerGui, CoreGui }
+    local patterns = { "Blox Fruit Premium Menu", "Bản Sạch", "Blox Fruit" }
+    for _, parent in ipairs(targets) do
+        for _, child in ipairs(parent:GetChildren()) do
+            if child:IsA("ScreenGui") then
+                for _, d in ipairs(child:GetDescendants()) do
+                    if (d:IsA("TextLabel") or d:IsA("TextButton")) and d.Text and d.Text ~= "" then
+                        for _, p in ipairs(patterns) do
+                            if tostring(d.Text):match(p) then
+                                return child
+                            end
+                        end
+                    end
+                end
+            end
+        end
+    end
+    -- fallback nhẹ: ScreenGui có nhiều descendants (có thể là UI lớn)
+    for _, parent in ipairs(targets) do
+        for _, child in ipairs(parent:GetChildren()) do
+            if child:IsA("ScreenGui") and #child:GetDescendants() > 10 then
+                return child
+            end
+        end
+    end
+    return nil
+end
+
+-- Tạo minimizer GUI (riêng, không can thiệp GUI Fluent)
+local minimizerGui = Instance.new("ScreenGui")
+minimizerGui.Name = "BFP_Minimizer"
+minimizerGui.ResetOnSpawn = false
+minimizerGui.Parent = PlayerGui
+
+local btn = Instance.new("ImageButton")
+btn.Name = "MinimizeButton"
+btn.Parent = minimizerGui
+btn.Size = UDim2.new(0, 48, 0, 48)
+btn.Position = UDim2.new(0, 10, 0, 120) -- chỉnh vị trí mặc định nếu cần
+btn.AnchorPoint = Vector2.new(0, 0)
+btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+btn.BorderSizePixel = 0
+btn.AutoButtonColor = true
+btn.Image = "" -- đặt đường dẫn ảnh nếu bạn muốn icon hình ảnh
+btn.Visible = true
+
+local corner = Instance.new("UICorner", btn)
+corner.CornerRadius = UDim.new(1, 0) -- tròn hoàn toàn
+
+local label = Instance.new("TextLabel", btn)
+label.Size = UDim2.new(1, 0, 1, 0)
+label.BackgroundTransparency = 1
+label.Text = "-" -- "-" khi menu hiện, "+" khi ẩn
+label.TextColor3 = Color3.fromRGB(255,255,255)
+label.TextScaled = true
+label.Font = Enum.Font.SourceSansSemibold
+
+-- Drag logic (mouse + touch)
+local dragging = false
+local dragInput, dragStart, startPos
+
+btn.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        dragging = true
+        dragStart = input.Position
+        startPos = btn.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then
+                dragging = false
+            end
+        end)
+    end
+end)
+
+btn.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+        dragInput = input
+    end
+end)
+
+UIS.InputChanged:Connect(function(input)
+    if input == dragInput and dragging and dragStart and startPos then
+        local delta = input.Position - dragStart
+        btn.Position = UDim2.new(
+            startPos.X.Scale,
+            startPos.X.Offset + delta.X,
+            startPos.Y.Scale,
+            startPos.Y.Offset + delta.Y
+        )
+    end
+end)
+
+-- Helpers để toggle Fluent GUI an toàn (không sửa Fluent)
+local function setGuiVisible(gui, visible)
+    if not gui then return end
+    if gui:IsA("ScreenGui") and gui.Enabled ~= nil then
+        gui.Enabled = visible
+        return
+    end
+    for _, v in ipairs(gui:GetDescendants()) do
+        if v:IsA("GuiObject") then
+            v.Visible = visible
+        end
+    end
+end
+
+local function getGuiVisible(gui)
+    if not gui then return true end
+    if gui:IsA("ScreenGui") and gui.Enabled ~= nil then
+        return gui.Enabled
+    end
+    for _, v in ipairs(gui:GetDescendants()) do
+        if v:IsA("GuiObject") then
+            return v.Visible
+        end
+    end
+    return true
+end
+
+-- Toggle khi click: tìm GUI Fluent nếu chưa tìm, sau đó toggle
+local fluentGui = findFluentScreenGui()
+local function updateLabel()
+    if fluentGui and fluentGui.Parent then
+        label.Text = (getGuiVisible(fluentGui) == false) and "+" or "-"
+    else
+        label.Text = "-" -- mặc định nếu chưa tìm thấy
+    end
+end
+
+btn.MouseButton1Click:Connect(function()
+    if not fluentGui or not fluentGui.Parent then
+        fluentGui = findFluentScreenGui()
+    end
+    if fluentGui then
+        setGuiVisible(fluentGui, not getGuiVisible(fluentGui))
+        updateLabel()
+    else
+        warn("[Minimizer] Không tìm thấy Fluent ScreenGui. Đảm bảo Fluent đã tạo GUI trước khi minimizer chạy.")
+    end
+end)
+
+-- Nếu Fluent load chậm, thử tìm lại vài lần tự động và cập nhật label
+spawn(function()
+    local attempts = 0
+    while attempts < 8 and (not fluentGui) do
+        fluentGui = findFluentScreenGui()
+        if fluentGui then break end
+        attempts = attempts + 1
+        wait(0.6)
+    end
+    updateLabel()
+end)
+-- =========================
+-- Minimizer (CHỈ GUI) - kết thúc
+-- =========================
