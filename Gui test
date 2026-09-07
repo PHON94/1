@@ -1,22 +1,23 @@
--- Khởi tạo thư viện trực tiếp từ nguồn tải chính thức của Fluent UI
+-- Full script: giữ logic gốc, thêm fallback UI cho Farming và minimizer robust
+-- Tải Fluent (như bạn có)
 local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
 
--- Đăng ký các biến cấu hình toàn cục lên bộ nhớ hệ thống
+-- Globals
 _G.DanhSachFarmDaChon = {}
 _G.IsStartFarm = false
 
--- Cấu hình khung cửa sổ hiển thị trực quan
+-- Window
 local Window = Fluent:CreateWindow({
     Title = "Blox Fruit Premium Menu",
     SubTitle = "Bản Sạch Không Lỗi Console",
-    TabWidth = 170, 
+    TabWidth = 170,
     Size = UDim2.fromOffset(590, 470),
     Acrylic = false,
-    Theme = "Dark", 
+    Theme = "Dark",
     MinimizeKey = Enum.KeyCode.RightControl
 })
 
--- Thiết lập danh sách các tab chức năng ở cột trái
+-- Tabs
 local Tabs = {
     Shop = Window:AddTab({ Title = "Shop", Icon = "shopping-cart" }),
     Status = Window:AddTab({ Title = "Status", Icon = "user" }),
@@ -27,85 +28,302 @@ local Tabs = {
     V4AndRace = Window:AddTab({ Title = "V4 and Race", Icon = "shield" })
 }
 
--- Chèn các nút bấm tương tác trong danh mục Farming
 Tabs.Farming:AddParagraph({ Title = "Hệ Thống Tự Động Farm", Content = "Chọn các kiểu farm bên dưới, sau đó gạt Start Farm để bắt đầu." })
 
--- Helper kiểm tra table rỗng
-local function isTableEmpty(t)
-    return (type(t) ~= "table") or (next(t) == nil)
+-- Helper
+local function isTableEmpty(t) return (type(t) ~= "table") or (next(t) == nil) end
+
+-- Try to add Farming controls via Fluent; if unavailable, create fallback GUI
+local usedFluentControls = false
+
+do
+    local okMulti = type(Tabs.Farming.AddMultiDropdown) == "function"
+    local okToggle = type(Tabs.Farming.AddToggle) == "function"
+    if okMulti and okToggle then
+        usedFluentControls = true
+        Tabs.Farming:AddMultiDropdown("MultiDropdownFarm", {
+            Title = "Chọn kiểu farm cần làm",
+            Values = {"Farm Level", "Farm Bones"},
+            Default = {},
+            Callback = function(Value)
+                if type(Value) == "table" then
+                    _G.DanhSachFarmDaChon = Value
+                else
+                    _G.DanhSachFarmDaChon = {}
+                end
+                -- debug
+                local s = ""
+                if not isTableEmpty(_G.DanhSachFarmDaChon) then
+                    for i,v in ipairs(_G.DanhSachFarmDaChon) do s = s .. (i==1 and "" or ", ") .. tostring(v) end
+                end
+                print("[Farm] Selected:", (s=="" and "<none>" or s))
+            end
+        })
+
+        Tabs.Farming:AddToggle("StartFarmToggle", {
+            Title = "Start Farm",
+            Default = false,
+            Callback = function(Value)
+                if Value then
+                    if isTableEmpty(_G.DanhSachFarmDaChon) then
+                        warn("Chưa chọn mục farm nào. Vui lòng chọn trước khi bật.")
+                        _G.IsStartFarm = false
+                        return
+                    end
+                    _G.IsStartFarm = true
+                    print("[Farm] Bắt đầu farm:", table.concat(_G.DanhSachFarmDaChon, ", "))
+                else
+                    _G.IsStartFarm = false
+                    print("[Farm] Dừng farm.")
+                end
+            end
+        })
+    end
 end
 
--- Multi-select cho các kiểu farm
-Tabs.Farming:AddMultiDropdown("MultiDropdownFarm", {
-    Title = "Chọn kiểu farm cần làm",
-    Values = {"Farm Level", "Farm Bones"},
-    Default = {},
-    Callback = function(Value)
-        if type(Value) == "table" then
-            _G.DanhSachFarmDaChon = Value
-        else
-            _G.DanhSachFarmDaChon = {}
-        end
-        -- Debug: in ra console
-        local s = ""
-        if not isTableEmpty(_G.DanhSachFarmDaChon) then
-            for i,v in ipairs(_G.DanhSachFarmDaChon) do s = s .. (i==1 and "" or ", ") .. tostring(v) end
-        end
-        print("[Farm] Selected:", (s == "" and "<none>") or s)
-    end
-})
+-- If Fluent controls not available, create fallback GUI under PlayerGui
+local fallbackGui
+if not usedFluentControls then
+    local Players = game:GetService("Players")
+    local LocalPlayer = Players.LocalPlayer
+    local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 
--- Toggle (thanh gạt) Start Farm
-Tabs.Farming:AddToggle("StartFarmToggle", {
-    Title = "Start Farm",
-    Default = false,
-    Callback = function(Value)
-        if Value then
-            if isTableEmpty(_G.DanhSachFarmDaChon) then
-                -- Nếu chưa chọn kiểu farm nào, không bật
-                warn("Chưa chọn mục farm nào. Vui lòng chọn 'Farm Level' hoặc 'Farm Bones' trước khi bật.")
-                _G.IsStartFarm = false
-                -- Không thể chắc chắn đổi trạng thái UI toggle sang off vì phụ thuộc Fluent API,
-                -- nhưng biến trạng thái farm được giữ false để tránh chạy farm.
-                return
-            end
-            _G.IsStartFarm = true
-            print("[Farm] Bắt đầu farm. Mục đã chọn:", table.concat(_G.DanhSachFarmDaChon, ", "))
+    fallbackGui = Instance.new("ScreenGui")
+    fallbackGui.Name = "BFP_FarmFallback"
+    fallbackGui.ResetOnSpawn = false
+    fallbackGui.DisplayOrder = 999
+    fallbackGui.Parent = PlayerGui
+
+    local frame = Instance.new("Frame")
+    frame.Name = "FarmPanel"
+    frame.Size = UDim2.new(0, 260, 0, 140)
+    frame.Position = UDim2.new(0.5, -130, 0.5, -70)
+    frame.BackgroundColor3 = Color3.fromRGB(28,28,28)
+    frame.BorderSizePixel = 0
+    frame.Parent = fallbackGui
+    local frCorner = Instance.new("UICorner", frame)
+    frCorner.CornerRadius = UDim.new(0,8)
+
+    local title = Instance.new("TextLabel", frame)
+    title.Size = UDim2.new(1, -20, 0, 28)
+    title.Position = UDim2.new(0, 10, 0, 8)
+    title.BackgroundTransparency = 1
+    title.Text = "Farming"
+    title.TextColor3 = Color3.fromRGB(255,255,255)
+    title.TextScaled = false
+    title.Font = Enum.Font.SourceSansSemibold
+    title.TextSize = 18
+    title.TextXAlignment = Enum.TextXAlignment.Left
+
+    -- Checkboxes area
+    local cb1 = Instance.new("TextButton", frame)
+    cb1.Name = "CB_FarmLevel"
+    cb1.Size = UDim2.new(0, 220, 0, 30)
+    cb1.Position = UDim2.new(0, 20, 0, 42)
+    cb1.BackgroundColor3 = Color3.fromRGB(40,40,40)
+    cb1.BorderSizePixel = 0
+    cb1.AutoButtonColor = true
+    cb1.Text = "   [ ] Farm Level"
+    cb1.TextColor3 = Color3.fromRGB(255,255,255)
+    cb1.Font = Enum.Font.SourceSans
+    cb1.TextSize = 16
+    local cb1Corner = Instance.new("UICorner", cb1)
+    cb1Corner.CornerRadius = UDim.new(0,6)
+
+    local cb2 = Instance.new("TextButton", frame)
+    cb2.Name = "CB_FarmBones"
+    cb2.Size = UDim2.new(0, 220, 0, 30)
+    cb2.Position = UDim2.new(0, 20, 0, 78)
+    cb2.BackgroundColor3 = Color3.fromRGB(40,40,40)
+    cb2.BorderSizePixel = 0
+    cb2.AutoButtonColor = true
+    cb2.Text = "   [ ] Farm Bones"
+    cb2.TextColor3 = Color3.fromRGB(255,255,255)
+    cb2.Font = Enum.Font.SourceSans
+    cb2.TextSize = 16
+    local cb2Corner = Instance.new("UICorner", cb2)
+    cb2Corner.CornerRadius = UDim.new(0,6)
+
+    -- Start Toggle (switch)
+    local switch = Instance.new("TextButton", frame)
+    switch.Name = "StartSwitch"
+    switch.Size = UDim2.new(0, 100, 0, 30)
+    switch.Position = UDim2.new(1, -120, 1, -40)
+    switch.AnchorPoint = Vector2.new(0,0)
+    switch.BackgroundColor3 = Color3.fromRGB(70,70,70)
+    switch.BorderSizePixel = 0
+    switch.Text = "Start: OFF"
+    switch.TextColor3 = Color3.fromRGB(255,255,255)
+    switch.Font = Enum.Font.SourceSansSemibold
+    switch.TextSize = 14
+    local swCorner = Instance.new("UICorner", switch)
+    swCorner.CornerRadius = UDim.new(0,6)
+
+    -- Small warning label
+    local warnLabel = Instance.new("TextLabel", frame)
+    warnLabel.Name = "WarnLabel"
+    warnLabel.Size = UDim2.new(1, -20, 0, 20)
+    warnLabel.Position = UDim2.new(0, 10, 1, -20)
+    warnLabel.BackgroundTransparency = 1
+    warnLabel.Text = ""
+    warnLabel.TextColor3 = Color3.fromRGB(255,100,100)
+    warnLabel.Font = Enum.Font.SourceSans
+    warnLabel.TextSize = 14
+    warnLabel.TextXAlignment = Enum.TextXAlignment.Left
+
+    -- State
+    local selected = { ["Farm Level"] = false, ["Farm Bones"] = false }
+
+    local function updateGlobalSelected()
+        local t = {}
+        for k,v in pairs(selected) do
+            if v then table.insert(t, k) end
+        end
+        _G.DanhSachFarmDaChon = t
+    end
+
+    local function updateCheckboxVisual(btnObj, checked)
+        if checked then
+            btnObj.Text = "   [x] " .. (btnObj == cb1 and "Farm Level" or "Farm Bones")
+            btnObj.BackgroundColor3 = Color3.fromRGB(60, 100, 60)
         else
-            _G.IsStartFarm = false
+            btnObj.Text = "   [ ] " .. (btnObj == cb1 and "Farm Level" or "Farm Bones")
+            btnObj.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+        end
+    end
+
+    cb1.MouseButton1Click:Connect(function()
+        selected["Farm Level"] = not selected["Farm Level"]
+        updateCheckboxVisual(cb1, selected["Farm Level"])
+        updateGlobalSelected()
+        warnLabel.Text = ""
+    end)
+
+    cb2.MouseButton1Click:Connect(function()
+        selected["Farm Bones"] = not selected["Farm Bones"]
+        updateCheckboxVisual(cb2, selected["Farm Bones"])
+        updateGlobalSelected()
+        warnLabel.Text = ""
+    end)
+
+    -- Start/Stop logic
+    local function setSwitchState(on)
+        _G.IsStartFarm = on
+        if on then
+            switch.Text = "Start: ON"
+            switch.BackgroundColor3 = Color3.fromRGB(60,160,60)
+            warnLabel.Text = ""
+            print("[Farm] Bắt đầu farm:", table.concat(_G.DanhSachFarmDaChon, ", "))
+        else
+            switch.Text = "Start: OFF"
+            switch.BackgroundColor3 = Color3.fromRGB(70,70,70)
+            warnLabel.Text = ""
             print("[Farm] Dừng farm.")
         end
     end
-})
 
--- Ép menu tự động hiển thị tab đầu tiên ngay khi kích hoạt xong
+    switch.MouseButton1Click:Connect(function()
+        if not next(_G.DanhSachFarmDaChon) then
+            -- show warning and don't turn on
+            warnLabel.Text = "Vui lòng chọn ít nhất 1 mục farm trước khi bật."
+            -- briefly flash red/back
+            spawn(function()
+                local orig = switch.BackgroundColor3
+                switch.BackgroundColor3 = Color3.fromRGB(160,60,60)
+                wait(0.25)
+                switch.BackgroundColor3 = orig
+            end)
+            setSwitchState(false)
+            return
+        end
+        setSwitchState(not _G.IsStartFarm)
+    end)
+
+    -- Init visuals
+    updateCheckboxVisual(cb1, false)
+    updateCheckboxVisual(cb2, false)
+    setSwitchState(false)
+end
+
+-- Ensure Window show first tab
 Window:SelectTab(1)
 
--- =========================
--- Minimizer (không đổi phần farm logic)
--- =========================
-local Players = game:GetService("Players")
-local UIS = game:GetService("UserInputService")
-local LocalPlayer = Players.LocalPlayer
+-- Minimizer (keeps same behavior, plus toggles fallback GUI if present)
+do
+    local Players = game:GetService("Players")
+    local UIS = game:GetService("UserInputService")
+    local LocalPlayer = Players.LocalPlayer
 
--- Lấy PlayerGui nếu có, fallback sang CoreGui
-local PlayerGui
-pcall(function() PlayerGui = LocalPlayer:WaitForChild("PlayerGui", 3) end)
-local parentGui = PlayerGui or game:GetService("CoreGui")
+    local PlayerGui
+    pcall(function() PlayerGui = LocalPlayer:WaitForChild("PlayerGui", 3) end)
+    local parentGui = PlayerGui or game:GetService("CoreGui")
 
--- Tìm ScreenGui do Fluent tạo (dò trong PlayerGui và CoreGui)
-local function findFluentScreenGui()
-    local targets = { PlayerGui, game:GetService("CoreGui") }
-    local patterns = { "Blox Fruit Premium Menu", "Bản Sạch", "Blox Fruit" }
-    for _, parent in ipairs(targets) do
-        if parent then
-            for _, child in ipairs(parent:GetChildren()) do
-                if child:IsA("ScreenGui") then
-                    for _, d in ipairs(child:GetDescendants()) do
-                        if (d:IsA("TextLabel") or d:IsA("TextButton")) and d.Text and d.Text ~= "" then
-                            for _, p in ipairs(patterns) do
-                                if tostring(d.Text):match(p) then
-                                    return child
+    local minimizerGui = Instance.new("ScreenGui")
+    minimizerGui.Name = "BFP_Minimizer"
+    minimizerGui.ResetOnSpawn = false
+    minimizerGui.DisplayOrder = 9999
+    minimizerGui.Parent = parentGui
+
+    local btn = Instance.new("ImageButton")
+    btn.Name = "MinimizeButton"
+    btn.Parent = minimizerGui
+    btn.Size = UDim2.new(0, 48, 0, 48)
+    btn.Position = UDim2.new(0, 10, 0, 120)
+    btn.AnchorPoint = Vector2.new(0,0)
+    btn.BackgroundColor3 = Color3.fromRGB(30,30,30)
+    btn.BorderSizePixel = 0
+    btn.AutoButtonColor = true
+    btn.Image = ""
+    btn.Visible = true
+
+    local corner = Instance.new("UICorner", btn)
+    corner.CornerRadius = UDim.new(1,0)
+    local label = Instance.new("TextLabel", btn)
+    label.Size = UDim2.new(1,0,1,0)
+    label.BackgroundTransparency = 1
+    label.Text = "-"
+    label.TextColor3 = Color3.fromRGB(255,255,255)
+    label.TextScaled = true
+    label.Font = Enum.Font.SourceSansSemibold
+
+    local dragging = false
+    local dragInput, dragStart, startPos
+    btn.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = btn.Position
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then dragging = false end
+            end)
+        end
+    end)
+    btn.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            dragInput = input
+        end
+    end)
+    UIS.InputChanged:Connect(function(input)
+        if input == dragInput and dragging and dragStart and startPos then
+            local delta = input.Position - dragStart
+            btn.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end)
+
+    -- find Fluent ScreenGui (same method as before)
+    local function findFluentScreenGui()
+        local targets = { PlayerGui, game:GetService("CoreGui") }
+        local patterns = { "Blox Fruit Premium Menu", "Bản Sạch", "Blox Fruit" }
+        for _, parent in ipairs(targets) do
+            if parent then
+                for _, child in ipairs(parent:GetChildren()) do
+                    if child:IsA("ScreenGui") then
+                        for _, d in ipairs(child:GetDescendants()) do
+                            if (d:IsA("TextLabel") or d:IsA("TextButton")) and d.Text and d.Text ~= "" then
+                                for _, p in ipairs(patterns) do
+                                    if tostring(d.Text):match(p) then
+                                        return child
+                                    end
                                 end
                             end
                         end
@@ -113,155 +331,87 @@ local function findFluentScreenGui()
                 end
             end
         end
-    end
-    for _, parent in ipairs(targets) do
-        if parent then
-            for _, child in ipairs(parent:GetChildren()) do
-                if child:IsA("ScreenGui") and #child:GetDescendants() > 10 then
-                    return child
+        for _, parent in ipairs(targets) do
+            if parent then
+                for _, child in ipairs(parent:GetChildren()) do
+                    if child:IsA("ScreenGui") and #child:GetDescendants() > 10 then
+                        return child
+                    end
                 end
             end
         end
+        return nil
     end
-    return nil
-end
 
--- Tạo minimizer GUI (riêng, không can thiệp GUI Fluent)
-local minimizerGui = Instance.new("ScreenGui")
-minimizerGui.Name = "BFP_Minimizer"
-minimizerGui.ResetOnSpawn = false
-minimizerGui.DisplayOrder = 9999
-minimizerGui.Parent = parentGui
+    local fluentGui = findFluentScreenGui()
 
-local btn = Instance.new("ImageButton")
-btn.Name = "MinimizeButton"
-btn.Parent = minimizerGui
-btn.Size = UDim2.new(0, 48, 0, 48)
-btn.Position = UDim2.new(0, 10, 0, 120)
-btn.AnchorPoint = Vector2.new(0, 0)
-btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-btn.BorderSizePixel = 0
-btn.AutoButtonColor = true
-btn.Image = ""
-btn.Visible = true
+    local function setGuiVisible(gui, visible)
+        if not gui then return end
+        if gui:IsA("ScreenGui") and gui.Enabled ~= nil then
+            gui.Enabled = visible
+            return
+        end
+        for _, v in ipairs(gui:GetDescendants()) do
+            if v:IsA("GuiObject") then v.Visible = visible end
+        end
+    end
 
-local corner = Instance.new("UICorner", btn)
-corner.CornerRadius = UDim.new(1, 0)
+    local function getGuiVisible(gui)
+        if not gui then return true end
+        if gui:IsA("ScreenGui") and gui.Enabled ~= nil then return gui.Enabled end
+        for _, v in ipairs(gui:GetDescendants()) do
+            if v:IsA("GuiObject") then return v.Visible end
+        end
+        return true
+    end
 
-local label = Instance.new("TextLabel", btn)
-label.Size = UDim2.new(1, 0, 1, 0)
-label.BackgroundTransparency = 1
-label.Text = "-"
-label.TextColor3 = Color3.fromRGB(255,255,255)
-label.TextScaled = true
-label.Font = Enum.Font.SourceSansSemibold
+    local function updateLabel()
+        if fluentGui and fluentGui.Parent then
+            label.Text = (getGuiVisible(fluentGui) == false) and "+" or "-"
+        else
+            label.Text = "-"
+        end
+    end
 
--- Drag logic
-local dragging = false
-local dragInput, dragStart, startPos
-
-btn.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        dragging = true
-        dragStart = input.Position
-        startPos = btn.Position
-        input.Changed:Connect(function()
-            if input.UserInputState == Enum.UserInputState.End then
-                dragging = false
+    btn.MouseButton1Click:Connect(function()
+        if not fluentGui or not fluentGui.Parent then fluentGui = findFluentScreenGui() end
+        if fluentGui then
+            local vis = not getGuiVisible(fluentGui)
+            setGuiVisible(fluentGui, vis)
+            -- also toggle fallback if present
+            if fallbackGui then fallbackGui.Enabled = vis end
+            updateLabel()
+        else
+            -- if no fluentGui, still toggle fallback if exists
+            if fallbackGui then
+                fallbackGui.Enabled = not fallbackGui.Enabled
+                label.Text = (fallbackGui.Enabled == false) and "+" or "-"
+            else
+                warn("[Minimizer] Không tìm thấy Fluent ScreenGui và không có fallback.")
             end
-        end)
-    end
-end)
-
-btn.InputChanged:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-        dragInput = input
-    end
-end)
-
-UIS.InputChanged:Connect(function(input)
-    if input == dragInput and dragging and dragStart and startPos then
-        local delta = input.Position - dragStart
-        btn.Position = UDim2.new(
-            startPos.X.Scale,
-            startPos.X.Offset + delta.X,
-            startPos.Y.Scale,
-            startPos.Y.Offset + delta.Y
-        )
-    end
-end)
-
--- Helpers toggle Fluent GUI
-local function setGuiVisible(gui, visible)
-    if not gui then return end
-    if gui:IsA("ScreenGui") and gui.Enabled ~= nil then
-        gui.Enabled = visible
-        return
-    end
-    for _, v in ipairs(gui:GetDescendants()) do
-        if v:IsA("GuiObject") then
-            v.Visible = visible
         end
-    end
-end
+    end)
 
-local function getGuiVisible(gui)
-    if not gui then return true end
-    if gui:IsA("ScreenGui") and gui.Enabled ~= nil then
-        return gui.Enabled
-    end
-    for _, v in ipairs(gui:GetDescendants()) do
-        if v:IsA("GuiObject") then
-            return v.Visible
+    spawn(function()
+        local attempts = 0
+        while attempts < 10 and (not fluentGui) do
+            fluentGui = findFluentScreenGui()
+            if fluentGui then break end
+            attempts = attempts + 1
+            wait(0.5)
         end
-    end
-    return true
-end
-
-local fluentGui = findFluentScreenGui()
-local function updateLabel()
-    if fluentGui and fluentGui.Parent then
-        label.Text = (getGuiVisible(fluentGui) == false) and "+" or "-"
-    else
-        label.Text = "-"
-    end
-end
-
-btn.MouseButton1Click:Connect(function()
-    if not fluentGui or not fluentGui.Parent then
-        fluentGui = findFluentScreenGui()
-    end
-    if fluentGui then
-        setGuiVisible(fluentGui, not getGuiVisible(fluentGui))
         updateLabel()
-    else
-        warn("[Minimizer] Không tìm thấy Fluent ScreenGui. Đảm bảo Fluent đã tạo GUI trước khi minimizer chạy.")
-    end
-end)
+    end)
+end
 
-spawn(function()
-    local attempts = 0
-    while attempts < 10 and (not fluentGui) do
-        fluentGui = findFluentScreenGui()
-        if fluentGui then break end
-        attempts = attempts + 1
-        wait(0.5)
-    end
-    updateLabel()
-end)
-
--- =========================
--- Vòng lặp farm (stub - không đổi logic)
--- =========================
+-- Farm loop (unchanged stub)
 spawn(function()
     while true do
         wait(0.5)
         if _G.IsStartFarm then
-            -- TODO: thêm logic farm thực tế dựa trên _G.DanhSachFarmDaChon
-            -- ví dụ:
-            -- if table.find(_G.DanhSachFarmDaChon, "Farm Level") then
-            --     -- thực hiện hành động farm level
-            -- end
+            -- TODO: fill farm actions here based on _G.DanhSachFarmDaChon
+            -- Example:
+            -- if table.find(_G.DanhSachFarmDaChon, "Farm Level") then ... end
         end
     end
 end)
