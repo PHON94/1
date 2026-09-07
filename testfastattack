@@ -504,96 +504,6 @@ FruitM1Toggle.Activated:Connect(function()
     UpdateFruitM1Button()
 end)
 
---===========================================================================
--- AUTO CLICK :: SOURCE NEARBY ATTACK (BATCH)
--- ON: xử lý toàn bộ quái còn sống trong 60 studs.
--- OFF: không thực hiện attack. Khi không có target thì không gọi attack remote.
-_G.AutoClick = false
-
-local AutoClickToggle = Instance.new("TextButton")
-AutoClickToggle.Name = "AutoClickToggle"
-AutoClickToggle.Position = UDim2.fromOffset(13, 145)
-AutoClickToggle.Size = UDim2.new(1, -26, 0, 40)
-AutoClickToggle.BackgroundColor3 = Color3.fromRGB(48, 52, 63)
-AutoClickToggle.BorderSizePixel = 0
-AutoClickToggle.Text = "AUTO CLICK: OFF"
-AutoClickToggle.Font = Enum.Font.GothamBlack
-AutoClickToggle.TextSize = 10
-AutoClickToggle.TextColor3 = Color3.fromRGB(215, 219, 227)
-AutoClickToggle.AutoButtonColor = false
-AutoClickToggle.ZIndex = 50
-AutoClickToggle.Parent = SettingFarm
-
-local AutoClickCorner = Instance.new("UICorner")
-AutoClickCorner.CornerRadius = UDim.new(0, 8)
-AutoClickCorner.Parent = AutoClickToggle
-
-local function RefreshAutoClick()
-    if _G.AutoClick then
-        AutoClickToggle.Text = "AUTO CLICK: ON"
-        AutoClickToggle.BackgroundColor3 = Color3.fromRGB(64, 145, 91)
-    else
-        AutoClickToggle.Text = "AUTO CLICK: OFF"
-        AutoClickToggle.BackgroundColor3 = Color3.fromRGB(48, 52, 63)
-    end
-end
-
-AutoClickToggle.Activated:Connect(function()
-    _G.AutoClick = not _G.AutoClick
-    RefreshAutoClick()
-end)
-
-RefreshAutoClick()
-
-local function GetNearbyAliveEnemies()
-    local character = LocalPlayer.Character
-    local playerRoot = character and character:FindFirstChild("HumanoidRootPart")
-    local enemies = workspace:FindFirstChild("Enemies")
-    if not playerRoot or not enemies then
-        return {}
-    end
-
-    local targets = {}
-    for _, enemy in ipairs(enemies:GetChildren()) do
-        local humanoid = enemy:FindFirstChildOfClass("Humanoid")
-        local root = enemy:FindFirstChild("HumanoidRootPart")
-        if humanoid and root and humanoid.Health > 0 then
-            if (root.Position - playerRoot.Position).Magnitude <= 60 then
-                targets[#targets + 1] = enemy
-            end
-        end
-    end
-    return targets
-end
-
-task.spawn(function()
-    while task.wait(0.05) do
-        if not _G.AutoClick then
-            continue
-        end
-
-        pcall(function()
-            local character = LocalPlayer.Character
-            local attack = _G.SourceFastAttack
-            if not character or not attack then return end
-
-            local targets = GetNearbyAliveEnemies()
-            if #targets == 0 then
-                -- Không có quái trong 60 studs: không gọi attack.
-                return
-            end
-
-            -- Một lượt quét xử lý toàn bộ target hiện có, không break ở target đầu tiên.
-            for _, enemy in ipairs(targets) do
-                if attack.Alive(enemy) then
-                    attack.Kill(enemy)
-                end
-            end
-        end)
-    end
-end)
-
-
 UpdateFruitM1Button()
 
 local WeaponDrop = Instance.new("Frame")
@@ -4462,5 +4372,94 @@ task.spawn(function()
 
     if not ok then
         warn("[PhongdzHub][ResetBypass] Disabled safely:", err)
+    end
+end)
+
+--===========================================================================
+-- AUTO CLICK :: SOURCE NEARBY ATTACK (BATCH)
+-- ON: xử lý toàn bộ quái còn sống trong 60 studs.
+-- OFF: không thực hiện attack. Khi không có target thì không gọi attack remote.
+_G.AutoClick = false
+
+local AutoClickToggle = Instance.new("TextButton")
+AutoClickToggle.Name = "AutoClickToggle"
+AutoClickToggle.Position = UDim2.fromOffset(13, 145)
+AutoClickToggle.Size = UDim2.new(1, -26, 0, 40)
+AutoClickToggle.BackgroundColor3 = Color3.fromRGB(48, 52, 63)
+AutoClickToggle.BorderSizePixel = 0
+AutoClickToggle.Text = "AUTO CLICK: OFF"
+AutoClickToggle.Font = Enum.Font.GothamBlack
+AutoClickToggle.TextSize = 10
+AutoClickToggle.TextColor3 = Color3.fromRGB(215, 219, 227)
+AutoClickToggle.AutoButtonColor = false
+AutoClickToggle.ZIndex = 50
+AutoClickToggle.Parent = SettingFarm
+
+local AutoClickCorner = Instance.new("UICorner")
+AutoClickCorner.CornerRadius = UDim.new(0, 8)
+AutoClickCorner.Parent = AutoClickToggle
+
+local function RefreshAutoClick()
+    if _G.AutoClick then
+        AutoClickToggle.Text = "AUTO CLICK: ON"
+        AutoClickToggle.BackgroundColor3 = Color3.fromRGB(64, 145, 91)
+    else
+        AutoClickToggle.Text = "AUTO CLICK: OFF"
+        AutoClickToggle.BackgroundColor3 = Color3.fromRGB(48, 52, 63)
+    end
+end
+
+AutoClickToggle.Activated:Connect(function()
+    _G.AutoClick = not _G.AutoClick
+    RefreshAutoClick()
+end)
+
+RefreshAutoClick()
+
+local function GetNearbyAliveEnemies()
+    local character = LocalPlayer.Character
+    local playerRoot = character and character:FindFirstChild("HumanoidRootPart")
+    local enemies = workspace:FindFirstChild("Enemies")
+    if not playerRoot or not enemies then
+        return {}
+    end
+
+    local targets = {}
+    for _, enemy in ipairs(enemies:GetChildren()) do
+        local humanoid = enemy:FindFirstChildOfClass("Humanoid")
+        local root = enemy:FindFirstChild("HumanoidRootPart")
+        if humanoid and root and humanoid.Health > 0 then
+            if (root.Position - playerRoot.Position).Magnitude <= 60 then
+                targets[#targets + 1] = enemy
+            end
+        end
+    end
+    return targets
+end
+
+task.spawn(function()
+    while task.wait(0.05) do
+        if not _G.AutoClick then
+            continue
+        end
+
+        pcall(function()
+            local character = LocalPlayer.Character
+            local attack = _G.SourceFastAttack
+            if not character or not attack then return end
+
+            local targets = GetNearbyAliveEnemies()
+            if #targets == 0 then
+                -- Không có quái trong 60 studs: không gọi attack.
+                return
+            end
+
+            -- Một lượt quét xử lý toàn bộ target hiện có, không break ở target đầu tiên.
+            for _, enemy in ipairs(targets) do
+                if attack.Alive(enemy) then
+                    attack.Kill(enemy)
+                end
+            end
+        end)
     end
 end)
