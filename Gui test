@@ -11,9 +11,9 @@ local Window = Fluent:CreateWindow({
     SubTitle = "Bản Sạch Không Lỗi Console",
     TabWidth = 170, 
     Size = UDim2.fromOffset(590, 470),
-    Acrylic = false, -- Tắt hiệu ứng mờ nâng cao để tối ưu tốc độ phản hồi của Executor
+    Acrylic = false,
     Theme = "Dark", 
-    MinimizeKey = Enum.KeyCode.RightControl -- Phím ẩn/hiện menu mặc định là nút Ctrl bên phải
+    MinimizeKey = Enum.KeyCode.RightControl
 })
 
 -- Thiết lập danh sách các tab chức năng ở cột trái
@@ -27,23 +27,54 @@ local Tabs = {
     V4AndRace = Window:AddTab({ Title = "V4 and Race", Icon = "shield" })
 }
 
--- Chèn các nút bấm tương tác trống vào bên trong danh mục Farming
-Tabs.Farming:AddParagraph({ Title = "Hệ Thống Tự Động Farm", Content = "Tích chọn các mục muốn chạy rồi nhấn Start Farm." })
+-- Chèn các nút bấm tương tác trong danh mục Farming
+Tabs.Farming:AddParagraph({ Title = "Hệ Thống Tự Động Farm", Content = "Chọn các kiểu farm bên dưới, sau đó gạt Start Farm để bắt đầu." })
 
+-- Helper kiểm tra table rỗng
+local function isTableEmpty(t)
+    return (type(t) ~= "table") or (next(t) == nil)
+end
+
+-- Multi-select cho các kiểu farm
 Tabs.Farming:AddMultiDropdown("MultiDropdownFarm", {
     Title = "Chọn kiểu farm cần làm",
     Values = {"Farm Level", "Farm Bones"},
     Default = {},
     Callback = function(Value)
-        _G.DanhSachFarmDaChon = Value 
+        if type(Value) == "table" then
+            _G.DanhSachFarmDaChon = Value
+        else
+            _G.DanhSachFarmDaChon = {}
+        end
+        -- Debug: in ra console
+        local s = ""
+        if not isTableEmpty(_G.DanhSachFarmDaChon) then
+            for i,v in ipairs(_G.DanhSachFarmDaChon) do s = s .. (i==1 and "" or ", ") .. tostring(v) end
+        end
+        print("[Farm] Selected:", (s == "" and "<none>") or s)
     end
 })
 
+-- Toggle (thanh gạt) Start Farm
 Tabs.Farming:AddToggle("StartFarmToggle", {
     Title = "Start Farm",
     Default = false,
     Callback = function(Value)
-        _G.IsStartFarm = Value 
+        if Value then
+            if isTableEmpty(_G.DanhSachFarmDaChon) then
+                -- Nếu chưa chọn kiểu farm nào, không bật
+                warn("Chưa chọn mục farm nào. Vui lòng chọn 'Farm Level' hoặc 'Farm Bones' trước khi bật.")
+                _G.IsStartFarm = false
+                -- Không thể chắc chắn đổi trạng thái UI toggle sang off vì phụ thuộc Fluent API,
+                -- nhưng biến trạng thái farm được giữ false để tránh chạy farm.
+                return
+            end
+            _G.IsStartFarm = true
+            print("[Farm] Bắt đầu farm. Mục đã chọn:", table.concat(_G.DanhSachFarmDaChon, ", "))
+        else
+            _G.IsStartFarm = false
+            print("[Farm] Dừng farm.")
+        end
     end
 })
 
@@ -51,7 +82,7 @@ Tabs.Farming:AddToggle("StartFarmToggle", {
 Window:SelectTab(1)
 
 -- =========================
--- Minimizer (CHỈ GUI, KHÔNG ĐỤNG PHẦN KHÁC) - bắt đầu
+-- Minimizer (không đổi phần farm logic)
 -- =========================
 local Players = game:GetService("Players")
 local UIS = game:GetService("UserInputService")
@@ -59,7 +90,7 @@ local LocalPlayer = Players.LocalPlayer
 
 -- Lấy PlayerGui nếu có, fallback sang CoreGui
 local PlayerGui
-local ok = pcall(function() PlayerGui = LocalPlayer:WaitForChild("PlayerGui", 3) end)
+pcall(function() PlayerGui = LocalPlayer:WaitForChild("PlayerGui", 3) end)
 local parentGui = PlayerGui or game:GetService("CoreGui")
 
 -- Tìm ScreenGui do Fluent tạo (dò trong PlayerGui và CoreGui)
@@ -83,7 +114,6 @@ local function findFluentScreenGui()
             end
         end
     end
-    -- fallback nhẹ: ScreenGui có nhiều descendants (có thể là UI lớn)
     for _, parent in ipairs(targets) do
         if parent then
             for _, child in ipairs(parent:GetChildren()) do
@@ -107,26 +137,26 @@ local btn = Instance.new("ImageButton")
 btn.Name = "MinimizeButton"
 btn.Parent = minimizerGui
 btn.Size = UDim2.new(0, 48, 0, 48)
-btn.Position = UDim2.new(0, 10, 0, 120) -- chỉnh vị trí mặc định nếu cần
+btn.Position = UDim2.new(0, 10, 0, 120)
 btn.AnchorPoint = Vector2.new(0, 0)
 btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 btn.BorderSizePixel = 0
 btn.AutoButtonColor = true
-btn.Image = "" -- đặt đường dẫn ảnh nếu bạn muốn icon hình ảnh
+btn.Image = ""
 btn.Visible = true
 
 local corner = Instance.new("UICorner", btn)
-corner.CornerRadius = UDim.new(1, 0) -- tròn hoàn toàn
+corner.CornerRadius = UDim.new(1, 0)
 
 local label = Instance.new("TextLabel", btn)
 label.Size = UDim2.new(1, 0, 1, 0)
 label.BackgroundTransparency = 1
-label.Text = "-" -- "-" khi menu hiện, "+" khi ẩn
+label.Text = "-"
 label.TextColor3 = Color3.fromRGB(255,255,255)
 label.TextScaled = true
 label.Font = Enum.Font.SourceSansSemibold
 
--- Drag logic (mouse + touch)
+-- Drag logic
 local dragging = false
 local dragInput, dragStart, startPos
 
@@ -161,7 +191,7 @@ UIS.InputChanged:Connect(function(input)
     end
 end)
 
--- Helpers để toggle Fluent GUI an toàn (không sửa Fluent)
+-- Helpers toggle Fluent GUI
 local function setGuiVisible(gui, visible)
     if not gui then return end
     if gui:IsA("ScreenGui") and gui.Enabled ~= nil then
@@ -188,13 +218,12 @@ local function getGuiVisible(gui)
     return true
 end
 
--- Toggle khi click: tìm GUI Fluent nếu chưa tìm, sau đó toggle
 local fluentGui = findFluentScreenGui()
 local function updateLabel()
     if fluentGui and fluentGui.Parent then
         label.Text = (getGuiVisible(fluentGui) == false) and "+" or "-"
     else
-        label.Text = "-" -- mặc định nếu chưa tìm thấy
+        label.Text = "-"
     end
 end
 
@@ -210,7 +239,6 @@ btn.MouseButton1Click:Connect(function()
     end
 end)
 
--- Nếu Fluent load chậm, thử tìm lại vài lần tự động và cập nhật label
 spawn(function()
     local attempts = 0
     while attempts < 10 and (not fluentGui) do
@@ -223,5 +251,17 @@ spawn(function()
 end)
 
 -- =========================
--- Minimizer - kết thúc
+-- Vòng lặp farm (stub - không đổi logic)
 -- =========================
+spawn(function()
+    while true do
+        wait(0.5)
+        if _G.IsStartFarm then
+            -- TODO: thêm logic farm thực tế dựa trên _G.DanhSachFarmDaChon
+            -- ví dụ:
+            -- if table.find(_G.DanhSachFarmDaChon, "Farm Level") then
+            --     -- thực hiện hành động farm level
+            -- end
+        end
+    end
+end)
