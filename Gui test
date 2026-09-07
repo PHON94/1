@@ -1,38 +1,22 @@
--- =============================================================================
--- KIỂM TRA VÀ DỌN DEP MENU CŨ TRÁNH XUNG ĐỘT
--- =============================================================================
-local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
-local PlayerGui = LocalPlayer:FindFirstChildOfClass("PlayerGui")
+-- Khởi tạo thư viện trực tiếp từ nguồn tải chính thức của Fluent UI
+local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
 
-if PlayerGui then
-    for _, gui in pairs(PlayerGui:GetChildren()) do
-        if gui.Name == "Fluent" or (gui.Name == "ScreenGui" and gui:FindFirstChild("Fluent")) then
-            gui:Destroy()
-        end
-    end
-end
-task.wait(0.1)
-
--- =============================================================================
--- KHỞI TẠO MENU FLUENT UI VÀ BẮT BUỘC HIỂN THỊ LÊN LUÔN
--- =============================================================================
-local Fluent = loadstring(game:HttpGet("https://github.com"))()
-
+-- Đăng ký các biến cấu hình toàn cục lên bộ nhớ hệ thống
 _G.DanhSachFarmDaChon = {}
 _G.IsStartFarm = false
 
+-- Cấu hình khung cửa sổ hiển thị trực quan
 local Window = Fluent:CreateWindow({
     Title = "Blox Fruit Premium Menu",
-    SubTitle = "Auto Open Mode",
+    SubTitle = "Bản Sạch Không Lỗi Console",
     TabWidth = 170, 
     Size = UDim2.fromOffset(590, 470),
-    Acrylic = false, -- Tắt Acrylic kính mờ để menu load nhanh và mượt hơn, không bị lag hình
+    Acrylic = false, -- Tắt hiệu ứng mờ nâng cao để tối ưu tốc độ phản hồi của Executor
     Theme = "Dark", 
-    MinimizeKey = Enum.KeyCode.RightControl -- Đổi sang phím Ctrl bên phải để không vướng nút combo game
+    MinimizeKey = Enum.KeyCode.RightControl -- Phím ẩn/hiện menu mặc định là nút Ctrl bên phải
 })
 
--- Khởi tạo danh mục bên trái đúng thứ tự
+-- Thiết lập danh sách các tab chức năng ở cột trái
 local Tabs = {
     Shop = Window:AddTab({ Title = "Shop", Icon = "shopping-cart" }),
     Status = Window:AddTab({ Title = "Status", Icon = "user" }),
@@ -43,7 +27,7 @@ local Tabs = {
     V4AndRace = Window:AddTab({ Title = "V4 and Race", Icon = "shield" })
 }
 
--- Bố trí thành phần cho mục Farming
+-- Chèn các nút bấm tương tác trống vào bên trong danh mục Farming
 Tabs.Farming:AddParagraph({ Title = "Hệ Thống Tự Động Farm", Content = "Tích chọn các mục muốn chạy rồi nhấn Start Farm." })
 
 Tabs.Farming:AddMultiDropdown("MultiDropdownFarm", {
@@ -63,14 +47,5 @@ Tabs.Farming:AddToggle("StartFarmToggle", {
     end
 })
 
--- =============================================================================
--- LỆNH BẮT BUỘC MENU PHẢI BẬT LÊN TRÊN MÀN HÌNH CHÍNH
--- =============================================================================
-Window:SelectTab(1) 
-
--- Gửi thông báo nhỏ góc màn hình xác nhận menu đã sẵn sàng
-Fluent:Notify({
-    Title = "Blox Fruit Menu",
-    Content = "Menu đã mở thành công! Bấm nút Ctrl Phải để Ẩn/Hiện.",
-    Duration = 5
-})
+-- Ép menu tự động hiển thị tab đầu tiên ngay khi kích hoạt xong
+Window:SelectTab(1)
