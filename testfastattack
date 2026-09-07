@@ -505,9 +505,9 @@ FruitM1Toggle.Activated:Connect(function()
 end)
 
 --===========================================================================
--- AUTO CLICK :: SOURCE NEARBY ATTACK
---===========================================================================
-
+-- AUTO CLICK :: SOURCE NEARBY ATTACK (BATCH)
+-- ON: xử lý toàn bộ quái còn sống trong 60 studs.
+-- OFF: không thực hiện attack. Khi không có target thì không gọi attack remote.
 _G.AutoClick = false
 
 local AutoClickToggle = Instance.new("TextButton")
@@ -545,6 +545,27 @@ end)
 
 RefreshAutoClick()
 
+local function GetNearbyAliveEnemies()
+    local character = LocalPlayer.Character
+    local playerRoot = character and character:FindFirstChild("HumanoidRootPart")
+    local enemies = workspace:FindFirstChild("Enemies")
+    if not playerRoot or not enemies then
+        return {}
+    end
+
+    local targets = {}
+    for _, enemy in ipairs(enemies:GetChildren()) do
+        local humanoid = enemy:FindFirstChildOfClass("Humanoid")
+        local root = enemy:FindFirstChild("HumanoidRootPart")
+        if humanoid and root and humanoid.Health > 0 then
+            if (root.Position - playerRoot.Position).Magnitude <= 60 then
+                targets[#targets + 1] = enemy
+            end
+        end
+    end
+    return targets
+end
+
 task.spawn(function()
     while task.wait(0.05) do
         if not _G.AutoClick then
@@ -553,21 +574,19 @@ task.spawn(function()
 
         pcall(function()
             local character = LocalPlayer.Character
-            local playerRoot = character and character:FindFirstChild("HumanoidRootPart")
-            local enemies = workspace:FindFirstChild("Enemies")
             local attack = _G.SourceFastAttack
+            if not character or not attack then return end
 
-            if not playerRoot or not enemies or not attack then
+            local targets = GetNearbyAliveEnemies()
+            if #targets == 0 then
+                -- Không có quái trong 60 studs: không gọi attack.
                 return
             end
 
-            for _, enemy in ipairs(enemies:GetChildren()) do
+            -- Một lượt quét xử lý toàn bộ target hiện có, không break ở target đầu tiên.
+            for _, enemy in ipairs(targets) do
                 if attack.Alive(enemy) then
-                    local root = enemy:FindFirstChild("HumanoidRootPart")
-                    if root and (root.Position - playerRoot.Position).Magnitude <= 60 then
-                        attack.Kill(enemy)
-                        break
-                    end
+                    attack.Kill(enemy)
                 end
             end
         end)
