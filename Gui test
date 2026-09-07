@@ -47,7 +47,3 @@ Tabs.Farming:AddToggle("StartFarmToggle", {
 
 Window:SelectTab(1)
 
--- =============================================================================
--- [MẤU CHỐT]: SAU KHI UI LOAD XONG, GỌI FILE LOGIC TỪ ĐƯỜNG LINK RAW KHÁC
--- =============================================================================
--- Bạn thay link GitHub Raw chứa File 2 của bạn
