@@ -1,13 +1,33 @@
--- Tải thư viện Fluent UI bản mới nhất
+-- =============================================================================
+-- TỰ ĐỘNG XOÁ MENU CŨ TRƯỚC KHI CHẠY MENU MỚI
+-- =============================================================================
+local CoreGui = game:GetService("CoreGui")
+local PlayerGui = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
+
+-- Quét cả CoreGui và PlayerGui để tìm các bản Fluent cũ và xóa sạch
+for _, gui in pairs(CoreGui:GetChildren()) do
+    if gui.Name == "Fluent" or gui:FindFirstChild("Fluent") then
+        gui:Destroy()
+    end
+end
+for _, gui in pairs(PlayerGui:GetChildren()) do
+    if gui.Name == "Fluent" then
+        gui:Destroy()
+    end
+end
+task.wait(0.1) -- Chờ một chút để hệ thống xóa sạch hoàn toàn
+
+-- =============================================================================
+-- KHỞI TẠO MENU MỚI
+-- =============================================================================
 local Fluent = loadstring(game:HttpGet("https://github.com"))()
 
--- [QUAN TRỌNG]: Khởi tạo các biến cấu hình toàn cục (_G) để File Logic có thể đọc được
 _G.DanhSachFarmDaChon = {}
 _G.IsStartFarm = false
 
 local Window = Fluent:CreateWindow({
     Title = "Blox Fruit Premium Menu",
-    SubTitle = "Tách Biệt UI & Logic",
+    SubTitle = "Auto Clean Old Menu",
     TabWidth = 170, 
     Size = UDim2.fromOffset(590, 470),
     Acrylic = true, 
@@ -25,7 +45,6 @@ local Tabs = {
     V4AndRace = Window:AddTab({ Title = "V4 and Race", Icon = "shield" })
 }
 
--- Thiết lập mục Farming
 Tabs.Farming:AddParagraph({ Title = "Hệ Thống Tự Động Farm", Content = "Tích chọn các mục muốn chạy rồi nhấn Start Farm." })
 
 Tabs.Farming:AddMultiDropdown("MultiDropdownFarm", {
@@ -33,7 +52,7 @@ Tabs.Farming:AddMultiDropdown("MultiDropdownFarm", {
     Values = {"Farm Level", "Farm Bones"},
     Default = {},
     Callback = function(Value)
-        _G.DanhSachFarmDaChon = Value -- Cập nhật vào biến toàn cục _G
+        _G.DanhSachFarmDaChon = Value 
     end
 })
 
@@ -41,9 +60,8 @@ Tabs.Farming:AddToggle("StartFarmToggle", {
     Title = "Start Farm",
     Default = false,
     Callback = function(Value)
-        _G.IsStartFarm = Value -- Cập nhật vào biến toàn cục _G
+        _G.IsStartFarm = Value 
     end
 })
 
 Window:SelectTab(1)
-
