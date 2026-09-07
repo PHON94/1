@@ -1,24 +1,21 @@
 -- =============================================================================
--- TỰ ĐỘNG XOÁ MENU CŨ TRƯỚC KHI CHẠY MENU MỚI
+-- KIỂM TRA VÀ DỌN DEP MENU CŨ TRÁNH XUNG ĐỘT
 -- =============================================================================
-local CoreGui = game:GetService("CoreGui")
-local PlayerGui = game:GetService("Players").LocalPlayer:WaitForChild("PlayerGui")
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+local PlayerGui = LocalPlayer:FindFirstChildOfClass("PlayerGui")
 
--- Quét cả CoreGui và PlayerGui để tìm các bản Fluent cũ và xóa sạch
-for _, gui in pairs(CoreGui:GetChildren()) do
-    if gui.Name == "Fluent" or gui:FindFirstChild("Fluent") then
-        gui:Destroy()
+if PlayerGui then
+    for _, gui in pairs(PlayerGui:GetChildren()) do
+        if gui.Name == "Fluent" or (gui.Name == "ScreenGui" and gui:FindFirstChild("Fluent")) then
+            gui:Destroy()
+        end
     end
 end
-for _, gui in pairs(PlayerGui:GetChildren()) do
-    if gui.Name == "Fluent" then
-        gui:Destroy()
-    end
-end
-task.wait(0.1) -- Chờ một chút để hệ thống xóa sạch hoàn toàn
+task.wait(0.1)
 
 -- =============================================================================
--- KHỞI TẠO MENU MỚI
+-- KHỞI TẠO MENU FLUENT UI VÀ BẮT BUỘC HIỂN THỊ LÊN LUÔN
 -- =============================================================================
 local Fluent = loadstring(game:HttpGet("https://github.com"))()
 
@@ -27,14 +24,15 @@ _G.IsStartFarm = false
 
 local Window = Fluent:CreateWindow({
     Title = "Blox Fruit Premium Menu",
-    SubTitle = "Auto Clean Old Menu",
+    SubTitle = "Auto Open Mode",
     TabWidth = 170, 
     Size = UDim2.fromOffset(590, 470),
-    Acrylic = true, 
+    Acrylic = false, -- Tắt Acrylic kính mờ để menu load nhanh và mượt hơn, không bị lag hình
     Theme = "Dark", 
-    MinimizeKey = Enum.KeyCode.LeftControl 
+    MinimizeKey = Enum.KeyCode.RightControl -- Đổi sang phím Ctrl bên phải để không vướng nút combo game
 })
 
+-- Khởi tạo danh mục bên trái đúng thứ tự
 local Tabs = {
     Shop = Window:AddTab({ Title = "Shop", Icon = "shopping-cart" }),
     Status = Window:AddTab({ Title = "Status", Icon = "user" }),
@@ -45,6 +43,7 @@ local Tabs = {
     V4AndRace = Window:AddTab({ Title = "V4 and Race", Icon = "shield" })
 }
 
+-- Bố trí thành phần cho mục Farming
 Tabs.Farming:AddParagraph({ Title = "Hệ Thống Tự Động Farm", Content = "Tích chọn các mục muốn chạy rồi nhấn Start Farm." })
 
 Tabs.Farming:AddMultiDropdown("MultiDropdownFarm", {
@@ -64,4 +63,14 @@ Tabs.Farming:AddToggle("StartFarmToggle", {
     end
 })
 
-Window:SelectTab(1)
+-- =============================================================================
+-- LỆNH BẮT BUỘC MENU PHẢI BẬT LÊN TRÊN MÀN HÌNH CHÍNH
+-- =============================================================================
+Window:SelectTab(1) 
+
+-- Gửi thông báo nhỏ góc màn hình xác nhận menu đã sẵn sàng
+Fluent:Notify({
+    Title = "Blox Fruit Menu",
+    Content = "Menu đã mở thành công! Bấm nút Ctrl Phải để Ẩn/Hiện.",
+    Duration = 5
+})
