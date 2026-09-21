@@ -52,7 +52,92 @@ Gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
 local W, H = 440, 250
 local X, Y = 0, 0
+-- AXIOM_SOURCE_FAST_ATTACK_BEGIN
+-- Source-style Fast Attack core.
+-- Keeps the existing UI callbacks/flags intact and replaces the attack loop.
+do
+    local Players = game:GetService("Players")
+    local ReplicatedStorage = game:GetService("ReplicatedStorage")
+    local RunService = game:GetService("RunService")
+    local LocalPlayer = Players.LocalPlayer
 
+    _G.FastAttack = _G.FastAttack == true
+    _G.SelectWeapon = _G.SelectWeapon or nil
+
+    local SourceAttack = {}
+    SourceAttack.__index = SourceAttack
+
+    function SourceAttack.Alive(model)
+        if not model then return false end
+        local humanoid = model:FindFirstChildOfClass("Humanoid")
+        return humanoid ~= nil and humanoid.Health > 0
+    end
+
+    local function getRoot(model)
+        return model and model:FindFirstChild("HumanoidRootPart")
+    end
+
+    local function equipSelectedWeapon()
+        local character = LocalPlayer.Character
+        local backpack = LocalPlayer:FindFirstChild("Backpack")
+        if not character or not backpack then return end
+
+        local selected = _G.SelectWeapon
+        if not selected then return end
+
+        local tool = character:FindFirstChild(selected) or backpack:FindFirstChild(selected)
+        if tool and tool:IsA("Tool") then
+            pcall(function()
+                character:FindFirstChildOfClass("Humanoid"):EquipTool(tool)
+            end)
+        end
+    end
+
+    function SourceAttack.Kill(model)
+        if not SourceAttack.Alive(model) then return false end
+
+        local root = getRoot(model)
+        if not root then return false end
+
+        equipSelectedWeapon()
+
+        -- Movement is owned by Farm Level's TweenTo.
+        -- Do not reposition HumanoidRootPart here: doing so fights the
+        -- farm movement target and causes the character to jerk vertically.
+        return true
+    end
+
+    -- Expose the source-style dispatcher without changing the UI.
+    _G.SourceFastAttack = SourceAttack
+
+    -- Replace the existing attack worker when the script's flag is enabled.
+    task.spawn(function()
+        while task.wait(0.05) do
+            if _G.FastAttack and not _G.AutoClick then
+                pcall(function()
+                    local enemies = workspace:FindFirstChild("Enemies")
+                    if not enemies then return end
+
+                    for _, enemy in ipairs(enemies:GetChildren()) do
+                        if SourceAttack.Alive(enemy) then
+                            local root = getRoot(enemy)
+                            local playerRoot =
+                                LocalPlayer.Character and
+                                LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+
+                            if root and playerRoot and
+                               (root.Position - playerRoot.Position).Magnitude <= 60 then
+                                SourceAttack.Kill(enemy)
+                                break
+                            end
+                        end
+                    end
+                end)
+            end
+        end
+    end)
+end
+-- AXIOM_SOURCE_FAST_ATTACK_END
 
 
 local Main = Instance.new("Frame")
@@ -246,7 +331,7 @@ local Title = Instance.new("TextLabel")
 Title.Position = UDim2.fromOffset(18, 7)
 Title.Size = UDim2.fromOffset(300, 25)
 Title.BackgroundTransparency = 1
-Title.Text = "PHONGDZ HUB  v5.1"
+Title.Text = "PHONGDZ HUB  v5.4"
 Title.Font = Enum.Font.GothamBlack
 Title.TextSize = 19
 Title.TextColor3 = Color3.fromRGB(255, 211, 65)
@@ -306,7 +391,7 @@ cc.Parent = Close
 local SettingFarm = Instance.new("Frame")
 SettingFarm.Name = "SettingFarm"
 SettingFarm.Position = UDim2.fromOffset(16, 16)
-SettingFarm.Size = UDim2.fromOffset(W - 32, 194)
+SettingFarm.Size = UDim2.fromOffset(W - 32, 118)
 SettingFarm.BackgroundColor3 = Color3.fromRGB(22, 25, 33)
 SettingFarm.BorderSizePixel = 0
 SettingFarm.Parent = Main
@@ -386,7 +471,7 @@ Arrow.Parent = WeaponButton
 local FruitM1Toggle = Instance.new("TextButton")
 FruitM1Toggle.Name = "FruitM1Toggle"
 FruitM1Toggle.Position = UDim2.fromOffset(13, 101)
-FruitM1Toggle.Size = UDim2.fromOffset(W - 58, 32)
+FruitM1Toggle.Size = UDim2.new(0.5, -19, 0, 32)
 FruitM1Toggle.BackgroundColor3 = Color3.fromRGB(31, 34, 43)
 FruitM1Toggle.BorderSizePixel = 0
 FruitM1Toggle.Text = "Blox Fruit M1: OFF"
@@ -1102,10 +1187,11 @@ end
 
 local localPlayerButton, localPlayerPage = makeCategory("LOCAL PLAYER", "◉", 1)
 local farmButton, farmPage = makeCategory("FARM", "⚔", 2)
-local espButton, espPage = makeCategory("ESP", "◉", 3)
-local settingButton, settingPage = makeCategory("SETTING", "⚙", 4)
-local miscButton, miscPage = makeCategory("MISC", "✦", 5)
-local statusButton, statusPage = makeCategory("STATUS SERVER", "◌", 6)
+local questItemButton, questItemPage = makeCategory("QUEST AND GET ITEM", "◆", 3)
+local espButton, espPage = makeCategory("ESP", "◉", 4)
+local settingButton, settingPage = makeCategory("SETTING", "⚙", 5)
+local miscButton, miscPage = makeCategory("MISC", "✦", 6)
+local statusButton, statusPage = makeCategory("STATUS SERVER", "◌", 7)
 
 local function activateCategory(name)
     for pageName, page in pairs(CategoryPages) do
@@ -1125,6 +1211,7 @@ end
 
 localPlayerButton.Activated:Connect(function() activateCategory("LOCAL PLAYER") end)
 farmButton.Activated:Connect(function() activateCategory("FARM") end)
+questItemButton.Activated:Connect(function() activateCategory("QUEST AND GET ITEM") end)
 espButton.Activated:Connect(function() activateCategory("ESP") end)
 settingButton.Activated:Connect(function() activateCategory("SETTING") end)
 miscButton.Activated:Connect(function() activateCategory("MISC") end)
@@ -1239,6 +1326,8 @@ local function sectionCard(parent, title, subtitle)
     sub.Parent = card
 end
 
+sectionCard(questItemPage, "QUEST AND GET ITEM",
+    "Quest / item functions from source.txt will be placed here.")
 sectionCard(espPage, "ESP", "ESP controls can be placed here.")
 sectionCard(miscPage, "MISC", "Miscellaneous controls can be placed here.")
 
@@ -2894,6 +2983,7 @@ local function SourceTargetParts(targets)
 end
 
 local function ExecuteSourceFastAttack()
+    if _G.AutoClick then return end
     if not _G.AutoLevel or not SourceFastAttack.Enabled then return end
     local character = LocalPlayer.Character
     if not character then return end
@@ -2947,6 +3037,7 @@ end
 InitializeHitRegistration()
 
 local function ExecuteSourceHitRegistration()
+    if _G.AutoClick then return end
     if not _G.AutoLevel then return end
 
     local character = LocalPlayer.Character
@@ -3300,50 +3391,29 @@ GetQuestPointFromNPC = function(npcName)
 end
 
 
--- Update 30 compatibility: choose the current quest directly from ReplicatedStorage.Quests.
--- This avoids the old hard-coded First/Second Sea exceptions that became stale after the Sea 1 rework.
-local QuestMobAliases = {
-    ["Wysper"] = "Sky Warlord",
-    ["Sky Warlord"] = "Sky Warlord",
-    ["Thunder God"] = "Lightning God",
-    ["Lightning God"] = "Lightning God",
-    ["Magma General"] = "Magma General",
-    ["Magma General"] = "Magma General",
-}
-
-local function CanonicalQuestMobName(name)
-    return QuestMobAliases[name] or name
-end
-
-local function QuestMobMatches(instance, targetName)
-    if not instance or not targetName then return false end
-    local target = CanonicalQuestMobName(targetName)
-    local name = CanonicalQuestMobName(instance.Name)
-    if name == target then return true end
-
-    local display = instance:FindFirstChildOfClass("Humanoid")
-    display = display and display.DisplayName
-    if display and CanonicalQuestMobName(display) == target then
-        return true
-    end
-
-    return false
-end
-
 GetQuests = function()
     local lvl = plr.Data.Level.Value
-    local LevelReq = -1
+    local LevelReq = 0
     local mmb = {}
-
-    -- The live Quests module is the source of truth after Update 30.
-    for r, v in pairs(Quests) do
-        for id, v1 in pairs(v) do
-            local LvReq = tonumber(v1.LevelReq) or -1
-            if lvl >= LvReq and LvReq >= LevelReq and not table.find(blacklistquest, r) then
-                for nguoi, count in pairs(v1.Task or {}) do
-                    if tonumber(count) and tonumber(count) > 0 then
+    
+    if lvl >= 700 and CheckSea(1) then
+        mmb["Mob"] = "Galley Captain"
+        mmb["NameQuest"] = "FountainQuest"
+        mmb["ID"] = 2
+        mmb["LevelReq"] = 700
+    elseif lvl >= 1500 and CheckSea(2) then
+        mmb["Mob"] = "Water Fighter"
+        mmb["NameQuest"] = "ForgottenQuest"
+        mmb["ID"] = 2
+        mmb["LevelReq"] = 1450
+    else
+        for r, v in pairs(Quests) do
+            for id, v1 in pairs(v) do
+                local LvReq = v1.LevelReq
+                for nguoi, tinh in pairs(v1.Task) do
+                    if lvl >= LvReq and LevelReq <= LvReq and v1.Task[nguoi] > 1 and not table.find(blacklistquest, r) then
                         LevelReq = LvReq
-                        mmb["Mob"] = CanonicalQuestMobName(nguoi)
+                        mmb["Mob"] = nguoi
                         mmb["NameQuest"] = r
                         mmb["ID"] = id
                         mmb["LevelReq"] = LvReq
@@ -3352,7 +3422,7 @@ GetQuests = function()
             end
         end
     end
-
+    
     return mmb
 end
 
@@ -3363,7 +3433,7 @@ GetQuestPoint = function()
     return nil
 end
 
-MaterialMon=function()local a=game.Players.LocalPlayer;local b=a.Character and a.Character:FindFirstChild("HumanoidRootPart")if not b then return end;shouldRequestEntrance=function(c,d)local e=(b.Position-c).Magnitude;if e>=d then replicated.Remotes.CommF_:InvokeServer("requestEntrance",c)end end;if World1 then if SelectMaterial=="Angel Wings"then MMon={"Shanda","Royal Squad","Royal Soldier","Sky Warlord","Lightning God"}MPos=CFrame.new(-4698,845,-1912)SP="Default"local c=Vector3.new(-4607.82275,872.54248,-1667.55688)shouldRequestEntrance(c,10000)elseif SelectMaterial=="Leather + Scrap Metal"then MMon={"Brute","Pirate"}MPos=CFrame.new(-1145,15,4350)SP="Default"elseif SelectMaterial=="Magma Ore"then MMon={"Military Soldier","Military Spy","Magma General"}MPos=CFrame.new(-5815,84,8820)SP="Default"elseif SelectMaterial=="Fish Tail"then MMon={"Fishman Warrior","Fishman Commando","Fishman Lord"}MPos=CFrame.new(61123,19,1569)SP="Default"local c=Vector3.new(61163.8515625,5.342342376708984,1819.7841796875)shouldRequestEntrance(c,17000)end elseif World2 then if SelectMaterial=="Leather + Scrap Metal"then MMon={"Marine Captain"}MPos=CFrame.new(-2010.5059814453125,73.00115966796875,-3326.620849609375)SP="Default"elseif SelectMaterial=="Magma Ore"then MMon={"Magma Ninja","Lava Pirate"}MPos=CFrame.new(-5428,78,-5959)SP="Default"elseif SelectMaterial=="Ectoplasm"then MMon={"Ship Deckhand","Ship Engineer","Ship Steward","Ship Officer"}MPos=CFrame.new(911.35827636719,125.95812988281,33159.5390625)SP="Default"local c=Vector3.new(61163.8515625,5.342342376708984,1819.7841796875)shouldRequestEntrance(c,18000)elseif SelectMaterial=="Mystic Droplet"then MMon={"Water Fighter"}MPos=CFrame.new(-3385,239,-10542)SP="Default"elseif SelectMaterial=="Radioactive Material"then MMon={"Factory Staff"}MPos=CFrame.new(295,73,-56)SP="Default"elseif SelectMaterial=="Vampire Fang"then MMon={"Vampire"}MPos=CFrame.new(-6033,7,-1317)SP="Default"end elseif World3 then if SelectMaterial=="Scrap Metal"then MMon={"Jungle Pirate","Forest Pirate"}MPos=CFrame.new(-11975.78515625,331.7734069824219,-10620.0302734375)SP="Default"elseif SelectMaterial=="Fish Tail"then MMon={"Fishman Raider","Fishman Captain"}MPos=CFrame.new(-10993,332,-8940)SP="Default"elseif SelectMaterial=="Conjured Cocoa"then MMon={"Chocolate Bar Battler","Cocoa Warrior"}MPos=CFrame.new(620.6344604492188,78.93644714355469,-12581.369140625)SP="Default"elseif SelectMaterial=="Dragon Scale"then MMon={"Dragon Crew Archer","Dragon Crew Warrior"}MPos=CFrame.new(6594,383,139)SP="Default"elseif SelectMaterial=="Gunpowder"then MMon={"Pistol Billionaire"}MPos=CFrame.new(-84.8556900024414, 85.62061309814453, 6132.0087890625)SP="Default"elseif SelectMaterial=="Mini Tusk"then MMon={"Mythological Pirate"}MPos=CFrame.new(-13545,470,-6917)SP="Default"elseif SelectMaterial=="Demonic Wisp"then MMon={"Demonic Soul"}MPos=CFrame.new(-9495.6806640625,453.58624267578125,5977.3486328125)SP="Default"end end end
+MaterialMon=function()local a=game.Players.LocalPlayer;local b=a.Character and a.Character:FindFirstChild("HumanoidRootPart")if not b then return end;shouldRequestEntrance=function(c,d)local e=(b.Position-c).Magnitude;if e>=d then replicated.Remotes.CommF_:InvokeServer("requestEntrance",c)end end;if World1 then if SelectMaterial=="Angel Wings"then MMon={"Shanda","Royal Squad","Royal Soldier","Wysper","Thunder God"}MPos=CFrame.new(-4698,845,-1912)SP="Default"local c=Vector3.new(-4607.82275,872.54248,-1667.55688)shouldRequestEntrance(c,10000)elseif SelectMaterial=="Leather + Scrap Metal"then MMon={"Brute","Pirate"}MPos=CFrame.new(-1145,15,4350)SP="Default"elseif SelectMaterial=="Magma Ore"then MMon={"Military Soldier","Military Spy","Magma Admiral"}MPos=CFrame.new(-5815,84,8820)SP="Default"elseif SelectMaterial=="Fish Tail"then MMon={"Fishman Warrior","Fishman Commando","Fishman Lord"}MPos=CFrame.new(61123,19,1569)SP="Default"local c=Vector3.new(61163.8515625,5.342342376708984,1819.7841796875)shouldRequestEntrance(c,17000)end elseif World2 then if SelectMaterial=="Leather + Scrap Metal"then MMon={"Marine Captain"}MPos=CFrame.new(-2010.5059814453125,73.00115966796875,-3326.620849609375)SP="Default"elseif SelectMaterial=="Magma Ore"then MMon={"Magma Ninja","Lava Pirate"}MPos=CFrame.new(-5428,78,-5959)SP="Default"elseif SelectMaterial=="Ectoplasm"then MMon={"Ship Deckhand","Ship Engineer","Ship Steward","Ship Officer"}MPos=CFrame.new(911.35827636719,125.95812988281,33159.5390625)SP="Default"local c=Vector3.new(61163.8515625,5.342342376708984,1819.7841796875)shouldRequestEntrance(c,18000)elseif SelectMaterial=="Mystic Droplet"then MMon={"Water Fighter"}MPos=CFrame.new(-3385,239,-10542)SP="Default"elseif SelectMaterial=="Radioactive Material"then MMon={"Factory Staff"}MPos=CFrame.new(295,73,-56)SP="Default"elseif SelectMaterial=="Vampire Fang"then MMon={"Vampire"}MPos=CFrame.new(-6033,7,-1317)SP="Default"end elseif World3 then if SelectMaterial=="Scrap Metal"then MMon={"Jungle Pirate","Forest Pirate"}MPos=CFrame.new(-11975.78515625,331.7734069824219,-10620.0302734375)SP="Default"elseif SelectMaterial=="Fish Tail"then MMon={"Fishman Raider","Fishman Captain"}MPos=CFrame.new(-10993,332,-8940)SP="Default"elseif SelectMaterial=="Conjured Cocoa"then MMon={"Chocolate Bar Battler","Cocoa Warrior"}MPos=CFrame.new(620.6344604492188,78.93644714355469,-12581.369140625)SP="Default"elseif SelectMaterial=="Dragon Scale"then MMon={"Dragon Crew Archer","Dragon Crew Warrior"}MPos=CFrame.new(6594,383,139)SP="Default"elseif SelectMaterial=="Gunpowder"then MMon={"Pistol Billionaire"}MPos=CFrame.new(-84.8556900024414, 85.62061309814453, 6132.0087890625)SP="Default"elseif SelectMaterial=="Mini Tusk"then MMon={"Mythological Pirate"}MPos=CFrame.new(-13545,470,-6917)SP="Default"elseif SelectMaterial=="Demonic Wisp"then MMon={"Demonic Soul"}MPos=CFrame.new(-9495.6806640625,453.58624267578125,5977.3486328125)SP="Default"end end end
 
 GetQuestPoint = function()
     if GuideModule and GuideModule.Data and GuideModule.Data.LastClosestNPC then
@@ -3494,7 +3564,7 @@ task.spawn(function()
 
                     if enemies then
                         for _, v in pairs(enemies:GetChildren()) do
-                            if QuestMobMatches(v, enemyName) and SourceFarmAlive(v) then
+                            if v.Name == enemyName and SourceFarmAlive(v) then
                                 foundMob = true
                                 ActiveTarget = v
                                 AutoHaki()
@@ -3516,7 +3586,7 @@ task.spawn(function()
 
                     if not foundMob then
                         for _, v in pairs(ReplicatedStorage:GetChildren()) do
-                            if QuestMobMatches(v, enemyName) and SourceFarmAlive(v) then
+                            if v.Name == enemyName and SourceFarmAlive(v) then
                                 foundMob = true
                                 local mobRoot = v:FindFirstChild("HumanoidRootPart")
                                 if mobRoot then TweenTo(mobRoot.CFrame * CFrame.new(0,20,0)) end
@@ -3530,7 +3600,7 @@ task.spawn(function()
                         local spawnFolder = worldOrigin and worldOrigin:FindFirstChild("EnemySpawns")
                         if spawnFolder then
                             for _, spawnPoint in pairs(spawnFolder:GetChildren()) do
-                                if string.find(spawnPoint.Name, enemyName) or string.find(spawnPoint.Name, CanonicalQuestMobName(enemyName)) then
+                                if string.find(spawnPoint.Name, enemyName) then
                                     TweenTo(spawnPoint.CFrame * CFrame.new(0,20,0))
                                     break
                                 end
@@ -3551,9 +3621,9 @@ end)
 --===========================================================================
 local MaterialFarmTarget=nil
 local MaterialMap={
- ["Angel Wings"]={{"Shanda","Royal Squad","Royal Soldier","Sky Warlord","Lightning God"},CFrame.new(-4698,845,-1912),1},
+ ["Angel Wings"]={{"Shanda","Royal Squad","Royal Soldier","Wysper","Thunder God"},CFrame.new(-4698,845,-1912),1},
  ["Leather + Scrap Metal"]={{"Brute","Pirate"},CFrame.new(-1145,15,4350),1},
- ["Magma Ore"]={{"Military Soldier","Military Spy","Magma General"},CFrame.new(-5815,84,8820),1},
+ ["Magma Ore"]={{"Military Soldier","Military Spy","Magma Admiral"},CFrame.new(-5815,84,8820),1},
  ["Fish Tail"]={{"Fishman Warrior","Fishman Commando","Fishman Lord"},CFrame.new(61123,19,1569),1},
  ["Radioactive Material"]={{"Factory Staff"},CFrame.new(295,73,-56),2},
  ["Ectoplasm"]={{"Ship Deckhand","Ship Engineer","Ship Steward","Ship Officer"},CFrame.new(911.35827636719,125.95812988281,33159.5390625),2},
@@ -4311,165 +4381,429 @@ task.spawn(function()
     end
 end)
 
+
 --===========================================================================
--- AUTO CLICK / FAST ATTACK (LATE INIT)
--- Loaded only after the entire UI and Farm code above has initialized.
+
+--===========================================================================
+-- PHONGDZ HUB v5.4 :: ISLAND TRAVEL SAFE LATE LOAD
 --===========================================================================
 
 task.defer(function()
-    -- AXIOM_SOURCE_FAST_ATTACK_BEGIN
-    -- Source-style Fast Attack core.
-    -- Keeps the existing UI callbacks/flags intact and replaces the attack loop.
-    do
-        local Players = game:GetService("Players")
-        local ReplicatedStorage = game:GetService("ReplicatedStorage")
-        local RunService = game:GetService("RunService")
-        local LocalPlayer = Players.LocalPlayer
+    task.wait()
 
-        _G.FastAttack = _G.FastAttack == true
-        _G.SelectWeapon = _G.SelectWeapon or nil
-
-        local SourceAttack = {}
-        SourceAttack.__index = SourceAttack
-
-        function SourceAttack.Alive(model)
-            if not model then return false end
-            local humanoid = model:FindFirstChildOfClass("Humanoid")
-            return humanoid ~= nil and humanoid.Health > 0
+    local ok, err = xpcall(function()
+        -- Base menu is already constructed before this optional loader runs.
+        -- If its Local Player page is unavailable, simply skip the extension.
+        if not localPlayerPage or not localPlayerPage.Parent then
+            return
         end
 
-        local function getRoot(model)
-            return model and model:FindFirstChild("HumanoidRootPart")
+        local IslandTravel = {
+            Selected = nil,
+            Busy = false
+        }
+
+        local World1 = game.PlaceId == 2753915549
+        local World2 = game.PlaceId == 4442272183
+        local World3 = game.PlaceId == 7449423635
+
+        -- Exact island destinations from source.txt.
+        local Sea1 = {
+            ["Pirates"] = CFrame.new(-2709.67944, 24.5206585, 2104.24585),
+            ["Marine"] = CFrame.new(-2709.67944, 24.5206585, 2104.24585),
+            ["Jungle"] = CFrame.new(-1600, 36, 150),
+            ["Pirate Village"] = CFrame.new(-1100, 4, 3850),
+            ["Desert"] = CFrame.new(1090, 7, 4370),
+            ["Frozen Village"] = CFrame.new(1200, 28, -1500),
+            ["Marine Fortress"] = CFrame.new(-4500, 20, 4250),
+            ["Skylands Lower"] = CFrame.new(-5000, 700, -2500),
+            ["Prison"] = CFrame.new(4875, 6, 735),
+            ["Colosseum"] = CFrame.new(-1500, 60, -290),
+            ["Magma Village"] = CFrame.new(-5200, 8, 8400),
+            ["Underwater City"] = CFrame.new(61160, 5, 1819),
+            ["Skylands Upper"] = CFrame.new(-7880, 5545, -380)
+        }
+
+        local Sea2 = {
+            ["Kingdom of Rose"] = CFrame.new(-321, 73, 297),
+            ["Green Zone"] = CFrame.new(-2447, 73, -3211),
+            ["Graveyard Island"] = CFrame.new(-9515, 142, 5536),
+            ["Snow Mountain"] = CFrame.new(561, 401, -5306),
+            ["Hot and Cold (Cold)"] = CFrame.new(-6026, 15, -5062),
+            ["Hot and Cold (Hot)"] = CFrame.new(-5478, 15, -5240),
+            ["Cursed Ship"] = CFrame.new(902, 126, 33071),
+            ["Ice Castle"] = CFrame.new(6137, 294, -6747),
+            ["Forgotten Island"] = CFrame.new(-3043, 238, -10191)
+        }
+
+        local Sea3 = {
+            ["Port Town"] = CFrame.new(-290, 44, 5450),
+            ["Hydra Island"] = CFrame.new(5228, 604, 345),
+            ["Great Tree"] = CFrame.new(2682, 1682, -7190),
+            ["Floating Turtle"] = CFrame.new(-12000, 331, -8500),
+            ["Haunted Castle"] = CFrame.new(-9515, 142, 5536),
+            ["Sea of Treats"] = CFrame.new(-1145, 13, -14450),
+            ["Tiki Outpost"] = CFrame.new(-16200, 90, -17300),
+            ["Submerged Island"] = CFrame.new(-3200, -10, -10000)
+        }
+
+        local IslandData
+        if World1 then
+            IslandData = Sea1
+        elseif World2 then
+            IslandData = Sea2
+        elseif World3 then
+            IslandData = Sea3
+        else
+            IslandData = Sea1
         end
 
-        local function equipSelectedWeapon()
-            local character = LocalPlayer.Character
-            local backpack = LocalPlayer:FindFirstChild("Backpack")
-            if not character or not backpack then return end
+        local IslandNames = {}
+        for name in pairs(IslandData) do
+            table.insert(IslandNames, name)
+        end
+        table.sort(IslandNames)
 
-            local selected = _G.SelectWeapon
-            if not selected then return end
+        IslandTravel.Selected = IslandNames[1]
 
-            local tool = character:FindFirstChild(selected) or backpack:FindFirstChild(selected)
-            if tool and tool:IsA("Tool") then
-                pcall(function()
-                    character:FindFirstChildOfClass("Humanoid"):EquipTool(tool)
-                end)
-            end
+        local page = localPlayerPage
+        if not page or not page.Parent then
+            error("LocalPlayerPage không tồn tại")
         end
 
-        function SourceAttack.Kill(model)
-            if not SourceAttack.Alive(model) then return false end
+        -- Positioned below the existing Auto Stats card.
+        local card = Instance.new("Frame")
+        card.Name = "IslandTravel"
+        card.Position = UDim2.fromOffset(3, 310)
+        card.Size = UDim2.new(1, -6, 0, 166)
+        card.BackgroundColor3 = Color3.fromRGB(22, 25, 33)
+        card.BorderSizePixel = 0
+        card.ZIndex = 45
+        card.Parent = page
 
-            local root = getRoot(model)
-            if not root then return false end
+        local corner = Instance.new("UICorner")
+        corner.CornerRadius = UDim.new(0, 10)
+        corner.Parent = card
 
-            equipSelectedWeapon()
+        local title = Instance.new("TextLabel")
+        title.BackgroundTransparency = 1
+        title.Position = UDim2.fromOffset(13, 9)
+        title.Size = UDim2.new(1, -26, 0, 22)
+        title.Text = "ISLAND TRAVEL"
+        title.Font = Enum.Font.GothamBlack
+        title.TextSize = 12
+        title.TextColor3 = Color3.fromRGB(255, 211, 65)
+        title.TextXAlignment = Enum.TextXAlignment.Left
+        title.ZIndex = 46
+        title.Parent = card
 
-            -- Movement is owned by Farm Level's TweenTo.
-            -- Do not reposition HumanoidRootPart here: doing so fights the
-            -- farm movement target and causes the character to jerk vertically.
-            return true
+        local desc = Instance.new("TextLabel")
+        desc.BackgroundTransparency = 1
+        desc.Position = UDim2.fromOffset(13, 31)
+        desc.Size = UDim2.new(1, -26, 0, 18)
+        desc.Text = "Chọn đảo rồi di chuyển theo CFrame của source"
+        desc.Font = Enum.Font.Gotham
+        desc.TextSize = 8
+        desc.TextColor3 = Color3.fromRGB(140, 146, 158)
+        desc.TextXAlignment = Enum.TextXAlignment.Left
+        desc.ZIndex = 46
+        desc.Parent = card
+
+        local selected = Instance.new("TextButton")
+        selected.Position = UDim2.fromOffset(13, 57)
+        selected.Size = UDim2.new(1, -26, 0, 36)
+        selected.BackgroundColor3 = Color3.fromRGB(34, 38, 48)
+        selected.BorderSizePixel = 0
+        selected.Text = "ĐẢO: " .. tostring(IslandTravel.Selected) .. "  ▾"
+        selected.Font = Enum.Font.GothamBold
+        selected.TextSize = 9
+        selected.TextColor3 = Color3.fromRGB(225, 228, 235)
+        selected.AutoButtonColor = false
+        selected.ZIndex = 50
+        selected.Parent = card
+
+        local selectedCorner = Instance.new("UICorner")
+        selectedCorner.CornerRadius = UDim.new(0, 7)
+        selectedCorner.Parent = selected
+
+        local drop = Instance.new("Frame")
+        drop.Position = UDim2.fromOffset(13, 96)
+        drop.Size = UDim2.new(1, -26, 0, 0)
+        drop.BackgroundColor3 = Color3.fromRGB(27, 30, 38)
+        drop.BorderSizePixel = 0
+        drop.Visible = false
+        drop.ClipsDescendants = true
+        drop.ZIndex = 200
+        drop.Parent = card
+
+        local dropCorner = Instance.new("UICorner")
+        dropCorner.CornerRadius = UDim.new(0, 7)
+        dropCorner.Parent = drop
+
+        local travel = Instance.new("TextButton")
+        travel.Position = UDim2.fromOffset(13, 104)
+        travel.Size = UDim2.new(1, -26, 0, 40)
+        travel.BackgroundColor3 = Color3.fromRGB(48, 52, 63)
+        travel.BorderSizePixel = 0
+        travel.Text = "DI CHUYỂN ĐẾN ĐẢO"
+        travel.Font = Enum.Font.GothamBlack
+        travel.TextSize = 9
+        travel.TextColor3 = Color3.fromRGB(225, 228, 235)
+        travel.AutoButtonColor = false
+        travel.ZIndex = 50
+        travel.Parent = card
+
+        local travelCorner = Instance.new("UICorner")
+        travelCorner.CornerRadius = UDim.new(0, 8)
+        travelCorner.Parent = travel
+
+        local status = Instance.new("TextLabel")
+        status.BackgroundTransparency = 1
+        status.Position = UDim2.fromOffset(13, 146)
+        status.Size = UDim2.new(1, -26, 0, 16)
+        status.Text = "● READY  •  " .. tostring(IslandTravel.Selected)
+        status.Font = Enum.Font.GothamMedium
+        status.TextSize = 8
+        status.TextColor3 = Color3.fromRGB(140, 146, 158)
+        status.TextXAlignment = Enum.TextXAlignment.Center
+        status.ZIndex = 46
+        status.Parent = card
+
+        local function refresh()
+            selected.Text = "ĐẢO: " .. tostring(IslandTravel.Selected) .. "  ▾"
+            status.Text = "● READY  •  " .. tostring(IslandTravel.Selected)
         end
 
-        -- Expose the source-style dispatcher without changing the UI.
-        _G.SourceFastAttack = SourceAttack
-
-        -- Replace the existing attack worker when the script's flag is enabled.
-        task.spawn(function()
-            while task.wait(0.05) do
-                if _G.FastAttack then
-                    pcall(function()
-                        local enemies = workspace:FindFirstChild("Enemies")
-                        if not enemies then return end
-
-                        for _, enemy in ipairs(enemies:GetChildren()) do
-                            if SourceAttack.Alive(enemy) then
-                                local root = getRoot(enemy)
-                                local playerRoot =
-                                    LocalPlayer.Character and
-                                    LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-
-                                if root and playerRoot and
-                                   (root.Position - playerRoot.Position).Magnitude <= 60 then
-                                    SourceAttack.Kill(enemy)
-                                    break
-                                end
-                            end
-                        end
-                    end)
+        local function rebuild()
+            for _, child in ipairs(drop:GetChildren()) do
+                if child:IsA("TextButton") then
+                    child:Destroy()
                 end
             end
-        end)
-    end
-    -- AXIOM_SOURCE_FAST_ATTACK_END
 
-    -- AUTO CLICK :: SOURCE NEARBY ATTACK (BATCH)
+            local rowH = 31
+            local maxRows = math.min(#IslandNames, 7)
+
+            for i = 1, #IslandNames do
+                local name = IslandNames[i]
+                local option = Instance.new("TextButton")
+                option.Position = UDim2.fromOffset(4, (i - 1) * rowH)
+                option.Size = UDim2.new(1, -8, 0, rowH - 2)
+                option.BackgroundColor3 = name == IslandTravel.Selected
+                    and Color3.fromRGB(64, 145, 91)
+                    or Color3.fromRGB(35, 39, 49)
+                option.BorderSizePixel = 0
+                option.Text = name
+                option.Font = Enum.Font.GothamMedium
+                option.TextSize = 8
+                option.TextColor3 = Color3.fromRGB(230, 233, 240)
+                option.AutoButtonColor = false
+                option.ZIndex = 210
+                option.Parent = drop
+
+                local oc = Instance.new("UICorner")
+                oc.CornerRadius = UDim.new(0, 5)
+                oc.Parent = option
+
+                option.Activated:Connect(function()
+                    IslandTravel.Selected = name
+                    drop.Visible = false
+                    drop.Size = UDim2.fromOffset(0, 0)
+                    drop.Size = UDim2.new(1, -26, 0, 0)
+                    travel.Position = UDim2.fromOffset(13, 104)
+                    refresh()
+                    rebuild()
+                end)
+            end
+
+            local shownHeight = math.min(#IslandNames, 7) * rowH + 4
+            drop.Size = UDim2.new(1, -26, 0, shownHeight)
+        end
+
+        selected.Activated:Connect(function()
+            drop.Visible = not drop.Visible
+            if drop.Visible then
+                rebuild()
+                travel.Position = UDim2.fromOffset(
+                    13,
+                    104 + math.min(#IslandNames, 7) * 31 + 8
+                )
+                card.Size = UDim2.new(
+                    1, -6, 0,
+                    166 + math.min(#IslandNames, 7) * 31 + 8
+                )
+            else
+                drop.Size = UDim2.new(1, -26, 0, 0)
+                travel.Position = UDim2.fromOffset(13, 104)
+                card.Size = UDim2.new(1, -6, 0, 166)
+            end
+        end)
+
+        travel.Activated:Connect(function()
+            local targetCF = IslandData[IslandTravel.Selected]
+            if not targetCF or IslandTravel.Busy then
+                return
+            end
+
+            IslandTravel.Busy = true
+            travel.Text = "ĐANG DI CHUYỂN..."
+            travel.BackgroundColor3 = Color3.fromRGB(64, 145, 91)
+            status.Text = "● MOVING  •  " .. tostring(IslandTravel.Selected)
+
+            task.spawn(function()
+                local moved = pcall(function()
+                    -- Existing TweenTo owns movement and Reset Bypass integration.
+                    TweenTo(targetCF)
+                end)
+
+                if moved then
+                    status.Text = "● MOVING  •  " .. tostring(IslandTravel.Selected)
+                else
+                    status.Text = "● ERROR  •  không thể di chuyển"
+                end
+
+                task.wait(0.5)
+                IslandTravel.Busy = false
+                travel.Text = "DI CHUYỂN ĐẾN ĐẢO"
+                travel.BackgroundColor3 = Color3.fromRGB(48, 52, 63)
+            end)
+        end)
+
+        refresh()
+
+        -- Extend only this page's canvas. Existing menu scroll behavior remains.
+        local function refreshCanvas()
+            if page and page.Parent then
+                page.CanvasSize = UDim2.fromOffset(
+                    0,
+                    math.max(page.AbsoluteWindowSize.Y, card.Position.Y.Offset + card.AbsoluteSize.Y + 12)
+                )
+            end
+        end
+
+        card:GetPropertyChangedSignal("AbsoluteSize"):Connect(refreshCanvas)
+        task.defer(refreshCanvas)
+    end, debug.traceback)
+
+    if not ok then
+        warn("[PhongdzHub][IslandTravel] Optional module disabled safely:", err)
+    end
+end)
+
+
+--===========================================================================
+-- AUTO CLICK :: REMOTE ONLY / PER TARGET / 60 STUDS
+-- Không di chuyển player, không BringEnemy, không gọi Attack.Kill.
+-- Mỗi quái hợp lệ nhận một lượt RegisterAttack + RegisterHit riêng.
+--===========================================================================
+do
     _G.AutoClick = _G.AutoClick == true
 
-    local AutoClickToggle = SettingFarm:FindFirstChild("AutoClickToggle")
-    if not AutoClickToggle then
-        AutoClickToggle = Instance.new("TextButton")
-        AutoClickToggle.Name = "AutoClickToggle"
-        AutoClickToggle.Position = UDim2.fromOffset(13, 145)
-        AutoClickToggle.Size = UDim2.new(1, -26, 0, 40)
-        AutoClickToggle.BackgroundColor3 = Color3.fromRGB(48, 52, 63)
-        AutoClickToggle.BorderSizePixel = 0
-        AutoClickToggle.Text = "AUTO CLICK: OFF"
-        AutoClickToggle.Font = Enum.Font.GothamBlack
-        AutoClickToggle.TextSize = 10
-        AutoClickToggle.TextColor3 = Color3.fromRGB(215, 219, 227)
-        AutoClickToggle.AutoButtonColor = false
-        AutoClickToggle.ZIndex = 50
-        AutoClickToggle.Parent = SettingFarm
-        local c=Instance.new("UICorner")
-        c.CornerRadius=UDim.new(0,8)
-        c.Parent=AutoClickToggle
-    end
+    local AutoClickToggle = Instance.new("TextButton")
+    AutoClickToggle.Name = "AutoClickToggle"
+    AutoClickToggle.Position = UDim2.new(0.5, 3, 0, 101)
+    AutoClickToggle.Size = UDim2.new(0.5, -19, 0, 32)
+    AutoClickToggle.BackgroundColor3 = Color3.fromRGB(31, 34, 43)
+    AutoClickToggle.BorderSizePixel = 0
+    AutoClickToggle.Text = "AUTO CLICK: OFF"
+    AutoClickToggle.Font = Enum.Font.GothamBold
+    AutoClickToggle.TextSize = 10
+    AutoClickToggle.TextColor3 = Color3.fromRGB(180, 186, 198)
+    AutoClickToggle.AutoButtonColor = false
+    AutoClickToggle.ZIndex = 50
+    AutoClickToggle.Parent = SettingFarm
+
+    local acc = Instance.new("UICorner")
+    acc.CornerRadius = UDim.new(0, 7)
+    acc.Parent = AutoClickToggle
 
     local function RefreshAutoClick()
         if _G.AutoClick then
-            AutoClickToggle.Text="AUTO CLICK: ON"
-            AutoClickToggle.BackgroundColor3=Color3.fromRGB(64,145,91)
+            AutoClickToggle.Text = "AUTO CLICK: ON"
+            AutoClickToggle.BackgroundColor3 = Color3.fromRGB(64, 145, 91)
+            AutoClickToggle.TextColor3 = Color3.fromRGB(16, 18, 24)
         else
-            AutoClickToggle.Text="AUTO CLICK: OFF"
-            AutoClickToggle.BackgroundColor3=Color3.fromRGB(48,52,63)
+            AutoClickToggle.Text = "AUTO CLICK: OFF"
+            AutoClickToggle.BackgroundColor3 = Color3.fromRGB(31, 34, 43)
+            AutoClickToggle.TextColor3 = Color3.fromRGB(180, 186, 198)
         end
     end
+
     AutoClickToggle.Activated:Connect(function()
-        _G.AutoClick=not _G.AutoClick
+        _G.AutoClick = not _G.AutoClick
         RefreshAutoClick()
     end)
+
     RefreshAutoClick()
 
-    local function GetNearbyAliveEnemies()
-        local character=LocalPlayer.Character
-        local playerRoot=character and character:FindFirstChild("HumanoidRootPart")
-        local enemies=workspace:FindFirstChild("Enemies")
-        if not playerRoot or not enemies then return {} end
-        local targets={}
-        for _,enemy in ipairs(enemies:GetChildren()) do
-            local humanoid=enemy:FindFirstChildOfClass("Humanoid")
-            local root=enemy:FindFirstChild("HumanoidRootPart")
-            if humanoid and root and humanoid.Health>0 and (root.Position-playerRoot.Position).Magnitude<=60 then
-                targets[#targets+1]=enemy
+    local function AutoClickTargets()
+        local character = LocalPlayer.Character
+        local root = character and character:FindFirstChild("HumanoidRootPart")
+        if not character or not root then return {} end
+
+        local enemies = workspace:FindFirstChild("Enemies")
+        if not enemies then return {} end
+
+        local result = {}
+        for _, target in ipairs(enemies:GetChildren()) do
+            local humanoid = target:FindFirstChildOfClass("Humanoid")
+            local targetRoot = target:FindFirstChild("HumanoidRootPart")
+            if humanoid and targetRoot and humanoid.Health > 0
+                and target ~= character
+                and (targetRoot.Position - root.Position).Magnitude <= 60 then
+                result[#result + 1] = target
             end
         end
-        return targets
+        return result
+    end
+
+    local function AutoClickFireTarget(target)
+        local character = LocalPlayer.Character
+        if not character or not target or not target.Parent then return end
+
+        -- Auto Click chỉ hoạt động với tool đang được cầm.
+        local tool = character:FindFirstChildOfClass("Tool")
+        if not tool then return end
+
+        local humanoid = target:FindFirstChildOfClass("Humanoid")
+        local targetRoot = target:FindFirstChild("HumanoidRootPart")
+        if not humanoid or humanoid.Health <= 0 or not targetRoot then return end
+        if (targetRoot.Position - character:GetPivot().Position).Magnitude > 60 then return end
+
+        local attackRemote = Net:FindFirstChild("RE/RegisterAttack")
+        local hitRemote = Net:FindFirstChild("RE/RegisterHit")
+        if not attackRemote or not hitRemote then return end
+
+        local head = target:FindFirstChild("Head") or targetRoot
+        local hitParts = {}
+        for _, part in ipairs(target:GetChildren()) do
+            if part:IsA("BasePart") then
+                hitParts[#hitParts + 1] = {target, part}
+            end
+        end
+        if #hitParts == 0 then
+            hitParts[1] = {target, head}
+        end
+
+        -- Một target = một cặp remote riêng, không gom nhiều quái vào một packet.
+        pcall(function()
+            attackRemote:FireServer(SourceFastAttack.Rate)
+            hitRemote:FireServer(head, hitParts, {})
+        end)
     end
 
     task.spawn(function()
-        while task.wait(0.05) do
-            if not _G.AutoClick then continue end
-            pcall(function()
-                local attack=_G.SourceFastAttack
-                if not LocalPlayer.Character or not attack then return end
-                local targets=GetNearbyAliveEnemies()
-                if #targets==0 then return end
-                for _,enemy in ipairs(targets) do
-                    if attack.Alive(enemy) then attack.Kill(enemy) end
-                end
-            end)
+        while Gui and Gui.Parent do
+            task.wait(0.05)
+            if _G.AutoClick then
+                pcall(function()
+                    for _, target in ipairs(AutoClickTargets()) do
+                        if _G.AutoClick then
+                            AutoClickFireTarget(target)
+                        end
+                    end
+                end)
+            end
         end
     end)
-end)
+end
