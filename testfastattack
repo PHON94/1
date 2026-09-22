@@ -113,7 +113,7 @@ do
     -- Replace the existing attack worker when the script's flag is enabled.
     task.spawn(function()
         while task.wait(0.05) do
-            if _G.FastAttack and not _G.AutoClick then
+            if _G.FastAttack then
                 pcall(function()
                     local enemies = workspace:FindFirstChild("Enemies")
                     if not enemies then return end
@@ -471,7 +471,7 @@ Arrow.Parent = WeaponButton
 local FruitM1Toggle = Instance.new("TextButton")
 FruitM1Toggle.Name = "FruitM1Toggle"
 FruitM1Toggle.Position = UDim2.fromOffset(13, 101)
-FruitM1Toggle.Size = UDim2.new(0.5, -19, 0, 32)
+FruitM1Toggle.Size = UDim2.fromOffset(W - 58, 32)
 FruitM1Toggle.BackgroundColor3 = Color3.fromRGB(31, 34, 43)
 FruitM1Toggle.BorderSizePixel = 0
 FruitM1Toggle.Text = "Blox Fruit M1: OFF"
@@ -505,6 +505,105 @@ FruitM1Toggle.Activated:Connect(function()
 end)
 
 UpdateFruitM1Button()
+
+--===========================================================================
+-- AUTO CLICK :: SAFE UI INIT / REMOTE ONLY / PER TARGET / 60 STUDS
+-- Không sửa movement, không sửa Farm, không sửa Island Travel.
+--===========================================================================
+do
+    local ok, err = pcall(function()
+        _G.AutoClick = _G.AutoClick == true
+
+        local AutoClickToggle = Instance.new("TextButton")
+        AutoClickToggle.Name = "AutoClickToggle"
+        AutoClickToggle.Position = UDim2.new(0.5, 3, 0, 101)
+        AutoClickToggle.Size = UDim2.new(0.5, -19, 0, 32)
+        AutoClickToggle.BackgroundColor3 = Color3.fromRGB(31, 34, 43)
+        AutoClickToggle.BorderSizePixel = 0
+        AutoClickToggle.Text = "AUTO CLICK: OFF"
+        AutoClickToggle.Font = Enum.Font.GothamBold
+        AutoClickToggle.TextSize = 10
+        AutoClickToggle.TextColor3 = Color3.fromRGB(180, 186, 198)
+        AutoClickToggle.AutoButtonColor = false
+        AutoClickToggle.ZIndex = 50
+        AutoClickToggle.Parent = SettingFarm
+
+        local acc = Instance.new("UICorner")
+        acc.CornerRadius = UDim.new(0, 7)
+        acc.Parent = AutoClickToggle
+
+        local function refreshAutoClick()
+            if _G.AutoClick then
+                AutoClickToggle.Text = "AUTO CLICK: ON"
+                AutoClickToggle.BackgroundColor3 = Color3.fromRGB(64, 145, 91)
+                AutoClickToggle.TextColor3 = Color3.fromRGB(16, 18, 24)
+            else
+                AutoClickToggle.Text = "AUTO CLICK: OFF"
+                AutoClickToggle.BackgroundColor3 = Color3.fromRGB(31, 34, 43)
+                AutoClickToggle.TextColor3 = Color3.fromRGB(180, 186, 198)
+            end
+        end
+
+        AutoClickToggle.Activated:Connect(function()
+            _G.AutoClick = not _G.AutoClick
+            refreshAutoClick()
+        end)
+
+        refreshAutoClick()
+
+        task.spawn(function()
+            while AutoClickToggle and AutoClickToggle.Parent do
+                task.wait(0.05)
+                if not _G.AutoClick then
+                    continue
+                end
+
+                pcall(function()
+                    local character = LocalPlayer.Character
+                    local root = character and character:FindFirstChild("HumanoidRootPart")
+                    if not character or not root then return end
+
+                    -- Chỉ chạy khi đang cầm Tool, không tự equip/teleport.
+                    local tool = character:FindFirstChildOfClass("Tool")
+                    if not tool then return end
+
+                    local enemies = workspace:FindFirstChild("Enemies")
+                    if not enemies then return end
+
+                    local modules = ReplicatedStorage:FindFirstChild("Modules")
+                    local net = modules and modules:FindFirstChild("Net")
+                    if not net then return end
+
+                    local attackRemote = net:FindFirstChild("RE/RegisterAttack")
+                    local hitRemote = net:FindFirstChild("RE/RegisterHit")
+                    if not attackRemote or not hitRemote then return end
+
+                    for _, target in ipairs(enemies:GetChildren()) do
+                        if not _G.AutoClick then break end
+
+                        local humanoid = target:FindFirstChildOfClass("Humanoid")
+                        local targetRoot = target:FindFirstChild("HumanoidRootPart")
+                        if humanoid and targetRoot and humanoid.Health > 0 then
+                            local distance = (targetRoot.Position - root.Position).Magnitude
+                            if distance <= 60 then
+                                local head = target:FindFirstChild("Head") or targetRoot
+                                if head and head:IsA("BasePart") then
+                                    -- Mỗi target một cặp remote riêng, không gom nhiều target.
+                                    attackRemote:FireServer(0.000000002)
+                                    hitRemote:FireServer(head, {{target, head}}, {})
+                                end
+                            end
+                        end
+                    end
+                end)
+            end
+        end)
+    end)
+
+    if not ok then
+        warn("[PhongdzHub][AutoClick] UI disabled safely:", err)
+    end
+end
 
 local WeaponDrop = Instance.new("Frame")
 WeaponDrop.Name = "WeaponDropdown"
@@ -2983,7 +3082,6 @@ local function SourceTargetParts(targets)
 end
 
 local function ExecuteSourceFastAttack()
-    if _G.AutoClick then return end
     if not _G.AutoLevel or not SourceFastAttack.Enabled then return end
     local character = LocalPlayer.Character
     if not character then return end
@@ -3037,7 +3135,6 @@ end
 InitializeHitRegistration()
 
 local function ExecuteSourceHitRegistration()
-    if _G.AutoClick then return end
     if not _G.AutoLevel then return end
 
     local character = LocalPlayer.Character
@@ -4689,121 +4786,3 @@ task.defer(function()
         warn("[PhongdzHub][IslandTravel] Optional module disabled safely:", err)
     end
 end)
-
-
---===========================================================================
--- AUTO CLICK :: REMOTE ONLY / PER TARGET / 60 STUDS
--- Không di chuyển player, không BringEnemy, không gọi Attack.Kill.
--- Mỗi quái hợp lệ nhận một lượt RegisterAttack + RegisterHit riêng.
---===========================================================================
-do
-    _G.AutoClick = _G.AutoClick == true
-
-    local AutoClickToggle = Instance.new("TextButton")
-    AutoClickToggle.Name = "AutoClickToggle"
-    AutoClickToggle.Position = UDim2.new(0.5, 3, 0, 101)
-    AutoClickToggle.Size = UDim2.new(0.5, -19, 0, 32)
-    AutoClickToggle.BackgroundColor3 = Color3.fromRGB(31, 34, 43)
-    AutoClickToggle.BorderSizePixel = 0
-    AutoClickToggle.Text = "AUTO CLICK: OFF"
-    AutoClickToggle.Font = Enum.Font.GothamBold
-    AutoClickToggle.TextSize = 10
-    AutoClickToggle.TextColor3 = Color3.fromRGB(180, 186, 198)
-    AutoClickToggle.AutoButtonColor = false
-    AutoClickToggle.ZIndex = 50
-    AutoClickToggle.Parent = SettingFarm
-
-    local acc = Instance.new("UICorner")
-    acc.CornerRadius = UDim.new(0, 7)
-    acc.Parent = AutoClickToggle
-
-    local function RefreshAutoClick()
-        if _G.AutoClick then
-            AutoClickToggle.Text = "AUTO CLICK: ON"
-            AutoClickToggle.BackgroundColor3 = Color3.fromRGB(64, 145, 91)
-            AutoClickToggle.TextColor3 = Color3.fromRGB(16, 18, 24)
-        else
-            AutoClickToggle.Text = "AUTO CLICK: OFF"
-            AutoClickToggle.BackgroundColor3 = Color3.fromRGB(31, 34, 43)
-            AutoClickToggle.TextColor3 = Color3.fromRGB(180, 186, 198)
-        end
-    end
-
-    AutoClickToggle.Activated:Connect(function()
-        _G.AutoClick = not _G.AutoClick
-        RefreshAutoClick()
-    end)
-
-    RefreshAutoClick()
-
-    local function AutoClickTargets()
-        local character = LocalPlayer.Character
-        local root = character and character:FindFirstChild("HumanoidRootPart")
-        if not character or not root then return {} end
-
-        local enemies = workspace:FindFirstChild("Enemies")
-        if not enemies then return {} end
-
-        local result = {}
-        for _, target in ipairs(enemies:GetChildren()) do
-            local humanoid = target:FindFirstChildOfClass("Humanoid")
-            local targetRoot = target:FindFirstChild("HumanoidRootPart")
-            if humanoid and targetRoot and humanoid.Health > 0
-                and target ~= character
-                and (targetRoot.Position - root.Position).Magnitude <= 60 then
-                result[#result + 1] = target
-            end
-        end
-        return result
-    end
-
-    local function AutoClickFireTarget(target)
-        local character = LocalPlayer.Character
-        if not character or not target or not target.Parent then return end
-
-        -- Auto Click chỉ hoạt động với tool đang được cầm.
-        local tool = character:FindFirstChildOfClass("Tool")
-        if not tool then return end
-
-        local humanoid = target:FindFirstChildOfClass("Humanoid")
-        local targetRoot = target:FindFirstChild("HumanoidRootPart")
-        if not humanoid or humanoid.Health <= 0 or not targetRoot then return end
-        if (targetRoot.Position - character:GetPivot().Position).Magnitude > 60 then return end
-
-        local attackRemote = Net:FindFirstChild("RE/RegisterAttack")
-        local hitRemote = Net:FindFirstChild("RE/RegisterHit")
-        if not attackRemote or not hitRemote then return end
-
-        local head = target:FindFirstChild("Head") or targetRoot
-        local hitParts = {}
-        for _, part in ipairs(target:GetChildren()) do
-            if part:IsA("BasePart") then
-                hitParts[#hitParts + 1] = {target, part}
-            end
-        end
-        if #hitParts == 0 then
-            hitParts[1] = {target, head}
-        end
-
-        -- Một target = một cặp remote riêng, không gom nhiều quái vào một packet.
-        pcall(function()
-            attackRemote:FireServer(SourceFastAttack.Rate)
-            hitRemote:FireServer(head, hitParts, {})
-        end)
-    end
-
-    task.spawn(function()
-        while Gui and Gui.Parent do
-            task.wait(0.05)
-            if _G.AutoClick then
-                pcall(function()
-                    for _, target in ipairs(AutoClickTargets()) do
-                        if _G.AutoClick then
-                            AutoClickFireTarget(target)
-                        end
-                    end
-                end)
-            end
-        end
-    end)
-end
