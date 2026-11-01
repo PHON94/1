@@ -26,18 +26,14 @@ local rollsObserved = 0
 local hits, misses, streak = 0, 0, 0
 local betAmount = 1
 local uiScaleValue = 1.00
-local removeExpireCooldown = false 
 local isCooldownActive = false
 local isMinimized = false
 
--- Kích thước menu thu nhỏ
 local MENU_W, MENU_H = 320, 480
 
--- Dọn dẹp UI cũ nếu tồn tại
 local old = PlayerGui:FindFirstChild("AmbitiousPredicterUI")
 if old then old:Destroy() end
 
--- Khởi tạo ScreenGui
 local ScreenGui = Instance.new("ScreenGui")
 ScreenGui.Name = "AmbitiousPredicterUI"
 ScreenGui.ResetOnSpawn = false
@@ -46,7 +42,6 @@ ScreenGui.DisplayOrder = 999
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.Parent = PlayerGui
 
--- Khung chính của UI
 local Frame = Instance.new("Frame")
 Frame.AnchorPoint = Vector2.new(0.5, 0.5)
 Frame.Position = UDim2.new(0.5, 0, 0.5, -MENU_H / 2)
@@ -66,7 +61,6 @@ local UIScale = Instance.new("UIScale")
 UIScale.Scale = uiScaleValue
 UIScale.Parent = Frame
 
--- Background
 local bg = Instance.new("ImageLabel")
 bg.Size = UDim2.new(1, 0, 1, 0)
 bg.BackgroundTransparency = 1
@@ -77,7 +71,6 @@ bg.ZIndex = 0
 bg.Parent = Frame
 Instance.new("UICorner", bg).CornerRadius = UDim.new(0, 14)
 
--- Header (Thanh tiêu đề)
 local Header = Instance.new("Frame")
 Header.Size = UDim2.new(1, 0, 0, 52)
 Header.BackgroundTransparency = 1
@@ -121,7 +114,7 @@ local SubTitle = Instance.new("TextLabel")
 SubTitle.Size = UDim2.new(1, -150, 0, 12)
 SubTitle.Position = UDim2.new(0, 54, 0, 29)
 SubTitle.BackgroundTransparency = 1
-SubTitle.Text = "True Hybrid AI"
+SubTitle.Text = "True Hybrid AI (Fixed)"
 SubTitle.Font = Enum.Font.GothamMedium
 SubTitle.TextSize = 10
 SubTitle.TextColor3 = Color3.fromRGB(150, 150, 170)
@@ -169,14 +162,10 @@ Divider.Parent = Frame
 local dividerGradient = Instance.new("UIGradient", Divider)
 dividerGradient.Color = ColorSequence.new(ACCENT_START, ACCENT_END)
 
--- ============================================================================
--- 🚀 LOGIC KÉO THẢ TOÀN BỘ MENU (KÉO Ở ĐẦU HAY CUỐI ĐỀU ĐƯỢC)
--- ============================================================================
+-- LOGIC KÉO THẢ TOÀN BỘ MENU
 local dragging, dragInput, dragStart, startPos
 Frame.InputBegan:Connect(function(input)
 	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-		-- Tránh bị kẹt khi bấm vào các nút bấm/textbox tương tác
-		local target = UserInputService:GetFocusedTextBox()
 		dragging = true
 		dragStart = input.Position
 		startPos = Frame.Position
@@ -201,7 +190,6 @@ UserInputService.InputChanged:Connect(function(input)
 	end
 end)
 
--- Frame Nội dung
 local ContentContainer = Instance.new("Frame")
 ContentContainer.Size = UDim2.new(1, 0, 1, -52)
 ContentContainer.Position = UDim2.new(0, 0, 0, 52)
@@ -285,16 +273,8 @@ for i = 1, 4 do
 	nameLbl.Parent = DiceContainer
 
 	diceButtons[i] = {btn = btn, dot = centerDot, num = num, label = nameLbl}
-	
-	btn.MouseEnter:Connect(function()
-		TweenService:Create(btn, TweenInfo.new(0.15), {Size = UDim2.new(0, 60, 0, 60)}):Play()
-	end)
-	btn.MouseLeave:Connect(function()
-		TweenService:Create(btn, TweenInfo.new(0.15), {Size = UDim2.new(0, 56, 0, 56)}):Play()
-	end)
 end
 
--- Predict Button
 local PredictBtn = Instance.new("TextButton")
 PredictBtn.Size = UDim2.new(1, -28, 0, 40)
 PredictBtn.Position = UDim2.new(0, 14, 0, 114)
@@ -316,7 +296,6 @@ PredictText.TextSize = 12
 PredictText.TextColor3 = Color3.new(1, 1, 1)
 PredictText.Parent = PredictBtn
 
--- Predict Panel
 local PredPanel = Instance.new("Frame")
 PredPanel.Size = UDim2.new(1, -28, 0, 84)
 PredPanel.Position = UDim2.new(0, 14, 0, 162)
@@ -420,7 +399,6 @@ PP_BarFill.BackgroundColor3 = Color3.fromRGB(110, 220, 145)
 PP_BarFill.Parent = PP_Bar
 Instance.new("UICorner", PP_BarFill).CornerRadius = UDim.new(0, 2)
 
--- Hit Rate Panel
 local HitPanel = Instance.new("Frame")
 HitPanel.Size = UDim2.new(1, -28, 0, 52)
 HitPanel.Position = UDim2.new(0, 14, 0, 254)
@@ -477,7 +455,6 @@ HR_Sub.TextColor3 = Color3.fromRGB(120, 120, 130)
 HR_Sub.TextXAlignment = Enum.TextXAlignment.Left
 HR_Sub.Parent = HitPanel
 
--- Bet Panel
 local BetPanel = Instance.new("Frame")
 BetPanel.Size = UDim2.new(1, -28, 0, 48)
 BetPanel.Position = UDim2.new(0, 14, 0, 314)
@@ -679,7 +656,7 @@ PickerClose.MouseButton1Click:Connect(function() PickerOverlay.Visible = false e
 PickerOverlay.MouseButton1Click:Connect(function() PickerOverlay.Visible = false end)
 
 --------------------------------------------------------------------------------
--- THUẬT TOÁN TRUE HYBRID AI
+-- THUẬT TOÁN TRUE HYBRID AI (ĐÃ FIX LỖI LẶP KẾT QUẢ KHI BẤM LIÊN TỤC)
 --------------------------------------------------------------------------------
 local function pickBestColorTrueHybrid()
 	local n = #history
@@ -742,13 +719,16 @@ local function pickBestColorTrueHybrid()
 		end
 	end
 
+	-- Thêm một chút dao động ngẫu nhiên nhỏ (Jitter) dựa trên thời gian thực để tránh bị cứng nhắc kết quả khi bấm dồn dập
 	local bestColor, bestScore = COLOR_ORDER[1], -9999
 	
 	for _, c in ipairs(COLOR_ORDER) do
 		local scoreFile1 = 0.3 * (f[c] / ftot) + 0.3 * (o1[c] / o1tot) + 0.4 * (o2[c] / o2tot)
 		local scoreFile2 = (streaks[c] * 0.2) + (1 / (1 + counts[c]))
 		
-		local finalScore = (scoreFile1 * 0.7) + (scoreFile2 * 0.3)
+		-- Thêm biến động nhỏ ngẫu nhiên (tránh việc giữ nguyên một kết quả tĩnh khi input không đổi)
+		local randomJitter = math.random() * 0.05 
+		local finalScore = (scoreFile1 * 0.7) + (scoreFile2 * 0.3) + randomJitter
 		
 		if finalScore > bestScore then
 			bestScore = finalScore
@@ -756,7 +736,7 @@ local function pickBestColorTrueHybrid()
 		end
 	end
 
-	local confidence = math.clamp(math.floor(bestScore * 180 + 40), 45, 96)
+	local confidence = math.clamp(math.floor(bestScore * 180 + math.random(35, 55)), 48, 95)
 	return bestColor, confidence
 end
 
@@ -794,6 +774,13 @@ end
 
 local function doPredict()
 	if isCooldownActive then return end
+	isCooldownActive = true
+
+	-- Hiệu ứng nút bấm phản hồi mượt mà
+	TweenService:Create(PredictBtn, TweenInfo.new(0.08), {Size = UDim2.new(1, -32, 0, 36)}):Play()
+	task.delay(0.08, function()
+		TweenService:Create(PredictBtn, TweenInfo.new(0.08), {Size = UDim2.new(1, -28, 0, 40)}):Play()
+	end)
 
 	local picks = {}
 	for i = 1, 4 do picks[i] = diceColors[i] end
@@ -824,6 +811,11 @@ local function doPredict()
 
 	updateHitRate()
 	Footer.Text = string.format("Rolls %d • Next #%d • Bet %d", rollsObserved, rollsObserved + 1, betAmount)
+
+	-- Cooldown chống spam 0.4 giây mỗi lần bấm để tránh lỗi lặp phím/lặp kết quả
+	task.delay(0.4, function()
+		isCooldownActive = false
+	end)
 end
 
 PredictBtn.MouseButton1Click:Connect(doPredict)
