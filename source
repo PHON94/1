@@ -114,7 +114,7 @@ local SubTitle = Instance.new("TextLabel")
 SubTitle.Size = UDim2.new(1, -150, 0, 12)
 SubTitle.Position = UDim2.new(0, 54, 0, 29)
 SubTitle.BackgroundTransparency = 1
-SubTitle.Text = "True Hybrid AI (Fixed)"
+SubTitle.Text = "Optimized True Hybrid AI"
 SubTitle.Font = Enum.Font.GothamMedium
 SubTitle.TextSize = 10
 SubTitle.TextColor3 = Color3.fromRGB(150, 150, 170)
@@ -584,11 +584,12 @@ PickerGrid.Size = UDim2.new(1, -24, 0, 160)
 PickerGrid.Position = UDim2.new(0, 12, 0, 44)
 PickerGrid.BackgroundTransparency = 1
 PickerGrid.Parent = PickerBox
-local grid = Instance.new("UIGridLayout", PickerGrid)
-grid.CellSize = UDim2.new(0, 72, 0, 72)
-grid.CellPadding = UDim2.new(0, 10, 0, 8)
-grid.HorizontalAlignment = Enum.HorizontalAlignment.Center
-grid.SortOrder = Enum.SortOrder.LayoutOrder
+local grid = Instance.new("UIGradient", PickerGrid) -- fixed helper
+local uigrid = Instance.new("UIGridLayout", PickerGrid)
+uigrid.CellSize = UDim2.new(0, 72, 0, 72)
+uigrid.CellPadding = UDim2.new(0, 10, 0, 8)
+uigrid.HorizontalAlignment = Enum.HorizontalAlignment.Center
+uigrid.SortOrder = Enum.SortOrder.LayoutOrder
 
 local pickerTarget = 1
 local pickerColorButtons = {}
@@ -626,6 +627,9 @@ for i, name in ipairs(COLOR_ORDER) do
 	pickerColorButtons[name] = sw
 end
 
+-- ============================================================================
+-- 🚀 TỐI ƯU HÓA LIÊN KẾT ĐỔI MÀU THỦ CÔNG VỚI THUẬT TOÁN DỰ ĐOÁN
+-- ============================================================================
 local function setDiceColor(i, colorName)
 	local chosenColor = COLORS[colorName]
 	local dice = diceButtons[i]
@@ -633,6 +637,11 @@ local function setDiceColor(i, colorName)
 	diceColors[i] = colorName
 	dice.btn.BackgroundColor3 = chosenColor
 	dice.label.Text = colorName
+
+	-- Tự động đẩy ngay trạng thái đổi màu này vào lịch sử AI để cập nhật dữ liệu thông minh theo thời gian thực
+	local currentPicks = {}
+	for idx = 1, 4 do currentPicks[idx] = diceColors[idx] end
+	table.insert(history, {picks = currentPicks, result = "MANUAL", confidence = 0})
 end
 
 for i = 1, 4 do
@@ -656,7 +665,7 @@ PickerClose.MouseButton1Click:Connect(function() PickerOverlay.Visible = false e
 PickerOverlay.MouseButton1Click:Connect(function() PickerOverlay.Visible = false end)
 
 --------------------------------------------------------------------------------
--- THUẬT TOÁN TRUE HYBRID AI (ĐÃ FIX LỖI LẶP KẾT QUẢ KHI BẤM LIÊN TỤC)
+-- THUẬT TOÁN TRUE HYBRID AI (FILE 1 + FILE 2 TỐI ƯU)
 --------------------------------------------------------------------------------
 local function pickBestColorTrueHybrid()
 	local n = #history
@@ -719,15 +728,13 @@ local function pickBestColorTrueHybrid()
 		end
 	end
 
-	-- Thêm một chút dao động ngẫu nhiên nhỏ (Jitter) dựa trên thời gian thực để tránh bị cứng nhắc kết quả khi bấm dồn dập
 	local bestColor, bestScore = COLOR_ORDER[1], -9999
 	
 	for _, c in ipairs(COLOR_ORDER) do
 		local scoreFile1 = 0.3 * (f[c] / ftot) + 0.3 * (o1[c] / o1tot) + 0.4 * (o2[c] / o2tot)
 		local scoreFile2 = (streaks[c] * 0.2) + (1 / (1 + counts[c]))
 		
-		-- Thêm biến động nhỏ ngẫu nhiên (tránh việc giữ nguyên một kết quả tĩnh khi input không đổi)
-		local randomJitter = math.random() * 0.05 
+		local randomJitter = math.random() * 0.05
 		local finalScore = (scoreFile1 * 0.7) + (scoreFile2 * 0.3) + randomJitter
 		
 		if finalScore > bestScore then
@@ -776,7 +783,6 @@ local function doPredict()
 	if isCooldownActive then return end
 	isCooldownActive = true
 
-	-- Hiệu ứng nút bấm phản hồi mượt mà
 	TweenService:Create(PredictBtn, TweenInfo.new(0.08), {Size = UDim2.new(1, -32, 0, 36)}):Play()
 	task.delay(0.08, function()
 		TweenService:Create(PredictBtn, TweenInfo.new(0.08), {Size = UDim2.new(1, -28, 0, 40)}):Play()
@@ -812,7 +818,6 @@ local function doPredict()
 	updateHitRate()
 	Footer.Text = string.format("Rolls %d • Next #%d • Bet %d", rollsObserved, rollsObserved + 1, betAmount)
 
-	-- Cooldown chống spam 0.4 giây mỗi lần bấm để tránh lỗi lặp phím/lặp kết quả
 	task.delay(0.4, function()
 		isCooldownActive = false
 	end)
@@ -829,4 +834,3 @@ end)
 CloseBtn.MouseButton1Click:Connect(function() ScreenGui:Destroy() end)
 
 Footer.Text = string.format("Rolls 0 • Next #1 • Bet %d", betAmount)
-
