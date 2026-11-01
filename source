@@ -33,19 +33,19 @@ local removeExpireCooldown = false
 local isCooldownActive = false
 local isMinimized = false
 
-local old = PlayerGui:FindFirstChild("AmbitiousPredicterUI")
+local old = PlayerGui:FindFirstChild("PhonghubUI")
 if old then old:Destroy() end
 
--- Fa4e7xx ur dad btw
+-- ScreenGui
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "AmbitiousPredicterUI"
+ScreenGui.Name = "PhonghubUI"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.IgnoreGuiInset = true
 ScreenGui.DisplayOrder = 999
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.Parent = PlayerGui
 
--- Fa4e7xx ur dad btw (ĐÃ ĐIỀU CHỈNH VỊ TRÍ HẠ THẤP VỀ GIỮA MÀN HÌNH)
+-- Frame Căn Giữa Màn Hình
 local Frame = Instance.new("Frame")
 Frame.AnchorPoint = Vector2.new(0.5, 0.5)
 Frame.Position = UDim2.new(0.5, 0, 0.5, 0)
@@ -77,7 +77,7 @@ bg.ZIndex = 0
 bg.Parent = Frame
 Instance.new("UICorner", bg).CornerRadius = UDim.new(0, 14)
 
--- Fa4e7xx ur dad btw
+-- Header
 local Header = Instance.new("Frame")
 Header.Size = UDim2.new(1, 0, 0, 64)
 Header.BackgroundTransparency = 1
@@ -119,11 +119,12 @@ makeLogoDot(0.3, 0.3)
 makeLogoDot(0.5, 0.5)
 makeLogoDot(0.7, 0.7)
 
+-- ĐÃ ĐỔI TÊN THÀNH PHONGHUB
 local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, -190, 0, 20)
 Title.Position = UDim2.new(0, 66, 0, 16)
 Title.BackgroundTransparency = 1
-Title.Text = "Ambitious Predicter"
+Title.Text = "Phonghub"
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 16
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -135,7 +136,7 @@ local SubTitle = Instance.new("TextLabel")
 SubTitle.Size = UDim2.new(1, -190, 0, 14)
 SubTitle.Position = UDim2.new(0, 66, 0, 34)
 SubTitle.BackgroundTransparency = 1
-SubTitle.Text = "Debof by fa4e7xx"
+SubTitle.Text = "Phonghub Script"
 SubTitle.Font = Enum.Font.GothamMedium
 SubTitle.TextSize = 11
 SubTitle.TextColor3 = Color3.fromRGB(150, 150, 170)
@@ -183,7 +184,6 @@ Divider.Parent = Frame
 local dividerGradient = Instance.new("UIGradient", Divider)
 dividerGradient.Color = ColorSequence.new(ACCENT_START, ACCENT_END)
 
--- Fa4e7xx ur dad btw
 local ContentContainer = Instance.new("Frame")
 ContentContainer.Size = UDim2.new(1, 0, 1, -64)
 ContentContainer.Position = UDim2.new(0, 0, 0, 64)
@@ -277,7 +277,6 @@ for i = 1, 4 do
 	end)
 end
 
--- Fa4e7xx ur dad btw
 local PredictBtn = Instance.new("TextButton")
 PredictBtn.Size = UDim2.new(1, -40, 0, 48)
 PredictBtn.Position = UDim2.new(0, 20, 0, 140)
@@ -316,7 +315,6 @@ PredictBtn.MouseButton1Up:Connect(function()
 	TweenService:Create(PredictBtn, TweenInfo.new(0.08), {Size = targetSize}):Play()
 end)
 
--- Fa4e7xx ur dad btw
 local PredPanel = Instance.new("Frame")
 PredPanel.Size = UDim2.new(1, -40, 0, 100)
 PredPanel.Position = UDim2.new(0, 20, 0, 200)
@@ -448,7 +446,6 @@ Instance.new("UICorner", CooldownBarFill).CornerRadius = UDim.new(0, 1)
 local cooldownGradient = Instance.new("UIGradient", CooldownBarFill)
 cooldownGradient.Color = ColorSequence.new(ACCENT_START, ACCENT_END)
 
--- Fa4e7xx ur dad btw
 local HitPanel = Instance.new("Frame")
 HitPanel.Size = UDim2.new(1, -40, 0, 60)
 HitPanel.Position = UDim2.new(0, 20, 0, 312)
@@ -524,7 +521,6 @@ HR_Chance.TextColor3 = Color3.fromRGB(120, 120, 130)
 HR_Chance.TextXAlignment = Enum.TextXAlignment.Right
 HR_Chance.Parent = HitPanel
 
--- Fa4e7xx ur dad btw
 local BetPanel = Instance.new("Frame")
 BetPanel.Size = UDim2.new(1, -40, 0, 54)
 BetPanel.Position = UDim2.new(0, 20, 0, 384)
@@ -621,11 +617,12 @@ Footer.TextXAlignment = Enum.TextXAlignment.Center
 Footer.ZIndex = 2
 Footer.Parent = ContentContainer
 
+-- ĐÃ ĐỔI TÊN CREDITS THÀNH PHONGHUB SCRIPT
 local CreditsLabel = Instance.new("TextLabel")
 CreditsLabel.Size = UDim2.new(1, -40, 0, 14)
 CreditsLabel.Position = UDim2.new(0, 20, 1, -10)
 CreditsLabel.BackgroundTransparency = 1
-CreditsLabel.Text = "Debofed by fa4e7xx"
+CreditsLabel.Text = "Phonghub Script"
 CreditsLabel.Font = Enum.Font.GothamBold
 CreditsLabel.TextSize = 10
 CreditsLabel.TextColor3 = Color3.fromRGB(150, 150, 160)
@@ -633,7 +630,6 @@ CreditsLabel.TextXAlignment = Enum.TextXAlignment.Center
 CreditsLabel.ZIndex = 2
 CreditsLabel.Parent = ContentContainer
 
--- Fa4e7xx ur dad btw
 local PickerOverlay = Instance.new("TextButton")
 PickerOverlay.Visible = false
 PickerOverlay.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
@@ -739,7 +735,6 @@ for i, name in ipairs(COLOR_ORDER) do
 	pickerColorButtons[name] = sw
 end
 
--- Fa4e7xx ur dad btw
 local SettingsPanel = Instance.new("Frame")
 SettingsPanel.Size = UDim2.new(0, 300, 0, 216)
 SettingsPanel.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -940,7 +935,6 @@ Toggle.MouseButton1Click:Connect(function()
 	updateToggleUI()
 end)
 
--- Fa4e7xx ur dad btw
 local HistoryOverlay = Instance.new("TextButton")
 HistoryOverlay.Visible = false
 HistoryOverlay.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
@@ -1019,7 +1013,6 @@ local hlist = Instance.new("UIListLayout", HistoryScroll)
 hlist.SortOrder = Enum.SortOrder.LayoutOrder
 hlist.Padding = UDim.new(0, 6)
 
--- Fa4e7xx ur dad btw
 local function setDiceColor(i, colorName)
     local chosenColor = COLORS[colorName]
     local dice = diceButtons[i]
@@ -1191,12 +1184,10 @@ local function refreshHistoryUI()
 	HistoryScroll.CanvasPosition = Vector2.new(0, 0)
 end
 
--- Fa4e7xx ur dad btw
 local function pickBestColor()
 	if #history == 0 then
 		return COLOR_ORDER[math.random(#COLOR_ORDER)], math.random(50, 63)
 	end
-	-- Fa4e7xx ur dad btw
 	local counts, streaks = {}, {}
 	for _, c in ipairs(COLOR_ORDER) do counts[c] = 0; streaks[c] = 0 end
 	for _, entry in ipairs(history) do
@@ -1210,7 +1201,6 @@ local function pickBestColor()
 		end
 	end
 	
-	-- Fa4e7xx ur dad btw
 	local bestScore = -math.huge
 	local candidates = {}
 	for _, c in ipairs(COLOR_ORDER) do
@@ -1282,7 +1272,6 @@ local function doPredict()
 	end
 end
 
--- Fa4e7xx ur dad btw
 PredictBtn.MouseButton1Click:Connect(doPredict)
 
 local pickerTarget = 1
@@ -1338,7 +1327,6 @@ BetBox.FocusLost:Connect(function()
 	if n and n >= 1 then betAmount = math.floor(n) else BetBox.Text = tostring(betAmount) end
 end)
 
--- Fa4e7xx ur dad btw
 MinBtn.MouseButton1Click:Connect(function()
 	if isMinimized then
 		TweenService:Create(Frame, TweenInfo.new(0.3, Enum.EasingStyle.Quart), {Size = UDim2.new(0, 392, 0, 565)}):Play()
@@ -1372,7 +1360,6 @@ end)
 HistoryClose.MouseButton1Click:Connect(function() HistoryOverlay.Visible = false end)
 HistoryOverlay.MouseButton1Click:Connect(function() HistoryOverlay.Visible = false end)
 
--- Fa4e7xx ur dad btw
 local draggingSize = false
 local function setSizeFromMouse(mouseX)
 	local rel = math.clamp((mouseX - SizeSlider.AbsolutePosition.X) / SizeSlider.AbsoluteSize.X, 0, 1)
@@ -1406,7 +1393,7 @@ UserInputService.InputEnded:Connect(function(input)
 	end
 end)
 
--- Fa4e7xx ur dad btw (HỖ TRỢ KÉO THẢ TOÀN BỘ KHUNG MENU)
+-- HỖ TRỢ KÉO THẢ TOÀN BỘ KHUNG MENU
 local dragging = false
 local dragStart, startPos
 Frame.InputBegan:Connect(function(input)
