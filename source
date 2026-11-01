@@ -30,6 +30,9 @@ local removeExpireCooldown = false
 local isCooldownActive = false
 local isMinimized = false
 
+-- Kích thước menu thu nhỏ hơn
+local MENU_W, MENU_H = 320, 480
+
 -- Dọn dẹp UI cũ nếu tồn tại
 local old = PlayerGui:FindFirstChild("AmbitiousPredicterUI")
 if old then old:Destroy() end
@@ -43,11 +46,11 @@ ScreenGui.DisplayOrder = 999
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.Parent = PlayerGui
 
--- Khung chính của UI
+-- Khung chính của UI (Thu nhỏ lại và đặt giữa màn hình)
 local Frame = Instance.new("Frame")
-Frame.AnchorPoint = Vector2.new(0.5, 0)
-Frame.Position = UDim2.new(0.5, 0, 0.5, -270)
-Frame.Size = UDim2.new(0, 392, 0, 565) 
+Frame.AnchorPoint = Vector2.new(0.5, 0.5)
+Frame.Position = UDim2.new(0.5, 0, 0.5, -MENU_H / 2)
+Frame.Size = UDim2.new(0, MENU_W, 0, MENU_H) 
 Frame.BackgroundColor3 = Color3.fromRGB(10, 9, 15)
 Frame.Active = true
 Frame.ClipsDescendants = true
@@ -74,15 +77,15 @@ bg.ZIndex = 0
 bg.Parent = Frame
 Instance.new("UICorner", bg).CornerRadius = UDim.new(0, 14)
 
--- Header
+-- Header (Thanh tiêu đề để kéo thả)
 local Header = Instance.new("Frame")
-Header.Size = UDim2.new(1, 0, 0, 64)
+Header.Size = UDim2.new(1, 0, 0, 52)
 Header.BackgroundTransparency = 1
 Header.ZIndex = 2
 Header.Parent = Frame
 
 local Grabber = Instance.new("Frame")
-Grabber.Size = UDim2.new(0, 34, 0, 4)
+Grabber.Size = UDim2.new(0, 28, 0, 4)
 Grabber.AnchorPoint = Vector2.new(0.5, 0)
 Grabber.Position = UDim2.new(0.5, 0, 0, 6)
 Grabber.BackgroundColor3 = Color3.fromRGB(80, 80, 90)
@@ -92,49 +95,35 @@ Grabber.Parent = Header
 Instance.new("UICorner", Grabber).CornerRadius = UDim.new(0, 2)
 
 local Logo = Instance.new("Frame")
-Logo.Size = UDim2.new(0, 36, 0, 36)
-Logo.Position = UDim2.new(0, 18, 0, 16)
+Logo.Size = UDim2.new(0, 30, 0, 30)
+Logo.Position = UDim2.new(0, 14, 0, 14)
 Logo.BackgroundColor3 = Color3.fromRGB(124, 103, 255)
 Logo.ZIndex = 3
 Logo.Parent = Header
-Instance.new("UICorner", Logo).CornerRadius = UDim.new(0, 10)
+Instance.new("UICorner", Logo).CornerRadius = UDim.new(0, 8)
 local logog = Instance.new("UIGradient", Logo)
 logog.Color = ColorSequence.new(Color3.fromRGB(153, 91, 255), Color3.fromRGB(66, 143, 255))
 logog.Rotation = 45
 
-local function makeLogoDot(px, py)
-	local d = Instance.new("Frame")
-	d.Size = UDim2.new(0, 7, 0, 7)
-	d.AnchorPoint = Vector2.new(0.5, 0.5)
-	d.Position = UDim2.new(px, 0, py, 0)
-	d.BackgroundColor3 = Color3.new(1, 1, 1)
-	d.ZIndex = 5
-	d.Parent = Logo
-	Instance.new("UICorner", d).CornerRadius = UDim.new(0, 3)
-end
-makeLogoDot(0.3, 0.3)
-makeLogoDot(0.5, 0.5)
-makeLogoDot(0.7, 0.7)
-
 local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1, -190, 0, 20)
-Title.Position = UDim2.new(0, 66, 0, 16)
+Title.Size = UDim2.new(1, -150, 0, 18)
+Title.Position = UDim2.new(0, 54, 0, 13)
 Title.BackgroundTransparency = 1
 Title.Text = "Ambitious Predicter"
 Title.Font = Enum.Font.GothamBold
-Title.TextSize = 16
+Title.TextSize = 14
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
 Title.TextXAlignment = Enum.TextXAlignment.Left
 Title.ZIndex = 3
 Title.Parent = Header
 
 local SubTitle = Instance.new("TextLabel")
-SubTitle.Size = UDim2.new(1, -190, 0, 14)
-SubTitle.Position = UDim2.new(0, 66, 0, 34)
+SubTitle.Size = UDim2.new(1, -150, 0, 12)
+SubTitle.Position = UDim2.new(0, 54, 0, 29)
 SubTitle.BackgroundTransparency = 1
-SubTitle.Text = "True Hybrid AI Algorithm Engine"
+SubTitle.Text = "True Hybrid AI"
 SubTitle.Font = Enum.Font.GothamMedium
-SubTitle.TextSize = 11
+SubTitle.TextSize = 10
 SubTitle.TextColor3 = Color3.fromRGB(150, 150, 170)
 SubTitle.TextXAlignment = Enum.TextXAlignment.Left
 SubTitle.ZIndex = 3
@@ -142,18 +131,18 @@ SubTitle.Parent = Header
 
 local function makeHeaderBtn(text, xOffset, size)
 	local b = Instance.new("TextButton")
-	b.Size = UDim2.new(0, size or 28, 0, 28)
-	b.Position = UDim2.new(1, xOffset, 0, 20)
+	b.Size = UDim2.new(0, size or 24, 0, 24)
+	b.Position = UDim2.new(1, xOffset, 0, 16)
 	b.BackgroundColor3 = Color3.fromRGB(18, 18, 24)
 	b.BackgroundTransparency = 0.16
 	b.Text = text
 	b.Font = Enum.Font.GothamBold
-	b.TextSize = 14
+	b.TextSize = 12
 	b.TextColor3 = Color3.fromRGB(180, 180, 190)
 	b.AutoButtonColor = false
 	b.ZIndex = 3
 	b.Parent = Header
-	Instance.new("UICorner", b).CornerRadius = UDim.new(0, 8)
+	Instance.new("UICorner", b).CornerRadius = UDim.new(0, 6)
 	local s = Instance.new("UIStroke", b)
 	s.Color = Color3.fromRGB(45, 45, 54)
 	s.Thickness = 1
@@ -167,98 +156,127 @@ local function makeHeaderBtn(text, xOffset, size)
 	return b
 end
 
-local MinBtn = makeHeaderBtn("–", -112)
-local MenuBtn = makeHeaderBtn("···", -78)
-local CloseBtn = makeHeaderBtn("×", -44)
-CloseBtn.TextSize = 18
+local MinBtn = makeHeaderBtn("–", -92)
+local MenuBtn = makeHeaderBtn("···", -64)
+local CloseBtn = makeHeaderBtn("×", -36)
+CloseBtn.TextSize = 16
 
 local Divider = Instance.new("Frame")
-Divider.Size = UDim2.new(1, -32, 0, 1)
-Divider.Position = UDim2.new(0, 16, 0, 64)
+Divider.Size = UDim2.new(1, -24, 0, 1)
+Divider.Position = UDim2.new(0, 12, 0, 52)
 Divider.BackgroundColor3 = ACCENT_START
 Divider.Parent = Frame
 local dividerGradient = Instance.new("UIGradient", Divider)
 dividerGradient.Color = ColorSequence.new(ACCENT_START, ACCENT_END)
 
--- Frame Nội dung
+-- LOGIC KÉO THẢ MENU (DRAGGABLE)
+local dragging, dragInput, dragStart, startPos
+Header.InputBegan:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		dragging = true
+		dragStart = input.Position
+		startPos = Frame.Position
+		input.Changed:Connect(function()
+			if input.UserInputState == Enum.UserInputState.End then
+				dragging = false
+			end
+		end)
+	end
+end)
+
+Header.InputChanged:Connect(function(input)
+	if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+		dragInput = input
+	end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+	if input == dragInput and dragging then
+		local delta = input.Position - dragStart
+		Frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+	end
+end)
+
+-- Frame Nội dung (Thu nhỏ kích thước các thành phần bên trong)
 local ContentContainer = Instance.new("Frame")
-ContentContainer.Size = UDim2.new(1, 0, 1, -64)
-ContentContainer.Position = UDim2.new(0, 0, 0, 64)
+ContentContainer.Size = UDim2.new(1, 0, 1, -52)
+ContentContainer.Position = UDim2.new(0, 0, 0, 52)
 ContentContainer.BackgroundTransparency = 1
 ContentContainer.ClipsDescendants = true
 ContentContainer.Parent = Frame
 
 local RollsTitle = Instance.new("TextLabel")
-RollsTitle.Size = UDim2.new(0, 180, 0, 12)
-RollsTitle.Position = UDim2.new(0, 20, 0, 14)
+RollsTitle.Size = UDim2.new(0, 140, 0, 10)
+RollsTitle.Position = UDim2.new(0, 14, 0, 10)
 RollsTitle.BackgroundTransparency = 1
 RollsTitle.Text = "ROLLED COLORS"
 RollsTitle.Font = Enum.Font.GothamBold
-RollsTitle.TextSize = 9
+RollsTitle.TextSize = 8
 RollsTitle.TextColor3 = Color3.fromRGB(120, 120, 130)
 RollsTitle.TextXAlignment = Enum.TextXAlignment.Left
 RollsTitle.Parent = ContentContainer
 
 local RollsHint = Instance.new("TextLabel")
-RollsHint.Size = UDim2.new(0, 180, 0, 12)
-RollsHint.Position = UDim2.new(0, 180, 0, 14)
+RollsHint.Size = UDim2.new(0, 150, 0, 10)
+RollsHint.Position = UDim2.new(0, 156, 0, 10)
 RollsHint.BackgroundTransparency = 1
-RollsHint.Text = "TAP THE DICE TO CHANGE"
+RollsHint.Text = "TAP DICE TO CHANGE"
 RollsHint.Font = Enum.Font.GothamBold
-RollsHint.TextSize = 9
+RollsHint.TextSize = 8
 RollsHint.TextColor3 = Color3.fromRGB(120, 120, 130)
 RollsHint.TextXAlignment = Enum.TextXAlignment.Right
 RollsHint.Parent = ContentContainer
 
 local DiceContainer = Instance.new("Frame")
-DiceContainer.Size = UDim2.new(1, -40, 0, 98)
-DiceContainer.Position = UDim2.new(0, 20, 0, 36)
+DiceContainer.Size = UDim2.new(1, -28, 0, 80)
+DiceContainer.Position = UDim2.new(0, 14, 0, 26)
 DiceContainer.BackgroundTransparency = 1
 DiceContainer.Parent = ContentContainer
 
 local diceButtons = {}
+local spacing = 74
 for i = 1, 4 do
 	local btn = Instance.new("TextButton")
 	btn.AnchorPoint = Vector2.new(0.5, 0.5)
-	btn.Position = UDim2.new(0, 36 + (i - 1) * 96, 0, 36)
-	btn.Size = UDim2.new(0, 72, 0, 72)
+	btn.Position = UDim2.new(0, 28 + (i - 1) * 74, 0, 30)
+	btn.Size = UDim2.new(0, 56, 0, 56)
 	btn.BackgroundColor3 = COLORS[diceColors[i]]
 	btn.Text = ""
 	btn.AutoButtonColor = false
 	btn.Parent = DiceContainer
-	Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 16)
+	Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 12)
 	local s = Instance.new("UIStroke", btn)
 	s.Color = Color3.fromRGB(255, 255, 255)
-	s.Thickness = 1.5
+	s.Thickness = 1.2
 	s.Transparency = 0.85 
 
 	local num = Instance.new("TextLabel")
-	num.Size = UDim2.new(0, 12, 0, 12)
-	num.Position = UDim2.new(0, 9, 0, 6)
+	num.Size = UDim2.new(0, 10, 0, 10)
+	num.Position = UDim2.new(0, 6, 0, 4)
 	num.BackgroundTransparency = 1
 	num.Text = tostring(i)
 	num.Font = Enum.Font.GothamBold
-	num.TextSize = 10
+	num.TextSize = 9
 	num.TextColor3 = Color3.new(1, 1, 1)
 	num.TextTransparency = 0.2
 	num.Parent = btn
 
 	local centerDot = Instance.new("Frame")
-	centerDot.Size = UDim2.new(0, 14, 0, 14)
+	centerDot.Size = UDim2.new(0, 10, 0, 10)
 	centerDot.AnchorPoint = Vector2.new(0.5, 0.5)
 	centerDot.Position = UDim2.new(0.5, 0, 0.5, 0)
 	centerDot.BackgroundColor3 = Color3.new(1, 1, 1)
 	centerDot.Parent = btn
-	Instance.new("UICorner", centerDot).CornerRadius = UDim.new(0, 7)
+	Instance.new("UICorner", centerDot).CornerRadius = UDim.new(0, 5)
 
 	local nameLbl = Instance.new("TextLabel")
-	nameLbl.Size = UDim2.new(0, 72, 0, 14)
+	nameLbl.Size = UDim2.new(0, 56, 0, 12)
 	nameLbl.AnchorPoint = Vector2.new(0.5, 0)
-	nameLbl.Position = UDim2.new(0, 36 + (i - 1) * 96, 0, 78)
+	nameLbl.Position = UDim2.new(0, 28 + (i - 1) * 74, 0, 62)
 	nameLbl.BackgroundTransparency = 1
 	nameLbl.Text = diceColors[i]
 	nameLbl.Font = Enum.Font.Gotham
-	nameLbl.TextSize = 11
+	nameLbl.TextSize = 10
 	nameLbl.TextColor3 = Color3.fromRGB(165, 165, 178)
 	nameLbl.TextXAlignment = Enum.TextXAlignment.Center
 	nameLbl.Parent = DiceContainer
@@ -266,23 +284,23 @@ for i = 1, 4 do
 	diceButtons[i] = {btn = btn, dot = centerDot, num = num, label = nameLbl}
 	
 	btn.MouseEnter:Connect(function()
-		TweenService:Create(btn, TweenInfo.new(0.15), {Size = UDim2.new(0, 76, 0, 76)}):Play()
+		TweenService:Create(btn, TweenInfo.new(0.15), {Size = UDim2.new(0, 60, 0, 60)}):Play()
 	end)
 	btn.MouseLeave:Connect(function()
-		TweenService:Create(btn, TweenInfo.new(0.15), {Size = UDim2.new(0, 72, 0, 72)}):Play()
+		TweenService:Create(btn, TweenInfo.new(0.15), {Size = UDim2.new(0, 56, 0, 56)}):Play()
 	end)
 end
 
 -- Predict Button
 local PredictBtn = Instance.new("TextButton")
-PredictBtn.Size = UDim2.new(1, -40, 0, 48)
-PredictBtn.Position = UDim2.new(0, 20, 0, 140)
+PredictBtn.Size = UDim2.new(1, -28, 0, 40)
+PredictBtn.Position = UDim2.new(0, 14, 0, 114)
 PredictBtn.BackgroundColor3 = Color3.fromRGB(139, 91, 255)
 PredictBtn.Text = ""
 PredictBtn.AutoButtonColor = false
 PredictBtn.ZIndex = 2
 PredictBtn.Parent = ContentContainer
-Instance.new("UICorner", PredictBtn).CornerRadius = UDim.new(0, 12)
+Instance.new("UICorner", PredictBtn).CornerRadius = UDim.new(0, 10)
 local predGrad = Instance.new("UIGradient", PredictBtn)
 predGrad.Color = ColorSequence.new(ACCENT_START, ACCENT_END)
 
@@ -291,104 +309,104 @@ PredictText.Size = UDim2.new(1, 0, 1, 0)
 PredictText.BackgroundTransparency = 1
 PredictText.Text = "PREDICT NEXT ROLL"
 PredictText.Font = Enum.Font.GothamBold
-PredictText.TextSize = 14
+PredictText.TextSize = 12
 PredictText.TextColor3 = Color3.new(1, 1, 1)
 PredictText.Parent = PredictBtn
 
 -- Predict Panel
 local PredPanel = Instance.new("Frame")
-PredPanel.Size = UDim2.new(1, -40, 0, 100)
-PredPanel.Position = UDim2.new(0, 20, 0, 200)
+PredPanel.Size = UDim2.new(1, -28, 0, 84)
+PredPanel.Position = UDim2.new(0, 14, 0, 162)
 PredPanel.BackgroundColor3 = Color3.fromRGB(29, 25, 38)
 PredPanel.Parent = ContentContainer
-Instance.new("UICorner", PredPanel).CornerRadius = UDim.new(0, 12)
+Instance.new("UICorner", PredPanel).CornerRadius = UDim.new(0, 10)
 local pps = Instance.new("UIStroke", PredPanel)
 pps.Color = Color3.fromRGB(45, 45, 54)
 pps.Thickness = 1
 
 local PP_Title = Instance.new("TextLabel")
-PP_Title.Size = UDim2.new(0, 200, 0, 12)
-PP_Title.Position = UDim2.new(0, 16, 0, 12)
+PP_Title.Size = UDim2.new(0, 150, 0, 10)
+PP_Title.Position = UDim2.new(0, 12, 0, 10)
 PP_Title.BackgroundTransparency = 1
 PP_Title.Text = "NEXT ROLL PREDICTION"
 PP_Title.Font = Enum.Font.GothamBold
-PP_Title.TextSize = 9
+PP_Title.TextSize = 8
 PP_Title.TextColor3 = Color3.fromRGB(120, 120, 130)
 PP_Title.TextXAlignment = Enum.TextXAlignment.Left
 PP_Title.Parent = PredPanel
 
 local PP_ConfTitle = Instance.new("TextLabel")
-PP_ConfTitle.Size = UDim2.new(0, 114, 0, 12)
-PP_ConfTitle.Position = UDim2.new(0, 230, 0, 12)
+PP_ConfTitle.Size = UDim2.new(0, 90, 0, 10)
+PP_ConfTitle.Position = UDim2.new(0, 190, 0, 10)
 PP_ConfTitle.BackgroundTransparency = 1
 PP_ConfTitle.Text = "CONFIDENCE"
 PP_ConfTitle.Font = Enum.Font.GothamBold
-PP_ConfTitle.TextSize = 9
+PP_ConfTitle.TextSize = 8
 PP_ConfTitle.TextColor3 = Color3.fromRGB(120, 120, 130)
 PP_ConfTitle.TextXAlignment = Enum.TextXAlignment.Left
 PP_ConfTitle.Parent = PredPanel
 
 local PP_Box = Instance.new("Frame")
-PP_Box.Size = UDim2.new(0, 52, 0, 52)
-PP_Box.Position = UDim2.new(0, 16, 0, 34)
+PP_Box.Size = UDim2.new(0, 42, 0, 42)
+PP_Box.Position = UDim2.new(0, 12, 0, 28)
 PP_Box.BackgroundColor3 = Color3.fromRGB(42, 36, 54)
 PP_Box.Parent = PredPanel
-Instance.new("UICorner", PP_Box).CornerRadius = UDim.new(0, 10)
+Instance.new("UICorner", PP_Box).CornerRadius = UDim.new(0, 8)
 
 local PP_Question = Instance.new("TextLabel")
 PP_Question.Size = UDim2.new(1, 0, 1, 0)
 PP_Question.BackgroundTransparency = 1
 PP_Question.Text = "?"
 PP_Question.Font = Enum.Font.GothamBold
-PP_Question.TextSize = 20
+PP_Question.TextSize = 16
 PP_Question.TextColor3 = Color3.fromRGB(150, 150, 160)
 PP_Question.Parent = PP_Box
 
 local PP_Dot = Instance.new("Frame")
-PP_Dot.Size = UDim2.new(0, 14, 0, 14)
+PP_Dot.Size = UDim2.new(0, 12, 0, 12)
 PP_Dot.AnchorPoint = Vector2.new(0.5, 0.5)
 PP_Dot.Position = UDim2.new(0.5, 0, 0.5, 0)
 PP_Dot.BackgroundColor3 = Color3.new(1, 1, 1)
 PP_Dot.Visible = false
 PP_Dot.Parent = PP_Box
-Instance.new("UICorner", PP_Dot).CornerRadius = UDim.new(0, 7)
+Instance.new("UICorner", PP_Dot).CornerRadius = UDim.new(0, 6)
 
 local PP_Color = Instance.new("TextLabel")
-PP_Color.Size = UDim2.new(0, 150, 0, 30)
-PP_Color.Position = UDim2.new(0, 82, 0, 34)
+PP_Color.Size = UDim2.new(0, 120, 0, 24)
+PP_Color.Position = UDim2.new(0, 64, 0, 28)
 PP_Color.BackgroundTransparency = 1
 PP_Color.Text = "—"
 PP_Color.Font = Enum.Font.GothamBold
-PP_Color.TextSize = 24
+PP_Color.TextSize = 18
 PP_Color.TextColor3 = Color3.fromRGB(255, 255, 255)
 PP_Color.TextXAlignment = Enum.TextXAlignment.Left
 PP_Color.Parent = PredPanel
 
 local PP_Status = Instance.new("TextLabel")
-PP_Status.Size = UDim2.new(0, 160, 0, 16)
-PP_Status.Position = UDim2.new(0, 82, 0, 66)
+PP_Status.Size = UDim2.new(0, 130, 0, 14)
+PP_Status.Position = UDim2.new(0, 64, 0, 54)
 PP_Status.BackgroundTransparency = 1
-PP_Status.Text = "Waiting for first prediction"
+PP_Status.Text = "Waiting for prediction"
 PP_Status.Font = Enum.Font.Gotham
-PP_Status.TextSize = 11
+PP_Status.TextSize = 10
 PP_Status.TextColor3 = Color3.fromRGB(120, 120, 130)
 PP_Status.TextXAlignment = Enum.TextXAlignment.Left
 PP_Status.Parent = PredPanel
 
 local PP_Conf = Instance.new("TextLabel")
-PP_Conf.Size = UDim2.new(0, 100, 0, 30)
-PP_Conf.Position = UDim2.new(0, 244, 0, 32)
+PP_Conf.Size = UDim2.new(0, 80, 0, 24)
+PP_Conf.Position = UDim2.new(0, 200, 0, 26)
 PP_Conf.BackgroundTransparency = 1
 PP_Conf.Text = ""
 PP_Conf.Font = Enum.Font.GothamBold
-PP_Conf.TextSize = 20
+PP_Conf.TextSize = 16
 PP_Conf.TextColor3 = Color3.fromRGB(180, 180, 190)
 PP_Conf.TextXAlignment = Enum.TextXAlignment.Left
 PP_Conf.Parent = PredPanel
 
 local PP_Bar = Instance.new("Frame")
-PP_Bar.Size = UDim2.new(0, 90, 0, 4)
-PP_Bar.Position = UDim2.new(0, 254, 0, 72)
+PP_Bar.Size = UDim2.new(0, 80, 0, 4)
+PP_Bar.Position = UDim2.new(0, 200, 0, 56)
 PP_Bar.BackgroundColor3 = Color3.fromRGB(39, 36, 49)
 PP_Bar.Parent = PredPanel
 Instance.new("UICorner", PP_Bar).CornerRadius = UDim.new(0, 2)
@@ -399,58 +417,42 @@ PP_BarFill.BackgroundColor3 = Color3.fromRGB(110, 220, 145)
 PP_BarFill.Parent = PP_Bar
 Instance.new("UICorner", PP_BarFill).CornerRadius = UDim.new(0, 2)
 
-local CooldownBarBg = Instance.new("Frame")
-CooldownBarBg.Size = UDim2.new(1, -32, 0, 2)
-CooldownBarBg.Position = UDim2.new(0, 16, 1, -6)
-CooldownBarBg.BackgroundColor3 = Color3.fromRGB(60, 60, 75)
-CooldownBarBg.Visible = false
-CooldownBarBg.Parent = PredPanel
-Instance.new("UICorner", CooldownBarBg).CornerRadius = UDim.new(0, 1)
-
-local CooldownBarFill = Instance.new("Frame")
-CooldownBarFill.Size = UDim2.new(1, 0, 1, 0)
-CooldownBarFill.BackgroundColor3 = ACCENT_START
-CooldownBarFill.Parent = CooldownBarBg
-Instance.new("UICorner", CooldownBarFill).CornerRadius = UDim.new(0, 1)
-local cooldownGradient = Instance.new("UIGradient", CooldownBarFill)
-cooldownGradient.Color = ColorSequence.new(ACCENT_START, ACCENT_END)
-
 -- Hit Rate Panel
 local HitPanel = Instance.new("Frame")
-HitPanel.Size = UDim2.new(1, -40, 0, 60)
-HitPanel.Position = UDim2.new(0, 20, 0, 312)
+HitPanel.Size = UDim2.new(1, -28, 0, 52)
+HitPanel.Position = UDim2.new(0, 14, 0, 254)
 HitPanel.BackgroundColor3 = Color3.fromRGB(29, 25, 38)
 HitPanel.Parent = ContentContainer
-Instance.new("UICorner", HitPanel).CornerRadius = UDim.new(0, 12)
+Instance.new("UICorner", HitPanel).CornerRadius = UDim.new(0, 10)
 local hps = Instance.new("UIStroke", HitPanel)
 hps.Color = Color3.fromRGB(45, 45, 54)
 hps.Thickness = 1
 
 local HR_Title = Instance.new("TextLabel")
-HR_Title.Size = UDim2.new(0, 120, 0, 12)
-HR_Title.Position = UDim2.new(0, 16, 0, 11)
+HR_Title.Size = UDim2.new(0, 100, 0, 10)
+HR_Title.Position = UDim2.new(0, 12, 0, 9)
 HR_Title.BackgroundTransparency = 1
 HR_Title.Text = "HIT RATE"
 HR_Title.Font = Enum.Font.GothamBold
-HR_Title.TextSize = 9
+HR_Title.TextSize = 8
 HR_Title.TextColor3 = Color3.fromRGB(120, 120, 130)
 HR_Title.TextXAlignment = Enum.TextXAlignment.Left
 HR_Title.Parent = HitPanel
 
 local HR_Value = Instance.new("TextLabel")
-HR_Value.Size = UDim2.new(0, 164, 0, 18)
-HR_Value.Position = UDim2.new(0, 180, 0, 7)
+HR_Value.Size = UDim2.new(0, 140, 0, 14)
+HR_Value.Position = UDim2.new(0, 140, 0, 6)
 HR_Value.BackgroundTransparency = 1
 HR_Value.Text = "—"
 HR_Value.Font = Enum.Font.GothamBold
-HR_Value.TextSize = 13
+HR_Value.TextSize = 12
 HR_Value.TextColor3 = Color3.fromRGB(255, 255, 255)
 HR_Value.TextXAlignment = Enum.TextXAlignment.Right
 HR_Value.Parent = HitPanel
 
 local HR_Bar = Instance.new("Frame")
-HR_Bar.Size = UDim2.new(1, -32, 0, 6)
-HR_Bar.Position = UDim2.new(0, 16, 0, 30)
+HR_Bar.Size = UDim2.new(1, -24, 0, 5)
+HR_Bar.Position = UDim2.new(0, 12, 0, 26)
 HR_Bar.BackgroundColor3 = Color3.fromRGB(39, 36, 49)
 HR_Bar.Parent = HitPanel
 Instance.new("UICorner", HR_Bar).CornerRadius = UDim.new(1, 0)
@@ -462,42 +464,42 @@ HR_BarFill.Parent = HR_Bar
 Instance.new("UICorner", HR_BarFill).CornerRadius = UDim.new(1, 0)
 
 local HR_Sub = Instance.new("TextLabel")
-HR_Sub.Size = UDim2.new(0, 200, 0, 12)
-HR_Sub.Position = UDim2.new(0, 16, 0, 42)
+HR_Sub.Size = UDim2.new(0, 180, 0, 10)
+HR_Sub.Position = UDim2.new(0, 12, 0, 36)
 HR_Sub.BackgroundTransparency = 1
 HR_Sub.Text = "No results yet"
 HR_Sub.Font = Enum.Font.Gotham
-HR_Sub.TextSize = 10
+HR_Sub.TextSize = 9
 HR_Sub.TextColor3 = Color3.fromRGB(120, 120, 130)
 HR_Sub.TextXAlignment = Enum.TextXAlignment.Left
 HR_Sub.Parent = HitPanel
 
 -- Bet Panel
 local BetPanel = Instance.new("Frame")
-BetPanel.Size = UDim2.new(1, -40, 0, 54)
-BetPanel.Position = UDim2.new(0, 20, 0, 384)
+BetPanel.Size = UDim2.new(1, -28, 0, 48)
+BetPanel.Position = UDim2.new(0, 14, 0, 314)
 BetPanel.BackgroundColor3 = Color3.fromRGB(29, 25, 38)
 BetPanel.Parent = ContentContainer
-Instance.new("UICorner", BetPanel).CornerRadius = UDim.new(0, 12)
+Instance.new("UICorner", BetPanel).CornerRadius = UDim.new(0, 10)
 local bps = Instance.new("UIStroke", BetPanel)
 bps.Color = Color3.fromRGB(45, 45, 54)
 bps.Thickness = 1
 
 local Bet_Title = Instance.new("TextLabel")
-Bet_Title.Size = UDim2.new(0, 90, 1, 0)
-Bet_Title.Position = UDim2.new(0, 16, 0, 0)
+Bet_Title.Size = UDim2.new(0, 80, 1, 0)
+Bet_Title.Position = UDim2.new(0, 12, 0, 0)
 Bet_Title.BackgroundTransparency = 1
 Bet_Title.Text = "BET AMOUNT"
 Bet_Title.Font = Enum.Font.GothamBold
-Bet_Title.TextSize = 9
+Bet_Title.TextSize = 8
 Bet_Title.TextColor3 = Color3.fromRGB(120, 120, 130)
 Bet_Title.TextXAlignment = Enum.TextXAlignment.Left
 Bet_Title.Parent = BetPanel
 
 local BetRow = Instance.new("Frame")
 BetRow.AnchorPoint = Vector2.new(1, 0.5)
-BetRow.Position = UDim2.new(1, -11, 0.5, 0)
-BetRow.Size = UDim2.new(0, 240, 0, 32)
+BetRow.Position = UDim2.new(1, -8, 0.5, 0)
+BetRow.Size = UDim2.new(0, 200, 0, 28)
 BetRow.BackgroundTransparency = 1
 BetRow.Parent = BetPanel
 
@@ -505,21 +507,21 @@ local betLayout = Instance.new("UIListLayout", BetRow)
 betLayout.FillDirection = Enum.FillDirection.Horizontal
 betLayout.HorizontalAlignment = Enum.HorizontalAlignment.Right
 betLayout.VerticalAlignment = Enum.VerticalAlignment.Center
-betLayout.Padding = UDim.new(0, 6)
+betLayout.Padding = UDim.new(0, 4)
 betLayout.SortOrder = Enum.SortOrder.LayoutOrder
 
 local function makeBetBtn(text, order)
 	local b = Instance.new("TextButton")
 	b.LayoutOrder = order
-	b.Size = UDim2.new(0, 38, 0, 32)
+	b.Size = UDim2.new(0, 32, 0, 28)
 	b.BackgroundColor3 = Color3.fromRGB(42, 36, 54)
 	b.Text = text
 	b.Font = Enum.Font.GothamBold
-	b.TextSize = 12
+	b.TextSize = 11
 	b.TextColor3 = Color3.fromRGB(255, 255, 255)
 	b.AutoButtonColor = false
 	b.Parent = BetRow
-	Instance.new("UICorner", b).CornerRadius = UDim.new(0, 8)
+	Instance.new("UICorner", b).CornerRadius = UDim.new(0, 6)
 	return b
 end
 
@@ -528,32 +530,32 @@ local BetMinus1 = makeBetBtn("-1", 2)
 
 local BetBox = Instance.new("TextBox")
 BetBox.LayoutOrder = 3
-BetBox.Size = UDim2.new(0, 64, 0, 32)
+BetBox.Size = UDim2.new(0, 52, 0, 28)
 BetBox.BackgroundColor3 = Color3.fromRGB(14, 12, 18)
 BetBox.Text = tostring(betAmount)
 BetBox.Font = Enum.Font.GothamBold
-BetBox.TextSize = 17
+BetBox.TextSize = 15
 BetBox.TextColor3 = Color3.fromRGB(255, 255, 255)
 BetBox.ClearTextOnFocus = false
 BetBox.Parent = BetRow
-Instance.new("UICorner", BetBox).CornerRadius = UDim.new(0, 8)
+Instance.new("UICorner", BetBox).CornerRadius = UDim.new(0, 6)
 
 local BetPlus1 = makeBetBtn("+1", 4)
 local BetPlus10 = makeBetBtn("+10", 5)
 
 local Footer = Instance.new("TextLabel")
-Footer.Size = UDim2.new(1, -40, 0, 16)
-Footer.Position = UDim2.new(0, 20, 1, -24) 
+Footer.Size = UDim2.new(1, -28, 0, 14)
+Footer.Position = UDim2.new(0, 14, 1, -20) 
 Footer.BackgroundTransparency = 1
 Footer.Text = ""
 Footer.Font = Enum.Font.Gotham
-Footer.TextSize = 10
+Footer.TextSize = 9
 Footer.TextColor3 = Color3.fromRGB(120, 120, 130)
 Footer.TextXAlignment = Enum.TextXAlignment.Center
 Footer.Parent = ContentContainer
 
 --------------------------------------------------------------------------------
--- 🚀 THUẬT TOÁN DỰ ĐOÁN KẾT HỢP SÂU (TRUE HYBRID ALGORITHM: FILE 1 + FILE 2)
+-- 🚀 THUẬT TOÁN TRUE HYBRID AI (FILE 1 + FILE 2)
 --------------------------------------------------------------------------------
 local function pickBestColorTrueHybrid()
 	local n = #history
@@ -561,7 +563,6 @@ local function pickBestColorTrueHybrid()
 		return COLOR_ORDER[math.random(#COLOR_ORDER)], 50
 	end
 
-	-- ===== 1. TÍNH ĐIỂM TỪ THUẬT TOÁN FILE 1 (Ensemble AI Decay + Orders) =====
 	local f, ftot = {}, 6
 	local o1, o1tot = {}, 6
 	local o2, o2tot = {}, 6
@@ -598,7 +599,6 @@ local function pickBestColorTrueHybrid()
 		end
 	end
 
-	-- ===== 2. TÍNH ĐIỂM TỪ THUẬT TOÁN FILE 2 (Streaks & Inverse Counts) =====
 	local counts, streaks = {}, {}
 	for _, c in ipairs(COLOR_ORDER) do counts[c] = 0; streaks[c] = 0 end
 	
@@ -618,7 +618,6 @@ local function pickBestColorTrueHybrid()
 		end
 	end
 
-	-- ===== 3. HỢP NHẤT TRỌNG SỐ (70% File 1 Ensemble + 30% File 2 Streaks) =====
 	local bestColor, bestScore = COLOR_ORDER[1], -9999
 	
 	for _, c in ipairs(COLOR_ORDER) do
@@ -638,7 +637,7 @@ local function pickBestColorTrueHybrid()
 end
 
 --------------------------------------------------------------------------------
--- Cập nhật UI & Logic sự kiện
+-- Giao diện & Sự kiện bấm Predict
 --------------------------------------------------------------------------------
 local function setPrediction(colorName, conf, statusText)
 	PP_Color.Text = colorName
@@ -656,17 +655,6 @@ local function setPrediction(colorName, conf, statusText)
 	PP_Conf.TextColor3 = c
 	PP_BarFill.BackgroundColor3 = c
 	TweenService:Create(PP_BarFill, TweenInfo.new(0.4), {Size = UDim2.new(conf / 100, 0, 1, 0)}):Play()
-end
-
-local function resetPrediction()
-	PP_Color.Text = "—"
-	PP_Color.TextColor3 = Color3.fromRGB(255, 255, 255)
-	PP_Question.Visible = true
-	PP_Dot.Visible = false 
-	PP_Box.BackgroundColor3 = Color3.fromRGB(42, 36, 54)
-	PP_Conf.Text = ""
-	PP_Status.Text = "Waiting for next roll"
-	PP_BarFill.Size = UDim2.new(0, 0, 1, 0)
 end
 
 local function updateHitRate()
@@ -691,14 +679,13 @@ local function doPredict()
 
 	local entry = {picks = picks, result = "PENDING", confidence = 0}
 	
-	-- Thực hiện dự đoán bằng thuật toán gộp True Hybrid
 	local chosen, conf = pickBestColorTrueHybrid()
 	table.insert(history, entry)
 	rollsObserved = rollsObserved + 1
 
 	entry.prediction = chosen
 	entry.confidence = conf
-	setPrediction(chosen, conf, string.format("True Hybrid AI (%d rolls)", #history))
+	setPrediction(chosen, conf, string.format("True Hybrid (%d rolls)", #history))
 
 	local hit = false
 	for i = 1, 4 do if picks[i] == chosen then hit = true break end end
@@ -716,33 +703,18 @@ local function doPredict()
 
 	updateHitRate()
 	Footer.Text = string.format("Rolls %d • Next #%d • Bet %d", rollsObserved, rollsObserved + 1, betAmount)
-
-	if not removeExpireCooldown then
-		isCooldownActive = true
-		CooldownBarBg.Visible = true
-		CooldownBarFill.Size = UDim2.new(1, 0, 1, 0)
-		TweenService:Create(CooldownBarFill, TweenInfo.new(3, Enum.EasingStyle.Linear), {Size = UDim2.new(0, 0, 1, 0)}):Play()
-		
-		task.spawn(function()
-			for i = 3, 1, -1 do
-				PP_Status.Text = string.format("Expires in %ds", i)
-				task.wait(1)
-			end
-			isCooldownActive = false
-			CooldownBarBg.Visible = false
-			resetPrediction()
-		end)
-	end
 end
 
 PredictBtn.MouseButton1Click:Connect(doPredict)
 
 MinBtn.MouseButton1Click:Connect(function()
 	isMinimized = not isMinimized
-	Frame.Size = isMinimized and UDim2.new(0, 392, 0, 64) or UDim2.new(0, 392, 0, 565)
+	Frame.Size = isMinimized and UDim2.new(0, MENU_W, 0, 52) or UDim2.new(0, MENU_W, 0, MENU_H)
 	ContentContainer.Visible = not isMinimized
 end)
 
 CloseBtn.MouseButton1Click:Connect(function() ScreenGui:Destroy() end)
 
 Footer.Text = string.format("Rolls 0 • Next #1 • Bet %d", betAmount)
+
+-- Tích hợp link loadstring gốc của cả 2 file
