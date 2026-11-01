@@ -1,266 +1,971 @@
-
--- KEEP MAIN | STEAL A BRAINROT
--- Draggable + Minimize + Auto Steal
--- Uses normal ProximityPrompt interaction.
+--[[
+    PHONG HUB - STEAL A BRAINROT
+    Version: 1.0
+    Visuals: Player ESP, Brainrot ESP, Base Xray
+    Auto Steal has been removed.
+]]
 
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local Workspace = game:GetService("Workspace")
 
-local Player = Players.LocalPlayer
+local LocalPlayer = Players.LocalPlayer
+
+--==================================================
+-- CONFIG
+--==================================================
 
 local Config = {
-    AutoSteal = false,
-    StealRadius = 60,
-    ScanDelay = 0.15
+    PlayerESP = false,
+    BrainrotESP = false,
+
+    PlayerName = true,
+    PlayerDistance = true,
+    PlayerBox = true,
+    PlayerChams = false,
+
+    BrainrotName = true,
+    BrainrotDistance = true,
+    BrainrotBox = true,
+    BrainrotChams = false,
+
+    Xray = false,
+    XrayTransparency = 0.72,
+
+    UpdateDelay = 0.25,
 }
 
+local COLORS = {
+    Background = Color3.fromRGB(15, 17, 24),
+    Header = Color3.fromRGB(23, 27, 38),
+    Panel = Color3.fromRGB(25, 29, 41),
+    Row = Color3.fromRGB(32, 37, 51),
+    RowHover = Color3.fromRGB(40, 47, 64),
+    Accent = Color3.fromRGB(0, 166, 255),
+    AccentDark = Color3.fromRGB(0, 112, 190),
+    Text = Color3.fromRGB(240, 243, 250),
+    Muted = Color3.fromRGB(145, 155, 174),
+    Green = Color3.fromRGB(70, 210, 140),
+    Red = Color3.fromRGB(245, 95, 105),
+}
+
+--==================================================
+-- GUI PARENT
+--==================================================
+
 local Gui = Instance.new("ScreenGui")
-Gui.Name = "KeepMainUI"
+Gui.Name = "PhongHubVisuals"
 Gui.ResetOnSpawn = false
+Gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
-if syn and syn.protect_gui then
-    syn.protect_gui(Gui)
-    Gui.Parent = game:GetService("CoreGui")
-elseif gethui then
-    Gui.Parent = gethui()
-else
-    Gui.Parent = Player:WaitForChild("PlayerGui")
-end
+local parented = false
 
-local function Create(class, props, parent)
-    local obj = Instance.new(class)
-    for k, v in pairs(props) do
-        obj[k] = v
+pcall(function()
+    if syn and syn.protect_gui then
+        syn.protect_gui(Gui)
+        Gui.Parent = game:GetService("CoreGui")
+        parented = true
     end
-    obj.Parent = parent
-    return obj
+end)
+
+if not parented then
+    pcall(function()
+        if type(gethui) == "function" then
+            Gui.Parent = gethui()
+            parented = true
+        end
+    end)
 end
 
-local function Corner(obj, radius)
+if not parented then
+    Gui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+end
+
+--==================================================
+-- UI HELPERS
+--==================================================
+
+local function Create(className, properties, parent)
+    local object = Instance.new(className)
+
+    for property, value in pairs(properties or {}) do
+        object[property] = value
+    end
+
+    object.Parent = parent
+    return object
+end
+
+local function Corner(object, radius)
     Create("UICorner", {
         CornerRadius = UDim.new(0, radius)
-    }, obj)
+    }, object)
 end
 
-local function Tween(obj, props, duration)
+local function Stroke(object, color, thickness, transparency)
+    return Create("UIStroke", {
+        Color = color or COLORS.Accent,
+        Thickness = thickness or 1,
+        Transparency = transparency or 0,
+    }, object)
+end
+
+local function Tween(object, properties, duration)
     TweenService:Create(
-        obj,
+        object,
         TweenInfo.new(
-            duration or 0.25,
+            duration or 0.18,
             Enum.EasingStyle.Quart,
             Enum.EasingDirection.Out
         ),
-        props
+        properties
     ):Play()
 end
 
--- WINDOW
+local function MakeLabel(parent, text, size, position, fontSize, color, bold)
+    return Create("TextLabel", {
+        BackgroundTransparency = 1,
+        Position = position or UDim2.new(),
+        Size = size,
+        Text = text,
+        TextColor3 = color or COLORS.Text,
+        Font = bold and Enum.Font.GothamBold or Enum.Font.Gotham,
+        TextSize = fontSize or 12,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextYAlignment = Enum.TextYAlignment.Center,
+    }, parent)
+end
+
+--==================================================
+-- MAIN WINDOW
+--==================================================
 
 local Main = Create("Frame", {
-    Name = "MainFrame",
-    Size = UDim2.fromOffset(420, 300),
-    Position = UDim2.new(0.5, -210, 0.5, -150),
-    BackgroundColor3 = Color3.fromRGB(17, 19, 27),
+    Name = "Main",
+    Size = UDim2.fromOffset(650, 430),
+    Position = UDim2.new(0.5, -325, 0.5, -215),
+    BackgroundColor3 = COLORS.Background,
     BorderSizePixel = 0,
     Active = true,
-    ClipsDescendants = true
+    ClipsDescendants = true,
 }, Gui)
 
-Corner(Main, 12)
-
-Create("UIStroke", {
-    Color = Color3.fromRGB(0, 160, 255),
-    Thickness = 1.5
-}, Main)
-
--- HEADER
+Corner(Main, 13)
+Stroke(Main, COLORS.Accent, 1.4, 0.15)
 
 local Header = Create("Frame", {
-    Size = UDim2.new(1, 0, 0, 48),
-    BackgroundColor3 = Color3.fromRGB(25, 29, 42),
+    Name = "Header",
+    Size = UDim2.new(1, 0, 0, 45),
+    BackgroundColor3 = COLORS.Header,
     BorderSizePixel = 0,
-    Active = true
+    Active = true,
 }, Main)
 
-Corner(Header, 12)
+Corner(Header, 13)
 
-Create("TextLabel", {
-    Position = UDim2.fromOffset(15, 0),
-    Size = UDim2.new(1, -65, 1, 0),
-    BackgroundTransparency = 1,
-    Text = "KEEP MAIN  |  STEAL A BRAINROT",
-    TextColor3 = Color3.fromRGB(255, 255, 255),
-    Font = Enum.Font.GothamBold,
-    TextSize = 14,
-    TextXAlignment = Enum.TextXAlignment.Left
-}, Header)
+MakeLabel(
+    Header,
+    "PHONG HUB",
+    UDim2.new(0, 150, 1, 0),
+    UDim2.fromOffset(16, 0),
+    15,
+    COLORS.Text,
+    true
+)
+
+MakeLabel(
+    Header,
+    "STEAL A BRAINROT  •  VISUALS",
+    UDim2.new(0, 260, 1, 0),
+    UDim2.fromOffset(128, 0),
+    10,
+    COLORS.Muted,
+    false
+)
 
 local Minimize = Create("TextButton", {
-    Position = UDim2.new(1, -40, 0, 9),
+    Position = UDim2.new(1, -42, 0, 9),
     Size = UDim2.fromOffset(27, 27),
-    BackgroundColor3 = Color3.fromRGB(40, 45, 60),
+    BackgroundColor3 = COLORS.Row,
     Text = "–",
-    TextColor3 = Color3.fromRGB(255, 255, 255),
+    TextColor3 = COLORS.Text,
     Font = Enum.Font.GothamBold,
-    TextSize = 20
+    TextSize = 20,
+    AutoButtonColor = false,
 }, Header)
 
 Corner(Minimize, 7)
 
--- CONTENT
-
-local Content = Create("Frame", {
-    Position = UDim2.fromOffset(15, 60),
-    Size = UDim2.new(1, -30, 1, -75),
-    BackgroundTransparency = 1
+local TabBar = Create("Frame", {
+    Position = UDim2.fromOffset(10, 53),
+    Size = UDim2.new(1, -20, 0, 34),
+    BackgroundTransparency = 1,
 }, Main)
 
-Create("TextLabel", {
-    Size = UDim2.new(1, 0, 0, 30),
+local TabLayout = Create("UIListLayout", {
+    FillDirection = Enum.FillDirection.Horizontal,
+    SortOrder = Enum.SortOrder.LayoutOrder,
+    Padding = UDim.new(0, 5),
+}, TabBar)
+
+local PageHolder = Create("Frame", {
+    Position = UDim2.fromOffset(10, 94),
+    Size = UDim2.new(1, -20, 1, -104),
     BackgroundTransparency = 1,
-    Text = "AUTO STEAL",
-    TextColor3 = Color3.fromRGB(255, 255, 255),
-    Font = Enum.Font.GothamBold,
-    TextSize = 19,
-    TextXAlignment = Enum.TextXAlignment.Left
-}, Content)
+    ClipsDescendants = true,
+}, Main)
 
-Create("TextLabel", {
-    Position = UDim2.fromOffset(0, 30),
-    Size = UDim2.new(1, 0, 0, 22),
-    BackgroundTransparency = 1,
-    Text = "Automatic ProximityPrompt interaction",
-    TextColor3 = Color3.fromRGB(145, 155, 175),
-    Font = Enum.Font.Gotham,
-    TextSize = 11,
-    TextXAlignment = Enum.TextXAlignment.Left
-}, Content)
+local TabNames = {
+    "Stealing",
+    "Player",
+    "Visuals",
+    "Admin",
+    "Misc",
+    "Configs",
+}
 
--- TOGGLE
+local Tabs = {}
+local Pages = {}
 
-local Toggle = Create("TextButton", {
-    Position = UDim2.fromOffset(0, 65),
-    Size = UDim2.new(1, 0, 0, 42),
-    BackgroundColor3 = Color3.fromRGB(35, 40, 52),
-    Text = "AUTO STEAL: OFF",
-    TextColor3 = Color3.fromRGB(255, 255, 255),
-    Font = Enum.Font.GothamBold,
-    TextSize = 13,
-    AutoButtonColor = false
-}, Content)
+local function MakePage(name)
+    local page = Create("ScrollingFrame", {
+        Name = name .. "Page",
+        Size = UDim2.fromScale(1, 1),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        ScrollBarThickness = 3,
+        ScrollBarImageColor3 = COLORS.Accent,
+        CanvasSize = UDim2.new(),
+        AutomaticCanvasSize = Enum.AutomaticSize.Y,
+        Visible = false,
+    }, PageHolder)
 
-Corner(Toggle, 8)
+    Create("UIPadding", {
+        PaddingTop = UDim.new(0, 3),
+        PaddingBottom = UDim.new(0, 8),
+        PaddingLeft = UDim.new(0, 3),
+        PaddingRight = UDim.new(0, 7),
+    }, page)
 
-local Status = Create("TextLabel", {
-    Position = UDim2.fromOffset(0, 115),
-    Size = UDim2.new(1, 0, 0, 24),
-    BackgroundTransparency = 1,
-    Text = "● SYSTEM READY",
-    TextColor3 = Color3.fromRGB(80, 210, 140),
-    Font = Enum.Font.Gotham,
-    TextSize = 11,
-    TextXAlignment = Enum.TextXAlignment.Left
-}, Content)
+    Create("UIListLayout", {
+        Padding = UDim.new(0, 9),
+        SortOrder = Enum.SortOrder.LayoutOrder,
+    }, page)
 
--- RADIUS CONTROL
-
-Create("TextLabel", {
-    Position = UDim2.fromOffset(0, 155),
-    Size = UDim2.fromOffset(130, 25),
-    BackgroundTransparency = 1,
-    Text = "STEAL RADIUS",
-    TextColor3 = Color3.fromRGB(190, 195, 210),
-    Font = Enum.Font.GothamBold,
-    TextSize = 11,
-    TextXAlignment = Enum.TextXAlignment.Left
-}, Content)
-
-local RadiusValue = Create("TextLabel", {
-    Position = UDim2.new(1, -55, 0, 155),
-    Size = UDim2.fromOffset(55, 25),
-    BackgroundTransparency = 1,
-    Text = "60",
-    TextColor3 = Color3.fromRGB(0, 180, 255),
-    Font = Enum.Font.GothamBold,
-    TextSize = 13
-}, Content)
-
-local Minus = Create("TextButton", {
-    Position = UDim2.fromOffset(0, 185),
-    Size = UDim2.fromOffset(42, 30),
-    BackgroundColor3 = Color3.fromRGB(35, 40, 52),
-    Text = "-",
-    TextColor3 = Color3.fromRGB(255, 255, 255),
-    Font = Enum.Font.GothamBold,
-    TextSize = 18
-}, Content)
-
-Corner(Minus, 6)
-
-local Plus = Create("TextButton", {
-    Position = UDim2.fromOffset(50, 185),
-    Size = UDim2.fromOffset(42, 30),
-    BackgroundColor3 = Color3.fromRGB(35, 40, 52),
-    Text = "+",
-    TextColor3 = Color3.fromRGB(255, 255, 255),
-    Font = Enum.Font.GothamBold,
-    TextSize = 18
-}, Content)
-
-Corner(Plus, 6)
-
-local function UpdateRadius()
-    RadiusValue.Text = tostring(Config.StealRadius)
+    Pages[name] = page
+    return page
 end
 
-Minus.MouseButton1Click:Connect(function()
-    Config.StealRadius = math.max(10, Config.StealRadius - 5)
-    UpdateRadius()
-end)
+local function SelectTab(name)
+    for tabName, tabData in pairs(Tabs) do
+        local selected = tabName == name
 
-Plus.MouseButton1Click:Connect(function()
-    Config.StealRadius = math.min(150, Config.StealRadius + 5)
-    UpdateRadius()
-end)
+        Tween(tabData.Button, {
+            BackgroundColor3 = selected and COLORS.AccentDark or COLORS.Header,
+            TextColor3 = selected and COLORS.Text or COLORS.Muted,
+        }, 0.15)
 
--- PROGRESS BAR
-
-local BarBackground = Create("Frame", {
-    Position = UDim2.fromOffset(0, 230),
-    Size = UDim2.new(1, 0, 0, 9),
-    BackgroundColor3 = Color3.fromRGB(35, 40, 52),
-    BorderSizePixel = 0,
-    ClipsDescendants = true
-}, Content)
-
-Corner(BarBackground, 10)
-
-local BarFill = Create("Frame", {
-    Size = UDim2.new(0, 0, 1, 0),
-    BackgroundColor3 = Color3.fromRGB(0, 160, 255),
-    BorderSizePixel = 0
-}, BarBackground)
-
-Corner(BarFill, 10)
-
-local function SetProgress(value)
-    Tween(BarFill, {
-        Size = UDim2.new(math.clamp(value, 0, 1), 0, 1, 0)
-    }, 0.12)
+        tabData.Underline.Visible = selected
+        Pages[tabName].Visible = selected
+    end
 end
 
--- CHARACTER
+for index, name in ipairs(TabNames) do
+    local button = Create("TextButton", {
+        Name = name .. "Tab",
+        Size = UDim2.new(1 / #TabNames, -5, 1, 0),
+        BackgroundColor3 = COLORS.Header,
+        BorderSizePixel = 0,
+        Text = name,
+        TextColor3 = COLORS.Muted,
+        Font = Enum.Font.GothamBold,
+        TextSize = 11,
+        AutoButtonColor = false,
+        LayoutOrder = index,
+    }, TabBar)
 
-local function GetRoot()
-    local character = Player.Character
-    if not character then return nil end
+    Corner(button, 7)
 
-    return character:FindFirstChild("HumanoidRootPart")
-        or character:FindFirstChild("UpperTorso")
+    local underline = Create("Frame", {
+        AnchorPoint = Vector2.new(0.5, 1),
+        Position = UDim2.new(0.5, 0, 1, -2),
+        Size = UDim2.new(0.55, 0, 0, 2),
+        BackgroundColor3 = COLORS.Accent,
+        BorderSizePixel = 0,
+        Visible = false,
+    }, button)
+
+    Corner(underline, 2)
+
+    MakePage(name)
+
+    Tabs[name] = {
+        Button = button,
+        Underline = underline,
+    }
+
+    button.MouseButton1Click:Connect(function()
+        SelectTab(name)
+    end)
 end
 
--- OWN PLOT CHECK
+--==================================================
+-- PAGE / CONTROL HELPERS
+--==================================================
+
+local function MakeCard(parent, title, description)
+    local card = Create("Frame", {
+        Size = UDim2.new(1, -5, 0, 0),
+        AutomaticSize = Enum.AutomaticSize.Y,
+        BackgroundColor3 = COLORS.Panel,
+        BorderSizePixel = 0,
+    }, parent)
+
+    Corner(card, 9)
+    Stroke(card, Color3.fromRGB(55, 64, 82), 1, 0.65)
+
+    local padding = Create("UIPadding", {
+        PaddingTop = UDim.new(0, 10),
+        PaddingBottom = UDim.new(0, 10),
+        PaddingLeft = UDim.new(0, 11),
+        PaddingRight = UDim.new(0, 11),
+    }, card)
+
+    local layout = Create("UIListLayout", {
+        Padding = UDim.new(0, 7),
+        SortOrder = Enum.SortOrder.LayoutOrder,
+    }, card)
+
+    local heading = MakeLabel(
+        card,
+        title,
+        UDim2.new(1, 0, 0, 19),
+        nil,
+        12,
+        COLORS.Accent,
+        true
+    )
+    heading.LayoutOrder = 1
+
+    if description then
+        local desc = MakeLabel(
+            card,
+            description,
+            UDim2.new(1, 0, 0, 25),
+            nil,
+            10,
+            COLORS.Muted,
+            false
+        )
+        desc.TextWrapped = true
+        desc.LayoutOrder = 2
+    end
+
+    return card
+end
+
+local function AddToggle(parent, title, description, configKey, callback)
+    local row = Create("TextButton", {
+        Size = UDim2.new(1, 0, 0, description and 51 or 39),
+        BackgroundColor3 = COLORS.Row,
+        BorderSizePixel = 0,
+        Text = "",
+        AutoButtonColor = false,
+    }, parent)
+
+    Corner(row, 7)
+
+    local titleLabel = MakeLabel(
+        row,
+        title,
+        UDim2.new(1, -75, 0, 20),
+        UDim2.fromOffset(10, description and 5 or 9),
+        11,
+        COLORS.Text,
+        true
+    )
+
+    if description then
+        local descLabel = MakeLabel(
+            row,
+            description,
+            UDim2.new(1, -75, 0, 17),
+            UDim2.fromOffset(10, 26),
+            9,
+            COLORS.Muted,
+            false
+        )
+        descLabel.TextTruncate = Enum.TextTruncate.AtEnd
+    end
+
+    local switch = Create("Frame", {
+        AnchorPoint = Vector2.new(1, 0.5),
+        Position = UDim2.new(1, -10, 0.5, 0),
+        Size = UDim2.fromOffset(36, 19),
+        BackgroundColor3 = Config[configKey] and COLORS.Accent or Color3.fromRGB(65, 72, 88),
+        BorderSizePixel = 0,
+    }, row)
+
+    Corner(switch, 20)
+
+    local knob = Create("Frame", {
+        Size = UDim2.fromOffset(13, 13),
+        Position = Config[configKey] and UDim2.new(1, -16, 0.5, -6) or UDim2.fromOffset(3, 3),
+        BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+        BorderSizePixel = 0,
+    }, switch)
+
+    Corner(knob, 20)
+
+    local function Refresh()
+        local enabled = Config[configKey]
+        Tween(switch, {
+            BackgroundColor3 = enabled and COLORS.Accent or Color3.fromRGB(65, 72, 88),
+        }, 0.13)
+
+        Tween(knob, {
+            Position = enabled and UDim2.new(1, -16, 0.5, -6) or UDim2.fromOffset(3, 3),
+        }, 0.13)
+    end
+
+    row.MouseEnter:Connect(function()
+        Tween(row, { BackgroundColor3 = COLORS.RowHover }, 0.12)
+    end)
+
+    row.MouseLeave:Connect(function()
+        Tween(row, { BackgroundColor3 = COLORS.Row }, 0.12)
+    end)
+
+    row.MouseButton1Click:Connect(function()
+        Config[configKey] = not Config[configKey]
+        Refresh()
+
+        if callback then
+            callback(Config[configKey])
+        end
+    end)
+
+    return Refresh
+end
+
+local function AddSlider(parent, title, configKey, minimum, maximum, step, callback)
+    local row = Create("Frame", {
+        Size = UDim2.new(1, 0, 0, 54),
+        BackgroundColor3 = COLORS.Row,
+        BorderSizePixel = 0,
+    }, parent)
+
+    Corner(row, 7)
+
+    MakeLabel(
+        row,
+        title,
+        UDim2.new(1, -65, 0, 19),
+        UDim2.fromOffset(10, 5),
+        11,
+        COLORS.Text,
+        true
+    )
+
+    local valueLabel = MakeLabel(
+        row,
+        string.format("%.2f", Config[configKey]),
+        UDim2.fromOffset(55, 19),
+        UDim2.new(1, -63, 0, 5),
+        10,
+        COLORS.Accent,
+        true
+    )
+    valueLabel.TextXAlignment = Enum.TextXAlignment.Right
+
+    local track = Create("Frame", {
+        Position = UDim2.fromOffset(10, 34),
+        Size = UDim2.new(1, -20, 0, 6),
+        BackgroundColor3 = Color3.fromRGB(60, 68, 83),
+        BorderSizePixel = 0,
+    }, row)
+
+    Corner(track, 5)
+
+    local fill = Create("Frame", {
+        Size = UDim2.new(
+            (Config[configKey] - minimum) / (maximum - minimum),
+            0,
+            1,
+            0
+        ),
+        BackgroundColor3 = COLORS.Accent,
+        BorderSizePixel = 0,
+    }, track)
+
+    Corner(fill, 5)
+
+    local hitbox = Create("TextButton", {
+        Position = UDim2.new(0, 0, 0.5, -10),
+        Size = UDim2.new(1, 0, 0, 20),
+        BackgroundTransparency = 1,
+        Text = "",
+        AutoButtonColor = false,
+    }, track)
+
+    local dragging = false
+
+    local function SetFromX(x)
+        local alpha = math.clamp(
+            (x - track.AbsolutePosition.X) / math.max(track.AbsoluteSize.X, 1),
+            0,
+            1
+        )
+
+        local value = minimum + (maximum - minimum) * alpha
+        value = math.floor(value / step + 0.5) * step
+        value = math.clamp(value, minimum, maximum)
+
+        Config[configKey] = value
+        fill.Size = UDim2.new(
+            (value - minimum) / (maximum - minimum),
+            0,
+            1,
+            0
+        )
+        valueLabel.Text = string.format("%.2f", value)
+
+        if callback then
+            callback(value)
+        end
+    end
+
+    hitbox.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+            or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            SetFromX(input.Position.X)
+        end
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if dragging and (
+            input.UserInputType == Enum.UserInputType.MouseMovement
+            or input.UserInputType == Enum.UserInputType.Touch
+        ) then
+            SetFromX(input.Position.X)
+        end
+    end)
+
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+            or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = false
+        end
+    end)
+end
+
+local function AddInfo(parent, title, message)
+    local box = Create("Frame", {
+        Size = UDim2.new(1, 0, 0, 62),
+        BackgroundColor3 = COLORS.Row,
+        BorderSizePixel = 0,
+    }, parent)
+
+    Corner(box, 7)
+
+    MakeLabel(
+        box,
+        title,
+        UDim2.new(1, -20, 0, 20),
+        UDim2.fromOffset(10, 6),
+        11,
+        COLORS.Accent,
+        true
+    )
+
+    local body = MakeLabel(
+        box,
+        message,
+        UDim2.new(1, -20, 0, 27),
+        UDim2.fromOffset(10, 29),
+        10,
+        COLORS.Muted,
+        false
+    )
+    body.TextWrapped = true
+end
+
+--==================================================
+-- VISUALS PAGE
+--==================================================
+
+local VisualsPage = Pages.Visuals
+
+local playerCard = MakeCard(
+    VisualsPage,
+    "PLAYER ESP",
+    "Hiển thị thông tin người chơi khác trong trận."
+)
+
+AddToggle(playerCard, "Player ESP", "Bật/tắt toàn bộ ESP người chơi.", "PlayerESP")
+AddToggle(playerCard, "Name", "Hiển thị tên người chơi.", "PlayerName")
+AddToggle(playerCard, "Distance", "Hiển thị khoảng cách.", "PlayerDistance")
+AddToggle(playerCard, "Box", "Hiển thị viền quanh nhân vật.", "PlayerBox")
+AddToggle(playerCard, "Chams", "Tô sáng nhân vật qua vật cản.", "PlayerChams")
+
+local brainrotCard = MakeCard(
+    VisualsPage,
+    "BRAINROT ESP",
+    "Quét các khu AnimalPodiums trong workspace.Plots."
+)
+
+AddToggle(brainrotCard, "Brainrot ESP", "Bật/tắt ESP vật thể trong các podium.", "BrainrotESP")
+AddToggle(brainrotCard, "Name", "Hiển thị tên model/podium.", "BrainrotName")
+AddToggle(brainrotCard, "Distance", "Hiển thị khoảng cách tới podium.", "BrainrotDistance")
+AddToggle(brainrotCard, "Box", "Hiển thị viền model.", "BrainrotBox")
+AddToggle(brainrotCard, "Chams", "Tô sáng model qua vật cản.", "BrainrotChams")
+
+local xrayCard = MakeCard(
+    VisualsPage,
+    "BASE X-RAY",
+    "Làm mờ các phần của base đối thủ ở góc nhìn của bạn."
+)
+
+AddToggle(xrayCard, "Xray", "Bật/tắt làm mờ tường và cấu trúc base đối thủ.", "Xray")
+AddSlider(
+    xrayCard,
+    "Transparency",
+    "XrayTransparency",
+    0,
+    1,
+    0.05
+)
+
+--==================================================
+-- OTHER TABS
+--==================================================
+
+AddInfo(
+    Pages.Stealing,
+    "AUTO STEAL REMOVED",
+    "Chức năng Auto Steal cũ đã được gỡ khỏi bản này."
+)
+
+AddInfo(
+    Pages.Player,
+    "PLAYER",
+    "Tab Player được giữ theo bố cục Aurora. Các chức năng khác sẽ được thêm sau."
+)
+
+AddInfo(
+    Pages.Admin,
+    "ADMIN",
+    "Tab Admin hiện để trống, chưa bật chức năng nào."
+)
+
+AddInfo(
+    Pages.Misc,
+    "MISC",
+    "Các tiện ích phụ sẽ được thêm sau."
+)
+
+AddInfo(
+    Pages.Configs,
+    "CONFIGS",
+    "Lưu và tải cấu hình sẽ được bổ sung ở bản tiếp theo."
+)
+
+--==================================================
+-- ESP ENGINE
+--==================================================
+
+local ESPFolder = Create("Folder", {
+    Name = "PhongHubESP",
+}, Workspace)
+
+local ESPObjects = {}
+
+local function DestroyESP(key)
+    local data = ESPObjects[key]
+    if not data then
+        return
+    end
+
+    if data.Highlight then
+        pcall(function()
+            data.Highlight:Destroy()
+        end)
+    end
+
+    if data.Billboard then
+        pcall(function()
+            data.Billboard:Destroy()
+        end)
+    end
+
+    ESPObjects[key] = nil
+end
+
+local function ClearESP()
+    for key in pairs(ESPObjects) do
+        DestroyESP(key)
+    end
+end
+
+local function GetAdornee(model)
+    if not model then
+        return nil
+    end
+
+    if model:IsA("BasePart") then
+        return model
+    end
+
+    if model:IsA("Model") then
+        return model.PrimaryPart
+            or model:FindFirstChild("HumanoidRootPart")
+            or model:FindFirstChildWhichIsA("BasePart", true)
+    end
+
+    return nil
+end
+
+local function GetObjectPosition(model, adornee)
+    if model and model:IsA("Model") then
+        local success, pivot = pcall(function()
+            return model:GetPivot()
+        end)
+
+        if success then
+            return pivot.Position
+        end
+    end
+
+    return adornee and adornee.Position or nil
+end
+
+local function CreateESP(key, model, adornee, color)
+    local data = ESPObjects[key]
+
+    if data and (
+        data.Model ~= model
+        or data.Adornee ~= adornee
+    ) then
+        DestroyESP(key)
+        data = nil
+    end
+
+    if not data then
+        local highlight = Create("Highlight", {
+            Name = "PhongHubHighlight",
+            Adornee = model,
+            Enabled = true,
+            FillColor = color,
+            OutlineColor = color,
+            FillTransparency = 1,
+            OutlineTransparency = 0,
+            DepthMode = Enum.HighlightDepthMode.AlwaysOnTop,
+        }, ESPFolder)
+
+        local billboard = Create("BillboardGui", {
+            Name = "PhongHubLabel",
+            Adornee = adornee,
+            AlwaysOnTop = true,
+            LightInfluence = 0,
+            MaxDistance = 2500,
+            Size = UDim2.fromOffset(190, 42),
+            StudsOffset = Vector3.new(0, 3.1, 0),
+            Enabled = true,
+        }, Gui)
+
+        local label = Create("TextLabel", {
+            Size = UDim2.fromScale(1, 1),
+            BackgroundTransparency = 1,
+            Text = "",
+            TextColor3 = color,
+            TextStrokeColor3 = Color3.new(0, 0, 0),
+            TextStrokeTransparency = 0.15,
+            Font = Enum.Font.GothamBold,
+            TextSize = 12,
+            TextWrapped = true,
+            TextYAlignment = Enum.TextYAlignment.Bottom,
+        }, billboard)
+
+        data = {
+            Model = model,
+            Adornee = adornee,
+            Highlight = highlight,
+            Billboard = billboard,
+            Label = label,
+        }
+
+        ESPObjects[key] = data
+    end
+
+    data.Highlight.Adornee = model
+    data.Billboard.Adornee = adornee
+
+    return data
+end
+
+local function PaintESP(data, color, text, boxEnabled, chamsEnabled)
+    data.Highlight.FillColor = color
+    data.Highlight.OutlineColor = color
+    data.Highlight.OutlineTransparency = boxEnabled and 0 or 1
+    data.Highlight.FillTransparency = chamsEnabled and 0.68 or 1
+    data.Highlight.Enabled = boxEnabled or chamsEnabled
+
+    data.Label.TextColor3 = color
+    data.Label.Text = text
+    data.Billboard.Enabled = text ~= ""
+end
+
+--==================================================
+-- PLAYER ESP
+--==================================================
+
+local function UpdatePlayerESP(alive)
+    if not Config.PlayerESP then
+        return
+    end
+
+    local myCharacter = LocalPlayer.Character
+    local myRoot = myCharacter and myCharacter:FindFirstChild("HumanoidRootPart")
+
+    for _, target in ipairs(Players:GetPlayers()) do
+        if target ~= LocalPlayer then
+            local character = target.Character
+            local root = character and character:FindFirstChild("HumanoidRootPart")
+
+            if character and root then
+                local key = "Player_" .. tostring(target.UserId)
+                alive[key] = true
+
+                local color = Color3.fromRGB(245, 245, 255)
+                local lines = {}
+
+                if Config.PlayerName then
+                    lines[#lines + 1] = target.DisplayName or target.Name
+                end
+
+                if Config.PlayerDistance and myRoot then
+                    local distance = math.floor(
+                        (root.Position - myRoot.Position).Magnitude
+                    )
+                    lines[#lines + 1] = tostring(distance) .. "m"
+                end
+
+                local data = CreateESP(
+                    key,
+                    character,
+                    root,
+                    color
+                )
+
+                PaintESP(
+                    data,
+                    color,
+                    table.concat(lines, "\n"),
+                    Config.PlayerBox,
+                    Config.PlayerChams
+                )
+            end
+        end
+    end
+end
+
+--==================================================
+-- BRAINROT ESP
+--==================================================
+
+local function GetPodiumModel(podium)
+    if podium:IsA("Model") then
+        return podium
+    end
+
+    local nestedModel = podium:FindFirstChildWhichIsA("Model", true)
+    if nestedModel then
+        return nestedModel
+    end
+
+    return podium
+end
+
+local function UpdateBrainrotESP(alive)
+    if not Config.BrainrotESP then
+        return
+    end
+
+    local plots = Workspace:FindFirstChild("Plots")
+    if not plots then
+        return
+    end
+
+    local myCharacter = LocalPlayer.Character
+    local myRoot = myCharacter and myCharacter:FindFirstChild("HumanoidRootPart")
+
+    for _, plot in ipairs(plots:GetChildren()) do
+        local podiums = plot:FindFirstChild("AnimalPodiums")
+
+        if podiums then
+            for _, podium in ipairs(podiums:GetChildren()) do
+                local model = GetPodiumModel(podium)
+                local adornee = GetAdornee(model)
+
+                if model and adornee then
+                    local key = "Brainrot_" .. podium:GetFullName()
+                    alive[key] = true
+
+                    local position = GetObjectPosition(model, adornee)
+                    local lines = {}
+
+                    if Config.BrainrotName then
+                        local displayName = model.Name
+
+                        -- Try to use a visible name label if the game has one.
+                        for _, descendant in ipairs(podium:GetDescendants()) do
+                            if descendant:IsA("TextLabel")
+                                and descendant.Visible
+                                and descendant.Text ~= "" then
+                                displayName = descendant.Text
+                                break
+                            end
+                        end
+
+                        lines[#lines + 1] = displayName
+                    end
+
+                    if Config.BrainrotDistance and myRoot and position then
+                        local distance = math.floor(
+                            (position - myRoot.Position).Magnitude
+                        )
+                        lines[#lines + 1] = tostring(distance) .. "m"
+                    end
+
+                    local color = Color3.fromRGB(255, 205, 90)
+                    local data = CreateESP(
+                        key,
+                        model,
+                        adornee,
+                        color
+                    )
+
+                    PaintESP(
+                        data,
+                        color,
+                        table.concat(lines, "\n"),
+                        Config.BrainrotBox,
+                        Config.BrainrotChams
+                    )
+                end
+            end
+        end
+    end
+end
+
+--==================================================
+-- X-RAY ENGINE
+--==================================================
+
+local XrayOriginals = {}
 
 local function IsMyPlot(plot)
     local sign = plot:FindFirstChild("PlotSign")
@@ -271,204 +976,124 @@ local function IsMyPlot(plot)
         and yourBase.Enabled
 end
 
--- PROMPT POSITION
-
-local function GetPromptPosition(prompt)
-    local parent = prompt.Parent
-
-    while parent and parent ~= workspace do
-        if parent:IsA("BasePart") then
-            return parent.Position
+local function RestoreXray()
+    for part, oldValue in pairs(XrayOriginals) do
+        if part and part.Parent then
+            pcall(function()
+                part.LocalTransparencyModifier = oldValue
+            end)
         end
 
-        parent = parent.Parent
+        XrayOriginals[part] = nil
     end
-
-    return nil
 end
 
--- FIND NEAREST PROMPT
+local function UpdateXray()
+    if not Config.Xray then
+        if next(XrayOriginals) then
+            RestoreXray()
+        end
+        return
+    end
 
-local function FindNearestPrompt()
-    local root = GetRoot()
-    if not root then return nil end
+    local plots = Workspace:FindFirstChild("Plots")
+    if not plots then
+        return
+    end
 
-    local plots = workspace:FindFirstChild("Plots")
-    if not plots then return nil end
-
-    local nearest = nil
-    local nearestDistance = math.huge
+    local currentParts = {}
 
     for _, plot in ipairs(plots:GetChildren()) do
-        if IsMyPlot(plot) then
-            continue
-        end
+        if not IsMyPlot(plot) then
+            local podiums = plot:FindFirstChild("AnimalPodiums")
 
-        local podiums = plot:FindFirstChild("AnimalPodiums")
-        if not podiums then continue end
+            for _, part in ipairs(plot:GetDescendants()) do
+                if part:IsA("BasePart")
+                    and part.Transparency < 1
+                    and part.Name ~= "Spawn"
+                    and not (podiums and part:IsDescendantOf(podiums)) then
 
-        for _, podium in ipairs(podiums:GetChildren()) do
-            local base = podium:FindFirstChild("Base")
-            local spawn = base and base:FindFirstChild("Spawn")
-            local attachment = spawn and spawn:FindFirstChild("PromptAttachment")
+                    currentParts[part] = true
 
-            if not attachment then continue end
-
-            for _, prompt in ipairs(attachment:GetChildren()) do
-                if prompt:IsA("ProximityPrompt")
-                    and prompt.ActionText:find("Steal") then
-
-                    local position = GetPromptPosition(prompt)
-
-                    if position then
-                        local distance = (position - root.Position).Magnitude
-
-                        if distance <= Config.StealRadius
-                            and distance < nearestDistance then
-
-                            nearest = prompt
-                            nearestDistance = distance
-                        end
+                    if XrayOriginals[part] == nil then
+                        XrayOriginals[part] = part.LocalTransparencyModifier
                     end
+
+                    part.LocalTransparencyModifier = Config.XrayTransparency
                 end
             end
         end
     end
 
-    return nearest, nearestDistance
-end
-
--- AUTO STEAL LOOP
-
-local busy = false
-local currentPrompt = nil
-
-local function Interact(prompt)
-    if busy or not Config.AutoSteal then return end
-    if not prompt or not prompt.Enabled then return end
-
-    busy = true
-    currentPrompt = prompt
-
-    Status.Text = "● INTERACTING..."
-    Status.TextColor3 = Color3.fromRGB(255, 190, 70)
-
-    local success, err = pcall(function()
-        local root = GetRoot()
-        local position = GetPromptPosition(prompt)
-
-        if not root or not position then
-            error("Target unavailable")
-        end
-
-        local distance = (position - root.Position).Magnitude
-
-        if distance > prompt.MaxActivationDistance then
-            error("Target outside interaction range")
-        end
-
-        prompt:InputHoldBegin()
-
-        local duration = prompt.HoldDuration
-        local started = os.clock()
-
-        while os.clock() - started < duration do
-            if not Config.AutoSteal or not prompt.Enabled then
-                break
+    -- Restore parts that are no longer inside an enemy plot.
+    for part, oldValue in pairs(XrayOriginals) do
+        if not currentParts[part] then
+            if part and part.Parent then
+                pcall(function()
+                    part.LocalTransparencyModifier = oldValue
+                end)
             end
 
-            SetProgress(
-                (os.clock() - started) / math.max(duration, 0.01)
-            )
-
-            task.wait(0.03)
+            XrayOriginals[part] = nil
         end
-
-        prompt:InputHoldEnd()
-    end)
-
-    if success then
-        Status.Text = "● INTERACTION FINISHED"
-        Status.TextColor3 = Color3.fromRGB(80, 210, 140)
-    else
-        Status.Text = "● " .. tostring(err)
-        Status.TextColor3 = Color3.fromRGB(255, 90, 90)
-        warn("Keep Main:", err)
     end
-
-    SetProgress(0)
-    currentPrompt = nil
-    busy = false
 end
+
+--==================================================
+-- UPDATE LOOP
+--==================================================
+
+local running = true
 
 task.spawn(function()
-    while Gui.Parent do
-        if Config.AutoSteal and not busy then
-            local success, prompt = pcall(FindNearestPrompt)
+    while running and Gui.Parent do
+        local alive = {}
 
-            if success and prompt then
-                task.spawn(Interact, prompt)
+        local success, err = pcall(function()
+            UpdatePlayerESP(alive)
+            UpdateBrainrotESP(alive)
+            UpdateXray()
+        end)
+
+        if not success then
+            warn("[Phong Hub] Visual update error:", err)
+        end
+
+        for key in pairs(ESPObjects) do
+            if not alive[key] then
+                DestroyESP(key)
             end
         end
 
-        task.wait(Config.ScanDelay)
+        task.wait(Config.UpdateDelay)
     end
 end)
 
--- TOGGLE CONNECTION
-
-Toggle.MouseButton1Click:Connect(function()
-    Config.AutoSteal = not Config.AutoSteal
-
-    if Config.AutoSteal then
-        Toggle.Text = "AUTO STEAL: ON"
-        Toggle.BackgroundColor3 = Color3.fromRGB(0, 130, 90)
-        Status.Text = "● AUTO STEAL ENABLED"
-        Status.TextColor3 = Color3.fromRGB(80, 210, 140)
-    else
-        Toggle.Text = "AUTO STEAL: OFF"
-        Toggle.BackgroundColor3 = Color3.fromRGB(35, 40, 52)
-        Status.Text = "● AUTO STEAL DISABLED"
-        Status.TextColor3 = Color3.fromRGB(180, 180, 190)
-
-        if currentPrompt then
-            pcall(function()
-                currentPrompt:InputHoldEnd()
-            end)
-        end
-
-        SetProgress(0)
-    end
-end)
-
--- MINIMIZE
+--==================================================
+-- DRAG WINDOW + MINIMIZE CIRCLE
+--==================================================
 
 local Circle = Create("TextButton", {
-    Size = UDim2.fromOffset(55, 55),
-    Position = UDim2.new(0, 30, 0.5, -27),
-    BackgroundColor3 = Color3.fromRGB(0, 140, 230),
+    Name = "PhongHubMini",
+    Size = UDim2.fromOffset(54, 54),
+    Position = UDim2.new(0, 35, 0.5, -27),
+    BackgroundColor3 = COLORS.AccentDark,
     Text = "P",
-    TextColor3 = Color3.fromRGB(255, 255, 255),
+    TextColor3 = Color3.new(1, 1, 1),
     Font = Enum.Font.GothamBlack,
     TextSize = 23,
     Visible = false,
-    AutoButtonColor = false
+    AutoButtonColor = false,
 }, Gui)
 
 Corner(Circle, 100)
-
-Create("UIStroke", {
-    Color = Color3.fromRGB(100, 210, 255),
-    Thickness = 2
-}, Circle)
-
--- DRAG
+Stroke(Circle, Color3.fromRGB(115, 215, 255), 2, 0.05)
 
 local function MakeDraggable(object, handle)
     local dragging = false
+    local dragInput
     local dragStart
     local startPosition
-    local dragInput
 
     handle.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1
@@ -489,13 +1114,15 @@ local function MakeDraggable(object, handle)
     handle.InputChanged:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseMovement
             or input.UserInputType == Enum.UserInputType.Touch then
-
             dragInput = input
         end
     end)
 
     UserInputService.InputChanged:Connect(function(input)
-        if dragging and input == dragInput then
+        if dragging and (
+            input == dragInput
+            or input.UserInputType == Enum.UserInputType.Touch
+        ) then
             local delta = input.Position - dragStart
 
             object.Position = UDim2.new(
@@ -511,28 +1138,32 @@ end
 MakeDraggable(Main, Header)
 MakeDraggable(Circle, Circle)
 
-local originalSize = Main.Size
-
 Minimize.MouseButton1Click:Connect(function()
     Circle.Position = Main.Position
     Main.Visible = false
     Circle.Visible = true
-    Circle.Size = UDim2.fromOffset(0, 0)
-
-    Tween(Circle, {
-        Size = UDim2.fromOffset(55, 55)
-    }, 0.25)
 end)
 
 Circle.MouseButton1Click:Connect(function()
     Circle.Visible = false
     Main.Visible = true
     Main.Position = Circle.Position
-    Main.Size = UDim2.fromOffset(0, 0)
-
-    Tween(Main, {
-        Size = originalSize
-    }, 0.25)
 end)
 
-print("KEEP MAIN loaded successfully")
+--==================================================
+-- CLEANUP
+--==================================================
+
+Gui.Destroying:Connect(function()
+    running = false
+    ClearESP()
+    RestoreXray()
+
+    pcall(function()
+        ESPFolder:Destroy()
+    end)
+end)
+
+SelectTab("Visuals")
+
+print("[Phong Hub] Visuals loaded - Auto Steal removed.")
