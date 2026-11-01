@@ -1,7 +1,7 @@
 --[[
     PHONG HUB - STEAL A BRAINROT
-    Version: 1.0
-    Visuals: Player ESP, Brainrot ESP, Base Xray
+    Version: 1.1
+    Features: ESP, Xray, Invisible Tag, Speed, Carpet Speed, Infinite Jump, Aim Assist, Auto Defense, Item Assist
     Auto Steal has been removed.
 ]]
 
@@ -33,6 +33,16 @@ local Config = {
 
     Xray = false,
     XrayTransparency = 0.72,
+
+    PlayerInvisibleTag = true,
+    Speed = false,
+    WalkSpeed = 30,
+    CarpetSpeed = false,
+    CarpetSpeedValue = 130,
+    InfiniteJump = false,
+    Aimbot = false,
+    AutoDefense = false,
+    AutoPotionShield = false,
 
     UpdateDelay = 0.25,
 }
@@ -144,8 +154,8 @@ end
 
 local Main = Create("Frame", {
     Name = "Main",
-    Size = UDim2.fromOffset(650, 430),
-    Position = UDim2.new(0.5, -325, 0.5, -215),
+    Size = UDim2.fromOffset(560, 380),
+    Position = UDim2.new(0.5, -280, 0.5, -190),
     BackgroundColor3 = COLORS.Background,
     BorderSizePixel = 0,
     Active = true,
@@ -199,8 +209,8 @@ local Minimize = Create("TextButton", {
 Corner(Minimize, 7)
 
 local TabBar = Create("Frame", {
-    Position = UDim2.fromOffset(10, 53),
-    Size = UDim2.new(1, -20, 0, 34),
+    Position = UDim2.fromOffset(10, 51),
+    Size = UDim2.new(1, -20, 0, 30),
     BackgroundTransparency = 1,
 }, Main)
 
@@ -211,8 +221,8 @@ local TabLayout = Create("UIListLayout", {
 }, TabBar)
 
 local PageHolder = Create("Frame", {
-    Position = UDim2.fromOffset(10, 94),
-    Size = UDim2.new(1, -20, 1, -104),
+    Position = UDim2.fromOffset(10, 88),
+    Size = UDim2.new(1, -20, 1, -98),
     BackgroundTransparency = 1,
     ClipsDescendants = true,
 }, Main)
@@ -281,7 +291,7 @@ for index, name in ipairs(TabNames) do
         Text = name,
         TextColor3 = COLORS.Muted,
         Font = Enum.Font.GothamBold,
-        TextSize = 11,
+        TextSize = 9,
         AutoButtonColor = false,
         LayoutOrder = index,
     }, TabBar)
@@ -610,6 +620,7 @@ AddToggle(playerCard, "Name", "Hiển thị tên người chơi.", "PlayerName")
 AddToggle(playerCard, "Distance", "Hiển thị khoảng cách.", "PlayerDistance")
 AddToggle(playerCard, "Box", "Hiển thị viền quanh nhân vật.", "PlayerBox")
 AddToggle(playerCard, "Chams", "Tô sáng nhân vật qua vật cản.", "PlayerChams")
+AddToggle(playerCard, "Invisible Tag", "Đánh dấu người chơi có trạng thái tàng hình theo attribute của game.", "PlayerInvisibleTag")
 
 local brainrotCard = MakeCard(
     VisualsPage,
@@ -649,23 +660,22 @@ AddInfo(
     "Chức năng Auto Steal cũ đã được gỡ khỏi bản này."
 )
 
-AddInfo(
-    Pages.Player,
-    "PLAYER",
-    "Tab Player được giữ theo bố cục Aurora. Các chức năng khác sẽ được thêm sau."
-)
+local movementCard = MakeCard(Pages.Player, "MOVEMENT", "Điều chỉnh tốc độ và khả năng nhảy.")
+AddToggle(movementCard, "Speed", "Bật tốc độ di chuyển tùy chỉnh.", "Speed")
+AddSlider(movementCard, "Walk Speed", "WalkSpeed", 16, 80, 1)
+AddToggle(movementCard, "Carpet Speed", "Tăng tốc khi đang cầm vật phẩm bay như thảm bay.", "CarpetSpeed")
+AddSlider(movementCard, "Carpet Speed Value", "CarpetSpeedValue", 16, 500, 1)
 
-AddInfo(
-    Pages.Admin,
-    "ADMIN",
-    "Tab Admin hiện để trống, chưa bật chức năng nào."
-)
+AddToggle(movementCard, "Infinite Jump", "Cho phép nhảy liên tục khi đang ở trên không.", "InfiniteJump")
 
-AddInfo(
-    Pages.Misc,
-    "MISC",
-    "Các tiện ích phụ sẽ được thêm sau."
-)
+local aimCard = MakeCard(Pages.Player, "AIM ASSIST", "Tương tự Aurora: hỗ trợ ngắm khi đang cầm vũ khí được game hỗ trợ.")
+AddToggle(aimCard, "Aimbot", "Tự chọn người chơi gần nhất làm mục tiêu cho PlayerMouse.", "Aimbot")
+
+local defenseCard = MakeCard(Pages.Admin, "AUTO DEFENSE", "Phát hiện người đang Stealing trong phạm vi base; cần Admin Panel và quyền chạy firesignal.")
+AddToggle(defenseCard, "Auto Defense", "Tự động phản ứng khi có người đang lấy đồ trong base.", "AutoDefense")
+
+local itemCard = MakeCard(Pages.Misc, "ITEM ASSIST", "Tự trang bị và kích hoạt vật phẩm có sẵn trong Backpack.")
+AddToggle(itemCard, "Auto Giant Potion + Grief Shield", "Tự dùng Grief Shield và Giant Potion khi đang bật.", "AutoPotionShield")
 
 AddInfo(
     Pages.Configs,
@@ -851,6 +861,27 @@ local function UpdatePlayerESP(alive)
                         (root.Position - myRoot.Position).Magnitude
                     )
                     lines[#lines + 1] = tostring(distance) .. "m"
+                end
+
+                if Config.PlayerInvisibleTag then
+                    local invisLevel = character:GetAttribute("InvisibilityLevel")
+                    if type(invisLevel) == "number" and invisLevel > 0 then
+                        local modelParts = 0
+                        for _, child in ipairs(character:GetChildren()) do
+                            if child:IsA("Model") then
+                                for _, descendant in ipairs(child:GetDescendants()) do
+                                    if descendant:IsA("BasePart") then
+                                        modelParts += 1
+                                        if modelParts >= 2 then break end
+                                    end
+                                end
+                            end
+                            if modelParts >= 2 then break end
+                        end
+                        if modelParts < 2 then
+                            lines[#lines + 1] = "INVISIBLE"
+                        end
+                    end
                 end
 
                 local data = CreateESP(
@@ -1040,10 +1071,301 @@ local function UpdateXray()
 end
 
 --==================================================
--- UPDATE LOOP
+-- AURORA-STYLE PLAYER / ITEM SYSTEMS
 --==================================================
 
 local running = true
+local originalWalkSpeed = nil
+local function getCharacter()
+    local character = LocalPlayer.Character
+    return character, character and character:FindFirstChildOfClass("Humanoid"),
+        character and character:FindFirstChild("HumanoidRootPart")
+end
+
+local function equipAndUse(toolName)
+    local character, humanoid = getCharacter()
+    local backpack = LocalPlayer:FindFirstChildOfClass("Backpack")
+    local tool = (character and character:FindFirstChild(toolName))
+        or (backpack and backpack:FindFirstChild(toolName))
+    if not (tool and humanoid) then return false end
+    if tool.Parent ~= character then
+        pcall(function() humanoid:EquipTool(tool) end)
+        task.wait(0.1)
+    end
+    if tool.Parent == character then
+        pcall(function() tool:Activate() end)
+        return true
+    end
+    return false
+end
+
+-- Quick item action matching Aurora's Flash + Invis helper.
+do
+    local action = Create("TextButton", {
+        Size = UDim2.new(1, 0, 0, 34),
+        BackgroundColor3 = COLORS.AccentDark,
+        BorderSizePixel = 0,
+        Text = "FLASH + INVIS",
+        TextColor3 = COLORS.Text,
+        Font = Enum.Font.GothamBold,
+        TextSize = 11,
+        AutoButtonColor = false,
+    }, itemCard)
+    Corner(action, 7)
+    action.MouseButton1Click:Connect(function()
+        local cloak = equipAndUse("Invisibility Cloak")
+        task.wait(0.15)
+        local flash = equipAndUse("Flash Teleport")
+        if not cloak and not flash then
+            warn("[Phong Hub] Cần Invisibility Cloak hoặc Flash Teleport trong Backpack.")
+        end
+    end)
+end
+
+-- Speed and infinite jump
+local jumpConnection = UserInputService.JumpRequest:Connect(function()
+    if not Config.InfiniteJump then return end
+    local _, humanoid, root = getCharacter()
+    if humanoid and root and humanoid.Health > 0 then
+        root.AssemblyLinearVelocity = Vector3.new(
+            root.AssemblyLinearVelocity.X,
+            math.max(humanoid.JumpPower, 50),
+            root.AssemblyLinearVelocity.Z
+        )
+    end
+end)
+
+task.spawn(function()
+    while running and Gui.Parent do
+        local _, humanoid = getCharacter()
+        if humanoid then
+            if Config.Speed then
+                if originalWalkSpeed == nil then originalWalkSpeed = humanoid.WalkSpeed end
+                humanoid.WalkSpeed = Config.WalkSpeed
+            elseif originalWalkSpeed ~= nil then
+                humanoid.WalkSpeed = originalWalkSpeed
+                originalWalkSpeed = nil
+            end
+            if Config.CarpetSpeed then
+                local character = LocalPlayer.Character
+                local tool = character and character:FindFirstChildOfClass("Tool")
+                local isFlyingGear = false
+                if tool then
+                    local name = tool.Name:lower()
+                    for _, key in ipairs({"carpet", "wings", "broom", "waverider", "sleigh"}) do
+                        if name:find(key, 1, true) then
+                            isFlyingGear = true
+                            break
+                        end
+                    end
+                end
+                local root = character and character:FindFirstChild("HumanoidRootPart")
+                if isFlyingGear and root and humanoid.MoveDirection.Magnitude > 0 then
+                    local direction = humanoid.MoveDirection.Unit
+                    local velocity = root.AssemblyLinearVelocity
+                    root.AssemblyLinearVelocity = Vector3.new(
+                        direction.X * Config.CarpetSpeedValue,
+                        velocity.Y,
+                        direction.Z * Config.CarpetSpeedValue
+                    )
+                end
+            end
+        end
+        task.wait(0.05)
+    end
+end)
+
+-- Auto use defensive items (same item names as Aurora)
+task.spawn(function()
+    while running and Gui.Parent do
+        if Config.AutoPotionShield then
+            equipAndUse("Grief Shield")
+            task.wait(0.15)
+            equipAndUse("Giant Potion")
+        end
+        task.wait(1.0)
+    end
+end)
+
+-- Aurora-style item-aware aim assist. It does not auto-fire.
+local AIM_ITEMS = {
+    ["Blackhole Bomb"] = true, ["BlowDryer"] = true, ["Candy Launcher"] = true,
+    ["Candycane Bow"] = true, ["Christmas Launcher"] = true, ["Freeze Ray"] = true,
+    ["Gravity Gun"] = true, ["Hunter Crossbow"] = true, ["Jelly Gun"] = true,
+    ["Laser Cape"] = true, ["Lava Blaster"] = true, ["Paintball Gun"] = true,
+    ["Pumpkin Launcher"] = true, ["Radioactive Airstrike"] = true, ["Sabuk Bepak"] = true,
+    ["Sandal Jepit"] = true, ["Slingshot"] = true, ["Snowball"] = true,
+    ["Snowball Cannon"] = true, ["Summer Soaker"] = true, ["Super-GLS33"] = true,
+    ["Taser Gun"] = true, ["Tripple Plungers"] = true, ["Web Slinger"] = true,
+    ["Wormhole Tunneler"] = true, ["Zombie Blaster"] = true,
+}
+local playerMouse
+pcall(function()
+    local replicated = game:GetService("ReplicatedStorage")
+    playerMouse = require(replicated:WaitForChild("Packages"):WaitForChild("PlayerMouse"))
+end)
+
+task.spawn(function()
+    local target, lastScan = nil, 0
+    while running and Gui.Parent do
+        if Config.Aimbot and playerMouse then
+            local character, _, root = getCharacter()
+            local tool = character and character:FindFirstChildOfClass("Tool")
+            if root and tool and AIM_ITEMS[tool.Name] then
+                if not target or not target.Parent or os.clock() - lastScan > 0.05 then
+                    lastScan = os.clock()
+                    local bestDistance = math.huge
+                    target = nil
+                    for _, player in ipairs(Players:GetPlayers()) do
+                        if player ~= LocalPlayer then
+                            local targetCharacter = player.Character
+                            local targetRoot = targetCharacter and targetCharacter:FindFirstChild("HumanoidRootPart")
+                            local targetHumanoid = targetCharacter and targetCharacter:FindFirstChildOfClass("Humanoid")
+                            if targetRoot and targetHumanoid and targetHumanoid.Health > 0 then
+                                local distance = (targetRoot.Position - root.Position).Magnitude
+                                if distance < bestDistance then
+                                    bestDistance, target = distance, targetRoot
+                                end
+                            end
+                        end
+                    end
+                end
+                if target and target.Parent then
+                    pcall(function()
+                        playerMouse.Hit = CFrame.new(target.Position)
+                        playerMouse.Target = target
+                    end)
+                end
+            else
+                target = nil
+            end
+        else
+            target = nil
+        end
+        task.wait(0.04)
+    end
+end)
+
+-- Auto Defense: uses the game's AdminPanel command buttons when available.
+local function findMyBase()
+    local plots = Workspace:FindFirstChild("Plots")
+    if not plots then return nil end
+    for _, plot in ipairs(plots:GetChildren()) do
+        local sign = plot:FindFirstChild("PlotSign")
+        local yourBase = sign and sign:FindFirstChild("YourBase")
+        if yourBase and yourBase.Enabled then return plot end
+    end
+    return nil
+end
+
+local function adminPanel()
+    local playerGui = LocalPlayer:FindFirstChildOfClass("PlayerGui")
+    local gui = playerGui and playerGui:FindFirstChild("AdminPanel")
+    return gui, gui and gui:FindFirstChild("AdminPanel")
+end
+
+local function pressGuiButton(button)
+    if type(firesignal) ~= "function" then return false end
+    local ok = pcall(function()
+        firesignal(button.Activated)
+        firesignal(button.MouseButton1Click)
+    end)
+    return ok
+end
+
+local function runAdminCommand(command, target)
+    local gui, panel = adminPanel()
+    if not (gui and panel and target) then return false end
+    local commandButton
+    for _, button in ipairs(panel:GetDescendants()) do
+        if button:IsA("GuiButton") and button.Name ~= "Template" then
+            local label = button:FindFirstChild("Command")
+            if label and label:IsA("TextLabel")
+                and label.Text:lower():gsub("^;", "") == command then
+                commandButton = button
+                break
+            end
+        end
+    end
+    if not commandButton then return false end
+    local timer = commandButton:FindFirstChild("Timer")
+    if timer and timer:IsA("TextLabel") and timer.Visible then
+        local cooldown = tonumber(timer.Text:match("(%d+)")) or 0
+        if cooldown > 0 then return false end
+    end
+
+    local wasVisible = panel.Visible
+    panel.Visible = true
+    pressGuiButton(commandButton)
+    task.wait(0.15)
+    local selected = false
+    for _, button in ipairs(gui:GetDescendants()) do
+        if button:IsA("GuiButton") and button.Visible and button ~= commandButton then
+            local hit = button.Name == target.Name or button.Name == tostring(target.UserId)
+            if not hit then
+                for _, label in ipairs(button:GetDescendants()) do
+                    if label:IsA("TextLabel") and (
+                        label.Text == target.Name or label.Text == target.DisplayName
+                        or label.Text == "@" .. target.Name
+                    ) then
+                        hit = true
+                        break
+                    end
+                end
+            end
+            if hit then
+                pressGuiButton(button)
+                selected = true
+                break
+            end
+        end
+    end
+    panel.Visible = wasVisible
+    return selected
+end
+
+task.spawn(function()
+    local lastDefense = 0
+    while running and Gui.Parent do
+        if Config.AutoDefense and os.clock() - lastDefense > 2 then
+            local base = findMyBase()
+            if base then
+                local ok, center = pcall(function() return base:GetPivot().Position end)
+                if ok then
+                    local thieves = {}
+                    for _, player in ipairs(Players:GetPlayers()) do
+                        if player ~= LocalPlayer and player:GetAttribute("Stealing") then
+                            local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+                            if root and (root.Position - center).Magnitude < 70 then
+                                thieves[#thieves + 1] = {
+                                    player = player,
+                                    distance = (root.Position - center).Magnitude
+                                }
+                            end
+                        end
+                    end
+                    if #thieves > 0 then
+                        lastDefense = os.clock()
+                        table.sort(thieves, function(a, b) return a.distance < b.distance end)
+                        local commands = {"balloon", "ragdoll", "rocket", "inverse", "tiny", "jumpscare"}
+                        local targetCount = math.min(#thieves, 2)
+                        for index = 1, targetCount do
+                            local targetPlayer = thieves[index].player
+                            for _, command in ipairs(commands) do
+                                if runAdminCommand(command, targetPlayer) then break end
+                            end
+                        end
+                    end
+                end
+            end
+        end
+        task.wait(0.35)
+    end
+end)
+
+--==================================================
+-- UPDATE LOOP
+--==================================================
 
 task.spawn(function()
     while running and Gui.Parent do
@@ -1156,6 +1478,11 @@ end)
 
 Gui.Destroying:Connect(function()
     running = false
+    if jumpConnection then jumpConnection:Disconnect() end
+    local _, humanoid = getCharacter()
+    if humanoid and originalWalkSpeed then
+        pcall(function() humanoid.WalkSpeed = originalWalkSpeed end)
+    end
     ClearESP()
     RestoreXray()
 
@@ -1166,4 +1493,4 @@ end)
 
 SelectTab("Visuals")
 
-print("[Phong Hub] Visuals loaded - Auto Steal removed.")
+print("[Phong Hub] v1.1 loaded - ESP, Xray, Player, Movement, Aim Assist, Auto Defense, Item Assist. Auto Steal removed.")
