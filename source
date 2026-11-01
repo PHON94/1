@@ -26,6 +26,7 @@ local rollsObserved = 0
 local hits, misses, streak = 0, 0, 0
 local betAmount = 1
 
+-- ĐÃ GIẢM TỶ LỆ XUỐNG 0.75 ĐỂ GIAO DIỆN KHÔNG BỊ TRÀN MÀN HÌNH
 local uiScaleValue = 0.75 
 
 local removeExpireCooldown = false 
@@ -44,7 +45,7 @@ ScreenGui.DisplayOrder = 999
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.Parent = PlayerGui
 
--- Fa4e7xx ur dad btw (ĐÃ ĐIỀU CHỈNH VỊ TRÍ HẠ THẤP XUỐNG CHÍNH GIỮA MÀN HÌNH)
+-- Fa4e7xx ur dad btw (ĐÃ ĐIỀU CHỈNH VỊ TRÍ HẠ THẤP VỀ GIỮA MÀN HÌNH)
 local Frame = Instance.new("Frame")
 Frame.AnchorPoint = Vector2.new(0.5, 0.5)
 Frame.Position = UDim2.new(0.5, 0, 0.5, 0)
@@ -1405,15 +1406,19 @@ UserInputService.InputEnded:Connect(function(input)
 	end
 end)
 
--- Fa4e7xx ur dad btw
+-- Fa4e7xx ur dad btw (HỖ TRỢ KÉO THẢ TOÀN BỘ KHUNG MENU)
 local dragging = false
 local dragStart, startPos
-Header.InputBegan:Connect(function(input)
+Frame.InputBegan:Connect(function(input)
 	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
 		local mouse = UserInputService:GetMouseLocation()
-		for _, btn in ipairs({MinBtn, MenuBtn, CloseBtn}) do
-			local abspos, abssize = btn.AbsolutePosition, btn.AbsoluteSize
-			if mouse.X >= abspos.X and mouse.X <= abspos.X + abssize.X and mouse.Y >= abspos.Y and mouse.Y <= abspos.Y + abssize.Y then return end
+		for _, btn in ipairs({MinBtn, MenuBtn, CloseBtn, PredictBtn}) do
+			if btn and btn.Parent then
+				local abspos, abssize = btn.AbsolutePosition, btn.AbsoluteSize
+				if mouse.X >= abspos.X and mouse.X <= abspos.X + abssize.X and mouse.Y >= abspos.Y and mouse.Y <= abspos.Y + abssize.Y then 
+					return 
+				end
+			end
 		end
 		dragging = true
 		dragStart = input.Position
