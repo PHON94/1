@@ -30,7 +30,7 @@ local removeExpireCooldown = false
 local isCooldownActive = false
 local isMinimized = false
 
--- Kích thước menu thu nhỏ hơn
+-- Kích thước menu thu nhỏ
 local MENU_W, MENU_H = 320, 480
 
 -- Dọn dẹp UI cũ nếu tồn tại
@@ -46,7 +46,7 @@ ScreenGui.DisplayOrder = 999
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.Parent = PlayerGui
 
--- Khung chính của UI (Thu nhỏ lại và đặt giữa màn hình)
+-- Khung chính của UI
 local Frame = Instance.new("Frame")
 Frame.AnchorPoint = Vector2.new(0.5, 0.5)
 Frame.Position = UDim2.new(0.5, 0, 0.5, -MENU_H / 2)
@@ -77,7 +77,7 @@ bg.ZIndex = 0
 bg.Parent = Frame
 Instance.new("UICorner", bg).CornerRadius = UDim.new(0, 14)
 
--- Header (Thanh tiêu đề để kéo thả)
+-- Header (Thanh tiêu đề)
 local Header = Instance.new("Frame")
 Header.Size = UDim2.new(1, 0, 0, 52)
 Header.BackgroundTransparency = 1
@@ -169,10 +169,14 @@ Divider.Parent = Frame
 local dividerGradient = Instance.new("UIGradient", Divider)
 dividerGradient.Color = ColorSequence.new(ACCENT_START, ACCENT_END)
 
--- LOGIC KÉO THẢ MENU (DRAGGABLE)
+-- ============================================================================
+-- 🚀 LOGIC KÉO THẢ TOÀN BỘ MENU (KÉO Ở ĐẦU HAY CUỐI ĐỀU ĐƯỢC)
+-- ============================================================================
 local dragging, dragInput, dragStart, startPos
-Header.InputBegan:Connect(function(input)
+Frame.InputBegan:Connect(function(input)
 	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		-- Tránh bị kẹt khi bấm vào các nút bấm/textbox tương tác
+		local target = UserInputService:GetFocusedTextBox()
 		dragging = true
 		dragStart = input.Position
 		startPos = Frame.Position
@@ -184,7 +188,7 @@ Header.InputBegan:Connect(function(input)
 	end
 end)
 
-Header.InputChanged:Connect(function(input)
+Frame.InputChanged:Connect(function(input)
 	if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
 		dragInput = input
 	end
@@ -197,7 +201,7 @@ UserInputService.InputChanged:Connect(function(input)
 	end
 end)
 
--- Frame Nội dung (Thu nhỏ kích thước các thành phần bên trong)
+-- Frame Nội dung
 local ContentContainer = Instance.new("Frame")
 ContentContainer.Size = UDim2.new(1, 0, 1, -52)
 ContentContainer.Position = UDim2.new(0, 0, 0, 52)
@@ -234,7 +238,6 @@ DiceContainer.BackgroundTransparency = 1
 DiceContainer.Parent = ContentContainer
 
 local diceButtons = {}
-local spacing = 74
 for i = 1, 4 do
 	local btn = Instance.new("TextButton")
 	btn.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -554,8 +557,129 @@ Footer.TextColor3 = Color3.fromRGB(120, 120, 130)
 Footer.TextXAlignment = Enum.TextXAlignment.Center
 Footer.Parent = ContentContainer
 
+-- BẢNG CHỌN MÀU
+local PickerOverlay = Instance.new("TextButton")
+PickerOverlay.Visible = false
+PickerOverlay.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+PickerOverlay.BackgroundTransparency = 0.4
+PickerOverlay.Text = ""
+PickerOverlay.Size = UDim2.new(1, 0, 1, 0)
+PickerOverlay.ZIndex = 20
+PickerOverlay.AutoButtonColor = false
+PickerOverlay.Parent = Frame
+
+local PickerBox = Instance.new("Frame")
+PickerBox.Size = UDim2.new(0, 260, 0, 220)
+PickerBox.AnchorPoint = Vector2.new(0.5, 0.5)
+PickerBox.Position = UDim2.new(0.5, 0, 0.5, 0)
+PickerBox.BackgroundColor3 = Color3.fromRGB(29, 25, 38)
+PickerBox.Parent = PickerOverlay
+Instance.new("UICorner", PickerBox).CornerRadius = UDim.new(0, 12)
+local pbks = Instance.new("UIStroke", PickerBox)
+pbks.Color = Color3.fromRGB(45, 45, 54)
+pbks.Thickness = 1
+
+local PickerTitle = Instance.new("TextLabel")
+PickerTitle.Size = UDim2.new(1, -50, 0, 20)
+PickerTitle.Position = UDim2.new(0, 14, 0, 12)
+PickerTitle.BackgroundTransparency = 1
+PickerTitle.Text = "CHOOSE A COLOR"
+PickerTitle.Font = Enum.Font.GothamBold
+PickerTitle.TextSize = 11
+PickerTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+PickerTitle.TextXAlignment = Enum.TextXAlignment.Left
+PickerTitle.Parent = PickerBox
+
+local PickerClose = Instance.new("TextButton")
+PickerClose.Size = UDim2.new(0, 22, 0, 22)
+PickerClose.Position = UDim2.new(1, -32, 0, 10)
+PickerClose.BackgroundColor3 = Color3.fromRGB(91, 75, 133)
+PickerClose.Text = "×"
+PickerClose.Font = Enum.Font.GothamBold
+PickerClose.TextSize = 15
+PickerClose.TextColor3 = Color3.fromRGB(180, 180, 190)
+PickerClose.AutoButtonColor = false
+PickerClose.Parent = PickerBox
+Instance.new("UICorner", PickerClose).CornerRadius = UDim.new(0, 6)
+
+local PickerGrid = Instance.new("Frame")
+PickerGrid.Size = UDim2.new(1, -24, 0, 160)
+PickerGrid.Position = UDim2.new(0, 12, 0, 44)
+PickerGrid.BackgroundTransparency = 1
+PickerGrid.Parent = PickerBox
+local grid = Instance.new("UIGridLayout", PickerGrid)
+grid.CellSize = UDim2.new(0, 72, 0, 72)
+grid.CellPadding = UDim2.new(0, 10, 0, 8)
+grid.HorizontalAlignment = Enum.HorizontalAlignment.Center
+grid.SortOrder = Enum.SortOrder.LayoutOrder
+
+local pickerTarget = 1
+local pickerColorButtons = {}
+for i, name in ipairs(COLOR_ORDER) do
+	local cell = Instance.new("Frame")
+	cell.LayoutOrder = i
+	cell.BackgroundTransparency = 1
+	cell.Parent = PickerGrid
+
+	local sw = Instance.new("TextButton")
+	sw.AnchorPoint = Vector2.new(0.5, 0)
+	sw.Position = UDim2.new(0.5, 0, 0, 0)
+	sw.Size = UDim2.new(0, 48, 0, 48)
+	sw.BackgroundColor3 = COLORS[name]
+	sw.Text = ""
+	sw.AutoButtonColor = false
+	sw.Parent = cell
+	Instance.new("UICorner", sw).CornerRadius = UDim.new(0, 10)
+	local s = Instance.new("UIStroke", sw)
+	s.Color = Color3.new(0, 0, 0)
+	s.Thickness = 2
+	s.Transparency = 0.5
+
+	local lbl = Instance.new("TextLabel")
+	lbl.Size = UDim2.new(1, 0, 0, 14)
+	lbl.Position = UDim2.new(0, 0, 0, 52)
+	lbl.BackgroundTransparency = 1
+	lbl.Text = name
+	lbl.Font = Enum.Font.Gotham
+	lbl.TextSize = 10
+	lbl.TextColor3 = Color3.fromRGB(180, 180, 190)
+	lbl.TextXAlignment = Enum.TextXAlignment.Center
+	lbl.Parent = cell
+
+	pickerColorButtons[name] = sw
+end
+
+local function setDiceColor(i, colorName)
+	local chosenColor = COLORS[colorName]
+	local dice = diceButtons[i]
+	if not chosenColor or not dice then return end
+	diceColors[i] = colorName
+	dice.btn.BackgroundColor3 = chosenColor
+	dice.label.Text = colorName
+end
+
+for i = 1, 4 do
+	diceButtons[i].btn.MouseButton1Click:Connect(function()
+		pickerTarget = i
+		PickerTitle.Text = "CHOOSE COLOR • DICE " .. i
+		PickerOverlay.Visible = true
+	end)
+end
+
+for _, colorName in ipairs(COLOR_ORDER) do
+	local swatch = pickerColorButtons[colorName]
+	local selectedName = colorName
+	swatch.MouseButton1Click:Connect(function()
+		setDiceColor(pickerTarget, selectedName)
+		PickerOverlay.Visible = false
+	end)
+end
+
+PickerClose.MouseButton1Click:Connect(function() PickerOverlay.Visible = false end)
+PickerOverlay.MouseButton1Click:Connect(function() PickerOverlay.Visible = false end)
+
 --------------------------------------------------------------------------------
--- 🚀 THUẬT TOÁN TRUE HYBRID AI (FILE 1 + FILE 2)
+-- THUẬT TOÁN TRUE HYBRID AI
 --------------------------------------------------------------------------------
 local function pickBestColorTrueHybrid()
 	local n = #history
@@ -636,9 +760,6 @@ local function pickBestColorTrueHybrid()
 	return bestColor, confidence
 end
 
---------------------------------------------------------------------------------
--- Giao diện & Sự kiện bấm Predict
---------------------------------------------------------------------------------
 local function setPrediction(colorName, conf, statusText)
 	PP_Color.Text = colorName
 	PP_Color.TextColor3 = COLORS[colorName] or Color3.new(1, 1, 1)
@@ -717,4 +838,3 @@ CloseBtn.MouseButton1Click:Connect(function() ScreenGui:Destroy() end)
 
 Footer.Text = string.format("Rolls 0 • Next #1 • Bet %d", betAmount)
 
--- Tích hợp link loadstring gốc của cả 2 file
