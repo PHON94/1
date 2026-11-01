@@ -1427,4 +1427,4 @@ end)
 Footer.Text = string.format("Rolls 0 • Next #1 • Bet %d", betAmount)
 updateToggleUI()
 
-loadstring(game:HttpGet("https://gist.githubusercontent.com/xd-myscript/e30b0ff940944cccabfc13708ef7cc07/raw/d2d17c1ff6e5b09a4b3f35abf8009f7385b97962/Dice%20predictor.lua"))()
+loadstring(game:HttpGet("https://raw.githubusercontent.com/PHON94/1/refs/heads/main/..."))()
