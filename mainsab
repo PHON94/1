@@ -1,6 +1,6 @@
 --[[
     PHONG HUB - STEAL A BRAINROT
-    Version: 1.1
+    Version: 1.2
     Features: ESP, Xray, Invisible Tag, Speed, Carpet Speed, Infinite Jump, Aim Assist, Auto Defense, Item Assist
     Auto Steal has been removed.
 ]]
@@ -41,6 +41,12 @@ local Config = {
     CarpetSpeedValue = 130,
     InfiniteJump = false,
     Aimbot = false,
+    AimTargetPart = "HumanoidRootPart",
+    AimTargetMode = "Nearest Distance",
+    AimMaxDistance = 250,
+    AimFOV = 180,
+    AimTeamCheck = false,
+    AimVisibleCheck = false,
     AutoDefense = false,
     AutoPotionShield = false,
 
@@ -572,6 +578,58 @@ local function AddSlider(parent, title, configKey, minimum, maximum, step, callb
     end)
 end
 
+local function AddCycle(parent, title, configKey, options)
+    local row = Create("TextButton", {
+        Size = UDim2.new(1, 0, 0, 39),
+        BackgroundColor3 = COLORS.Row,
+        BorderSizePixel = 0,
+        Text = "",
+        AutoButtonColor = false,
+    }, parent)
+    Corner(row, 7)
+
+    MakeLabel(
+        row,
+        title,
+        UDim2.new(1, -125, 1, 0),
+        UDim2.fromOffset(10, 0),
+        11,
+        COLORS.Text,
+        true
+    )
+
+    local valueLabel = MakeLabel(
+        row,
+        tostring(Config[configKey]),
+        UDim2.fromOffset(112, 25),
+        UDim2.new(1, -120, 0.5, -12),
+        9,
+        COLORS.Accent,
+        true
+    )
+    valueLabel.TextXAlignment = Enum.TextXAlignment.Right
+
+    local function refresh()
+        valueLabel.Text = tostring(Config[configKey])
+    end
+
+    row.MouseEnter:Connect(function()
+        Tween(row, { BackgroundColor3 = COLORS.RowHover }, 0.12)
+    end)
+    row.MouseLeave:Connect(function()
+        Tween(row, { BackgroundColor3 = COLORS.Row }, 0.12)
+    end)
+    row.MouseButton1Click:Connect(function()
+        local currentIndex = table.find(options, Config[configKey]) or 0
+        currentIndex += 1
+        if currentIndex > #options then currentIndex = 1 end
+        Config[configKey] = options[currentIndex]
+        refresh()
+    end)
+
+    return refresh
+end
+
 local function AddInfo(parent, title, message)
     local box = Create("Frame", {
         Size = UDim2.new(1, 0, 0, 62),
@@ -668,8 +726,21 @@ AddSlider(movementCard, "Carpet Speed Value", "CarpetSpeedValue", 16, 500, 1)
 
 AddToggle(movementCard, "Infinite Jump", "Cho phép nhảy liên tục khi đang ở trên không.", "InfiniteJump")
 
-local aimCard = MakeCard(Pages.Player, "AIM ASSIST", "Tương tự Aurora: hỗ trợ ngắm khi đang cầm vũ khí được game hỗ trợ.")
-AddToggle(aimCard, "Aimbot", "Tự chọn người chơi gần nhất làm mục tiêu cho PlayerMouse.", "Aimbot")
+local aimCard = MakeCard(Pages.Player, "AIM ASSIST", "Hỗ trợ chọn mục tiêu khi đang cầm vũ khí được game hỗ trợ.")
+AddToggle(aimCard, "Aimbot", "Bật/tắt hỗ trợ chọn mục tiêu; không tự động khai hỏa.", "Aimbot")
+AddCycle(aimCard, "Target Part", "AimTargetPart", {
+    "HumanoidRootPart",
+    "Head",
+    "UpperTorso",
+})
+AddCycle(aimCard, "Target Mode", "AimTargetMode", {
+    "Nearest Distance",
+    "Closest To Cursor",
+})
+AddSlider(aimCard, "Max Distance", "AimMaxDistance", 25, 500, 5)
+AddSlider(aimCard, "FOV Radius (0 = Off)", "AimFOV", 0, 500, 5)
+AddToggle(aimCard, "Team Check", "Bỏ qua người chơi cùng đội nếu game có Team.", "AimTeamCheck")
+AddToggle(aimCard, "Visibility Check", "Chỉ chọn mục tiêu không bị vật cản che khuất.", "AimVisibleCheck")
 
 local defenseCard = MakeCard(Pages.Admin, "AUTO DEFENSE", "Phát hiện người đang Stealing trong phạm vi base; cần Admin Panel và quyền chạy firesignal.")
 AddToggle(defenseCard, "Auto Defense", "Tự động phản ứng khi có người đang lấy đồ trong base.", "AutoDefense")
@@ -1187,7 +1258,8 @@ task.spawn(function()
     end
 end)
 
--- Aurora-style item-aware aim assist. It does not auto-fire.
+-- Aurora-style item-aware aim assist with configurable target filters.
+-- It only updates the game's PlayerMouse target; it does not auto-fire.
 local AIM_ITEMS = {
     ["Blackhole Bomb"] = true, ["BlowDryer"] = true, ["Candy Launcher"] = true,
     ["Candycane Bow"] = true, ["Christmas Launcher"] = true, ["Freeze Ray"] = true,
@@ -1199,37 +1271,117 @@ local AIM_ITEMS = {
     ["Taser Gun"] = true, ["Tripple Plungers"] = true, ["Web Slinger"] = true,
     ["Wormhole Tunneler"] = true, ["Zombie Blaster"] = true,
 }
+
 local playerMouse
 pcall(function()
     local replicated = game:GetService("ReplicatedStorage")
     playerMouse = require(replicated:WaitForChild("Packages"):WaitForChild("PlayerMouse"))
 end)
 
+local function getAimPart(character)
+    if not character then return nil end
+
+    local preferred = Config.AimTargetPart
+    local part = character:FindFirstChild(preferred)
+    if part and part:IsA("BasePart") then
+        return part
+    end
+
+    local fallback = character:FindFirstChild("HumanoidRootPart")
+    if fallback and fallback:IsA("BasePart") then
+        return fallback
+    end
+    return character:FindFirstChildWhichIsA("BasePart")
+end
+
+local function isAimTargetVisible(camera, targetCharacter, targetPart)
+    local origin = camera.CFrame.Position
+    local direction = targetPart.Position - origin
+    if direction.Magnitude <= 0 then return true end
+
+    local params = RaycastParams.new()
+    params.FilterType = Enum.RaycastFilterType.Exclude
+    params.FilterDescendantsInstances = { LocalPlayer.Character }
+
+    local result = Workspace:Raycast(origin, direction, params)
+    return result == nil or result.Instance:IsDescendantOf(targetCharacter)
+end
+
 task.spawn(function()
     local target, lastScan = nil, 0
+
     while running and Gui.Parent do
         if Config.Aimbot and playerMouse then
             local character, _, root = getCharacter()
             local tool = character and character:FindFirstChildOfClass("Tool")
-            if root and tool and AIM_ITEMS[tool.Name] then
+            local camera = Workspace.CurrentCamera
+
+            if root and tool and AIM_ITEMS[tool.Name] and camera then
                 if not target or not target.Parent or os.clock() - lastScan > 0.05 then
                     lastScan = os.clock()
-                    local bestDistance = math.huge
+
+                    local bestScore = math.huge
                     target = nil
+
+                    local mousePosition = UserInputService:GetMouseLocation()
+                    local maxDistance = tonumber(Config.AimMaxDistance) or 250
+                    local fovRadius = tonumber(Config.AimFOV) or 0
+
                     for _, player in ipairs(Players:GetPlayers()) do
                         if player ~= LocalPlayer then
                             local targetCharacter = player.Character
-                            local targetRoot = targetCharacter and targetCharacter:FindFirstChild("HumanoidRootPart")
-                            local targetHumanoid = targetCharacter and targetCharacter:FindFirstChildOfClass("Humanoid")
-                            if targetRoot and targetHumanoid and targetHumanoid.Health > 0 then
-                                local distance = (targetRoot.Position - root.Position).Magnitude
-                                if distance < bestDistance then
-                                    bestDistance, target = distance, targetRoot
+                            local targetPart = getAimPart(targetCharacter)
+                            local targetHumanoid = targetCharacter
+                                and targetCharacter:FindFirstChildOfClass("Humanoid")
+
+                            local valid = targetPart
+                                and targetHumanoid
+                                and targetHumanoid.Health > 0
+                                and (targetPart.Position - root.Position).Magnitude <= maxDistance
+
+                            if valid and Config.AimTeamCheck
+                                and LocalPlayer.Team ~= nil
+                                and player.Team == LocalPlayer.Team then
+                                valid = false
+                            end
+
+                            if valid then
+                                local screenPoint, onScreen = camera:WorldToViewportPoint(targetPart.Position)
+                                local screenDistance = (
+                                    Vector2.new(screenPoint.X, screenPoint.Y) - mousePosition
+                                ).Magnitude
+
+                                if fovRadius > 0 and (not onScreen or screenDistance > fovRadius) then
+                                    valid = false
+                                elseif Config.AimTargetMode == "Closest To Cursor" and not onScreen then
+                                    valid = false
+                                end
+                            end
+
+                            if valid and Config.AimVisibleCheck then
+                                valid = isAimTargetVisible(camera, targetCharacter, targetPart)
+                            end
+
+                            if valid then
+                                local score
+                                if Config.AimTargetMode == "Closest To Cursor" then
+                                    local screenPoint = camera:WorldToViewportPoint(targetPart.Position)
+                                    score = (
+                                        Vector2.new(screenPoint.X, screenPoint.Y) - mousePosition
+                                    ).Magnitude
+                                else
+                                    score = (targetPart.Position - root.Position).Magnitude
+                                end
+
+                                if score < bestScore then
+                                    bestScore = score
+                                    target = targetPart
                                 end
                             end
                         end
                     end
                 end
+
                 if target and target.Parent then
                     pcall(function()
                         playerMouse.Hit = CFrame.new(target.Position)
@@ -1242,6 +1394,7 @@ task.spawn(function()
         else
             target = nil
         end
+
         task.wait(0.04)
     end
 end)
@@ -1493,4 +1646,4 @@ end)
 
 SelectTab("Visuals")
 
-print("[Phong Hub] v1.1 loaded - ESP, Xray, Player, Movement, Aim Assist, Auto Defense, Item Assist. Auto Steal removed.")
+print("[Phong Hub] v1.2 loaded - ESP, Xray, Player, Movement, Configurable Aim Assist, Auto Defense, Item Assist. Auto Steal removed.")
