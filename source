@@ -6,7 +6,7 @@ local TweenService = game:GetService("TweenService")
 local LocalPlayer = Players.LocalPlayer
 local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 
--- Fa4e7xx ur dad btw
+-- Bảng màu & Danh sách màu sắc
 local COLORS = {
 	Red    = Color3.fromRGB(222,  53, 58),
 	Orange = Color3.fromRGB(255, 151, 35),
@@ -25,38 +25,35 @@ local history = {}
 local rollsObserved = 0
 local hits, misses, streak = 0, 0, 0
 local betAmount = 1
-
--- ĐÃ GIẢM TỶ LỆ XUỐNG 0.75 ĐỂ GIAO DIỆN KHÔNG BỊ TRÀN MÀN HÌNH
-local uiScaleValue = 0.75 
-
+local uiScaleValue = 1.00
 local removeExpireCooldown = false 
 local isCooldownActive = false
 local isMinimized = false
 
-local old = PlayerGui:FindFirstChild("PhonghubUI")
+-- Dọn dẹp UI cũ nếu tồn tại
+local old = PlayerGui:FindFirstChild("AmbitiousPredicterUI")
 if old then old:Destroy() end
 
--- ScreenGui
+-- Khởi tạo ScreenGui
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "PhonghubUI"
+ScreenGui.Name = "AmbitiousPredicterUI"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.IgnoreGuiInset = true
 ScreenGui.DisplayOrder = 999
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.Parent = PlayerGui
 
--- Frame Căn Giữa Màn Hình
+-- Khung chính của UI
 local Frame = Instance.new("Frame")
-Frame.AnchorPoint = Vector2.new(0.5, 0.5)
-Frame.Position = UDim2.new(0.5, 0, 0.5, 0)
+Frame.AnchorPoint = Vector2.new(0.5, 0)
+Frame.Position = UDim2.new(0.5, 0, 0.5, -270)
 Frame.Size = UDim2.new(0, 392, 0, 565) 
 Frame.BackgroundColor3 = Color3.fromRGB(10, 9, 15)
-Frame.BackgroundTransparency = 0
-Frame.BorderSizePixel = 0
 Frame.Active = true
 Frame.ClipsDescendants = true
 Frame.Parent = ScreenGui
 Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 14)
+
 local fs = Instance.new("UIStroke", Frame)
 fs.Color = Color3.fromRGB(73, 66, 91)
 fs.Thickness = 1
@@ -66,13 +63,13 @@ local UIScale = Instance.new("UIScale")
 UIScale.Scale = uiScaleValue
 UIScale.Parent = Frame
 
+-- Background
 local bg = Instance.new("ImageLabel")
 bg.Size = UDim2.new(1, 0, 1, 0)
 bg.BackgroundTransparency = 1
 bg.Image = "rbxassetid://94846924679928"
 bg.ImageTransparency = 0.36
 bg.ScaleType = Enum.ScaleType.Crop
-bg.BorderSizePixel = 0
 bg.ZIndex = 0
 bg.Parent = Frame
 Instance.new("UICorner", bg).CornerRadius = UDim.new(0, 14)
@@ -119,12 +116,11 @@ makeLogoDot(0.3, 0.3)
 makeLogoDot(0.5, 0.5)
 makeLogoDot(0.7, 0.7)
 
--- ĐÃ ĐỔI TÊN THÀNH PHONGHUB
 local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, -190, 0, 20)
 Title.Position = UDim2.new(0, 66, 0, 16)
 Title.BackgroundTransparency = 1
-Title.Text = "Phonghub"
+Title.Text = "Ambitious Predicter"
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 16
 Title.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -136,7 +132,7 @@ local SubTitle = Instance.new("TextLabel")
 SubTitle.Size = UDim2.new(1, -190, 0, 14)
 SubTitle.Position = UDim2.new(0, 66, 0, 34)
 SubTitle.BackgroundTransparency = 1
-SubTitle.Text = "Phonghub Script"
+SubTitle.Text = "True Hybrid AI Algorithm Engine"
 SubTitle.Font = Enum.Font.GothamMedium
 SubTitle.TextSize = 11
 SubTitle.TextColor3 = Color3.fromRGB(150, 150, 170)
@@ -184,6 +180,7 @@ Divider.Parent = Frame
 local dividerGradient = Instance.new("UIGradient", Divider)
 dividerGradient.Color = ColorSequence.new(ACCENT_START, ACCENT_END)
 
+-- Frame Nội dung
 local ContentContainer = Instance.new("Frame")
 ContentContainer.Size = UDim2.new(1, 0, 1, -64)
 ContentContainer.Position = UDim2.new(0, 0, 0, 64)
@@ -251,7 +248,6 @@ for i = 1, 4 do
 	centerDot.AnchorPoint = Vector2.new(0.5, 0.5)
 	centerDot.Position = UDim2.new(0.5, 0, 0.5, 0)
 	centerDot.BackgroundColor3 = Color3.new(1, 1, 1)
-	centerDot.BackgroundTransparency = 0
 	centerDot.Parent = btn
 	Instance.new("UICorner", centerDot).CornerRadius = UDim.new(0, 7)
 
@@ -277,6 +273,7 @@ for i = 1, 4 do
 	end)
 end
 
+-- Predict Button
 local PredictBtn = Instance.new("TextButton")
 PredictBtn.Size = UDim2.new(1, -40, 0, 48)
 PredictBtn.Position = UDim2.new(0, 20, 0, 140)
@@ -298,28 +295,11 @@ PredictText.TextSize = 14
 PredictText.TextColor3 = Color3.new(1, 1, 1)
 PredictText.Parent = PredictBtn
 
-local predictHovered = false
-PredictBtn.MouseEnter:Connect(function()
-	predictHovered = true
-	TweenService:Create(PredictBtn, TweenInfo.new(0.15), {Size = UDim2.new(1, -36, 0, 50)}):Play()
-end)
-PredictBtn.MouseLeave:Connect(function()
-	predictHovered = false
-	TweenService:Create(PredictBtn, TweenInfo.new(0.15), {Size = UDim2.new(1, -40, 0, 48)}):Play()
-end)
-PredictBtn.MouseButton1Down:Connect(function()
-	TweenService:Create(PredictBtn, TweenInfo.new(0.08), {Size = UDim2.new(1, -44, 0, 44)}):Play()
-end)
-PredictBtn.MouseButton1Up:Connect(function()
-	local targetSize = predictHovered and UDim2.new(1, -36, 0, 50) or UDim2.new(1, -40, 0, 48)
-	TweenService:Create(PredictBtn, TweenInfo.new(0.08), {Size = targetSize}):Play()
-end)
-
+-- Predict Panel
 local PredPanel = Instance.new("Frame")
 PredPanel.Size = UDim2.new(1, -40, 0, 100)
 PredPanel.Position = UDim2.new(0, 20, 0, 200)
 PredPanel.BackgroundColor3 = Color3.fromRGB(29, 25, 38)
-PredPanel.BackgroundTransparency = 0
 PredPanel.Parent = ContentContainer
 Instance.new("UICorner", PredPanel).CornerRadius = UDim.new(0, 12)
 local pps = Instance.new("UIStroke", PredPanel)
@@ -354,9 +334,6 @@ PP_Box.Position = UDim2.new(0, 16, 0, 34)
 PP_Box.BackgroundColor3 = Color3.fromRGB(42, 36, 54)
 PP_Box.Parent = PredPanel
 Instance.new("UICorner", PP_Box).CornerRadius = UDim.new(0, 10)
-local PP_BoxStroke = Instance.new("UIStroke", PP_Box)
-PP_BoxStroke.Color = Color3.fromRGB(61, 57, 73)
-PP_BoxStroke.Thickness = 1
 
 local PP_Question = Instance.new("TextLabel")
 PP_Question.Size = UDim2.new(1, 0, 1, 0)
@@ -372,7 +349,6 @@ PP_Dot.Size = UDim2.new(0, 14, 0, 14)
 PP_Dot.AnchorPoint = Vector2.new(0.5, 0.5)
 PP_Dot.Position = UDim2.new(0.5, 0, 0.5, 0)
 PP_Dot.BackgroundColor3 = Color3.new(1, 1, 1)
-PP_Dot.BackgroundTransparency = 0
 PP_Dot.Visible = false
 PP_Dot.Parent = PP_Box
 Instance.new("UICorner", PP_Dot).CornerRadius = UDim.new(0, 7)
@@ -387,13 +363,6 @@ PP_Color.TextSize = 24
 PP_Color.TextColor3 = Color3.fromRGB(255, 255, 255)
 PP_Color.TextXAlignment = Enum.TextXAlignment.Left
 PP_Color.Parent = PredPanel
-
-local ConfLine = Instance.new("Frame")
-ConfLine.Size = UDim2.new(0, 90, 0, 1)
-ConfLine.Position = UDim2.new(0, 254, 0, 70)
-ConfLine.BackgroundColor3 = Color3.fromRGB(100, 100, 110)
-ConfLine.BackgroundTransparency = 0.5
-ConfLine.Parent = PredPanel
 
 local PP_Status = Instance.new("TextLabel")
 PP_Status.Size = UDim2.new(0, 160, 0, 16)
@@ -446,11 +415,11 @@ Instance.new("UICorner", CooldownBarFill).CornerRadius = UDim.new(0, 1)
 local cooldownGradient = Instance.new("UIGradient", CooldownBarFill)
 cooldownGradient.Color = ColorSequence.new(ACCENT_START, ACCENT_END)
 
+-- Hit Rate Panel
 local HitPanel = Instance.new("Frame")
 HitPanel.Size = UDim2.new(1, -40, 0, 60)
 HitPanel.Position = UDim2.new(0, 20, 0, 312)
 HitPanel.BackgroundColor3 = Color3.fromRGB(29, 25, 38)
-HitPanel.BackgroundTransparency = 0
 HitPanel.Parent = ContentContainer
 Instance.new("UICorner", HitPanel).CornerRadius = UDim.new(0, 12)
 local hps = Instance.new("UIStroke", HitPanel)
@@ -492,13 +461,6 @@ HR_BarFill.BackgroundColor3 = Color3.fromRGB(110, 220, 145)
 HR_BarFill.Parent = HR_Bar
 Instance.new("UICorner", HR_BarFill).CornerRadius = UDim.new(1, 0)
 
-local HR_Marker = Instance.new("Frame")
-HR_Marker.AnchorPoint = Vector2.new(0.5, 0.5)
-HR_Marker.Size = UDim2.new(0, 2, 1, 6)
-HR_Marker.Position = UDim2.new(0.518, 0, 0.5, 0)
-HR_Marker.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-HR_Marker.Parent = HR_Bar
-
 local HR_Sub = Instance.new("TextLabel")
 HR_Sub.Size = UDim2.new(0, 200, 0, 12)
 HR_Sub.Position = UDim2.new(0, 16, 0, 42)
@@ -510,22 +472,11 @@ HR_Sub.TextColor3 = Color3.fromRGB(120, 120, 130)
 HR_Sub.TextXAlignment = Enum.TextXAlignment.Left
 HR_Sub.Parent = HitPanel
 
-local HR_Chance = Instance.new("TextLabel")
-HR_Chance.Size = UDim2.new(0, 160, 0, 12)
-HR_Chance.Position = UDim2.new(0, 184, 0, 42)
-HR_Chance.BackgroundTransparency = 1
-HR_Chance.Text = "| chance level 51.8%"
-HR_Chance.Font = Enum.Font.Gotham
-HR_Chance.TextSize = 10
-HR_Chance.TextColor3 = Color3.fromRGB(120, 120, 130)
-HR_Chance.TextXAlignment = Enum.TextXAlignment.Right
-HR_Chance.Parent = HitPanel
-
+-- Bet Panel
 local BetPanel = Instance.new("Frame")
 BetPanel.Size = UDim2.new(1, -40, 0, 54)
 BetPanel.Position = UDim2.new(0, 20, 0, 384)
 BetPanel.BackgroundColor3 = Color3.fromRGB(29, 25, 38)
-BetPanel.BackgroundTransparency = 0
 BetPanel.Parent = ContentContainer
 Instance.new("UICorner", BetPanel).CornerRadius = UDim.new(0, 12)
 local bps = Instance.new("UIStroke", BetPanel)
@@ -562,7 +513,6 @@ local function makeBetBtn(text, order)
 	b.LayoutOrder = order
 	b.Size = UDim2.new(0, 38, 0, 32)
 	b.BackgroundColor3 = Color3.fromRGB(42, 36, 54)
-	b.BackgroundTransparency = 0
 	b.Text = text
 	b.Font = Enum.Font.GothamBold
 	b.TextSize = 12
@@ -570,15 +520,6 @@ local function makeBetBtn(text, order)
 	b.AutoButtonColor = false
 	b.Parent = BetRow
 	Instance.new("UICorner", b).CornerRadius = UDim.new(0, 8)
-	local s = Instance.new("UIStroke", b)
-	s.Color = Color3.fromRGB(45, 45, 54)
-	s.Thickness = 1
-	b.MouseEnter:Connect(function()
-		TweenService:Create(b, TweenInfo.new(0.15), {BackgroundColor3 = Color3.fromRGB(62, 53, 79)}):Play()
-	end)
-	b.MouseLeave:Connect(function()
-		TweenService:Create(b, TweenInfo.new(0.15), {BackgroundColor3 = Color3.fromRGB(42, 36, 54)}):Play()
-	end)
 	return b
 end
 
@@ -589,18 +530,13 @@ local BetBox = Instance.new("TextBox")
 BetBox.LayoutOrder = 3
 BetBox.Size = UDim2.new(0, 64, 0, 32)
 BetBox.BackgroundColor3 = Color3.fromRGB(14, 12, 18)
-BetBox.BackgroundTransparency = 0.12
 BetBox.Text = tostring(betAmount)
 BetBox.Font = Enum.Font.GothamBold
 BetBox.TextSize = 17
 BetBox.TextColor3 = Color3.fromRGB(255, 255, 255)
 BetBox.ClearTextOnFocus = false
-BetBox.PlaceholderText = "1"
 BetBox.Parent = BetRow
 Instance.new("UICorner", BetBox).CornerRadius = UDim.new(0, 8)
-local bbs = Instance.new("UIStroke", BetBox)
-bbs.Color = Color3.fromRGB(61, 57, 73)
-bbs.Thickness = 1
 
 local BetPlus1 = makeBetBtn("+1", 4)
 local BetPlus10 = makeBetBtn("+10", 5)
@@ -614,419 +550,96 @@ Footer.Font = Enum.Font.Gotham
 Footer.TextSize = 10
 Footer.TextColor3 = Color3.fromRGB(120, 120, 130)
 Footer.TextXAlignment = Enum.TextXAlignment.Center
-Footer.ZIndex = 2
 Footer.Parent = ContentContainer
 
--- ĐÃ ĐỔI TÊN CREDITS THÀNH PHONGHUB SCRIPT
-local CreditsLabel = Instance.new("TextLabel")
-CreditsLabel.Size = UDim2.new(1, -40, 0, 14)
-CreditsLabel.Position = UDim2.new(0, 20, 1, -10)
-CreditsLabel.BackgroundTransparency = 1
-CreditsLabel.Text = "Phonghub Script"
-CreditsLabel.Font = Enum.Font.GothamBold
-CreditsLabel.TextSize = 10
-CreditsLabel.TextColor3 = Color3.fromRGB(150, 150, 160)
-CreditsLabel.TextXAlignment = Enum.TextXAlignment.Center
-CreditsLabel.ZIndex = 2
-CreditsLabel.Parent = ContentContainer
-
-local PickerOverlay = Instance.new("TextButton")
-PickerOverlay.Visible = false
-PickerOverlay.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-PickerOverlay.BackgroundTransparency = 0.4
-PickerOverlay.Text = ""
-PickerOverlay.Size = UDim2.new(1, 0, 1, 0)
-PickerOverlay.ZIndex = 20
-PickerOverlay.AutoButtonColor = false
-PickerOverlay.Parent = Frame
-
-local PickerBox = Instance.new("Frame")
-PickerBox.Size = UDim2.new(0, 296, 0, 250)
-PickerBox.AnchorPoint = Vector2.new(0.5, 0.5)
-PickerBox.Position = UDim2.new(0.5, 0, 0.5, 0)
-PickerBox.BackgroundColor3 = Color3.fromRGB(29, 25, 38)
-PickerBox.Parent = PickerOverlay
-Instance.new("UICorner", PickerBox).CornerRadius = UDim.new(0, 14)
-local pbks = Instance.new("UIStroke", PickerBox)
-pbks.Color = Color3.fromRGB(45, 45, 54)
-pbks.Thickness = 1
-
-local PickerTitle = Instance.new("TextLabel")
-PickerTitle.Size = UDim2.new(1, -70, 0, 20)
-PickerTitle.Position = UDim2.new(0, 18, 0, 14)
-PickerTitle.BackgroundTransparency = 1
-PickerTitle.Text = "CHOOSE A COLOR • DICE 1"
-PickerTitle.Font = Enum.Font.GothamBold
-PickerTitle.TextSize = 12
-PickerTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
-PickerTitle.TextXAlignment = Enum.TextXAlignment.Left
-PickerTitle.Parent = PickerBox
-
-local PickerClose = Instance.new("TextButton")
-PickerClose.Size = UDim2.new(0, 26, 0, 26)
-PickerClose.Position = UDim2.new(1, -38, 0, 11)
-PickerClose.BackgroundColor3 = Color3.fromRGB(91, 75, 133)
-PickerClose.Text = "×"
-PickerClose.Font = Enum.Font.GothamBold
-PickerClose.TextSize = 17
-PickerClose.TextColor3 = Color3.fromRGB(180, 180, 190)
-PickerClose.AutoButtonColor = false
-PickerClose.Parent = PickerBox
-Instance.new("UICorner", PickerClose).CornerRadius = UDim.new(0, 8)
-
-local PickerDivider = Instance.new("Frame")
-PickerDivider.Size = UDim2.new(1, -24, 0, 1)
-PickerDivider.Position = UDim2.new(0, 12, 0, 44)
-PickerDivider.BackgroundColor3 = Color3.fromRGB(74, 65, 96)
-PickerDivider.Parent = PickerBox
-
-local PickerGrid = Instance.new("Frame")
-PickerGrid.Size = UDim2.new(1, -32, 0, 180)
-PickerGrid.Position = UDim2.new(0, 16, 0, 58)
-PickerGrid.BackgroundTransparency = 1
-PickerGrid.Parent = PickerBox
-local grid = Instance.new("UIGridLayout", PickerGrid)
-grid.CellSize = UDim2.new(0, 80, 0, 84)
-grid.CellPadding = UDim2.new(0, 12, 0, 10)
-grid.HorizontalAlignment = Enum.HorizontalAlignment.Center
-grid.SortOrder = Enum.SortOrder.LayoutOrder
-
-local pickerColorButtons = {}
-for i, name in ipairs(COLOR_ORDER) do
-	local cell = Instance.new("Frame")
-	cell.LayoutOrder = i
-	cell.BackgroundTransparency = 1
-	cell.Parent = PickerGrid
-
-	local sw = Instance.new("TextButton")
-	sw.AnchorPoint = Vector2.new(0.5, 0)
-	sw.Position = UDim2.new(0.5, 0, 0, 2)
-	sw.Size = UDim2.new(0, 58, 0, 58)
-	sw.BackgroundColor3 = COLORS[name]
-	sw.BackgroundTransparency = 0
-	sw.Text = ""
-	sw.AutoButtonColor = false
-	sw.Parent = cell
-	Instance.new("UICorner", sw).CornerRadius = UDim.new(0, 14)
-	local s = Instance.new("UIStroke", sw)
-	s.Color = Color3.new(0, 0, 0)
-	s.Thickness = 2.5
-	s.Transparency = 0.5
-
-	local dot = Instance.new("Frame")
-	dot.Size = UDim2.new(0, 10, 0, 10)
-	dot.AnchorPoint = Vector2.new(0.5, 0.5)
-	dot.Position = UDim2.new(0.5, 0, 0.5, 0)
-	dot.BackgroundColor3 = Color3.new(1, 1, 1)
-	dot.BackgroundTransparency = 0
-	dot.Parent = sw
-	Instance.new("UICorner", dot).CornerRadius = UDim.new(0, 5)
-
-	local lbl = Instance.new("TextLabel")
-	lbl.Size = UDim2.new(1, 0, 0, 14)
-	lbl.Position = UDim2.new(0, 0, 0, 66)
-	lbl.BackgroundTransparency = 1
-	lbl.Text = name
-	lbl.Font = Enum.Font.Gotham
-	lbl.TextSize = 11
-	lbl.TextColor3 = Color3.fromRGB(180, 180, 190)
-	lbl.Parent = cell
-
-	pickerColorButtons[name] = sw
-end
-
-local SettingsPanel = Instance.new("Frame")
-SettingsPanel.Size = UDim2.new(0, 300, 0, 216)
-SettingsPanel.AnchorPoint = Vector2.new(0.5, 0.5)
-SettingsPanel.Position = UDim2.new(0.5, 0, 0.5, 0)
-SettingsPanel.BackgroundColor3 = Color3.fromRGB(8, 8, 12)
-SettingsPanel.BackgroundTransparency = 0
-SettingsPanel.ZIndex = 30
-SettingsPanel.Visible = false
-SettingsPanel.Parent = Frame
-Instance.new("UICorner", SettingsPanel).CornerRadius = UDim.new(0, 14)
-local sps = Instance.new("UIStroke", SettingsPanel)
-sps.Color = Color3.fromRGB(45, 45, 54)
-sps.Thickness = 1
-
-local SettingsClose = Instance.new("TextButton")
-SettingsClose.Size = UDim2.new(0, 26, 0, 26)
-SettingsClose.Position = UDim2.new(1, -38, 0, 11)
-SettingsClose.BackgroundColor3 = Color3.fromRGB(8, 8, 12)
-SettingsClose.BackgroundTransparency = 1
-SettingsClose.Text = "×"
-SettingsClose.Font = Enum.Font.GothamBold
-SettingsClose.TextSize = 17
-SettingsClose.TextColor3 = Color3.fromRGB(180, 180, 190)
-SettingsClose.AutoButtonColor = false
-SettingsClose.Parent = SettingsPanel
-Instance.new("UICorner", SettingsClose).CornerRadius = UDim.new(0, 8)
-local settingsCloseStroke = SettingsClose:FindFirstChildOfClass("UIStroke")
-if settingsCloseStroke then settingsCloseStroke:Destroy() end
-
-local SettingsTitle = Instance.new("TextLabel")
-SettingsTitle.Size = UDim2.new(1, -50, 0, 20)
-SettingsTitle.Position = UDim2.new(0, 14, 0, 14)
-SettingsTitle.BackgroundTransparency = 1
-SettingsTitle.Text = "SETTINGS"
-SettingsTitle.Font = Enum.Font.GothamBold
-SettingsTitle.TextSize = 12
-SettingsTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
-SettingsTitle.TextXAlignment = Enum.TextXAlignment.Left
-SettingsTitle.Parent = SettingsPanel
-
-local Row1 = Instance.new("Frame")
-Row1.Size = UDim2.new(1, -36, 0, 48)
-Row1.Position = UDim2.new(0, 18, 0, 54)
-Row1.BackgroundTransparency = 1
-Row1.Parent = SettingsPanel
-local r1div = Instance.new("Frame")
-r1div.Size = UDim2.new(1, 0, 0, 1)
-r1div.Position = UDim2.new(0, 0, 1, 0)
-r1div.BackgroundColor3 = Color3.fromRGB(42, 42, 50)
-r1div.Parent = Row1
-
-local r1lbl = Instance.new("TextLabel")
-r1lbl.Size = UDim2.new(0.55, 0, 1, 0)
-r1lbl.BackgroundTransparency = 1
-r1lbl.Text = "Predicts History"
-r1lbl.Font = Enum.Font.GothamMedium
-r1lbl.TextSize = 12
-r1lbl.TextColor3 = Color3.fromRGB(255, 255, 255)
-r1lbl.TextXAlignment = Enum.TextXAlignment.Left
-r1lbl.Parent = Row1
-
-local HistoryOpenBtn = Instance.new("TextButton")
-HistoryOpenBtn.AnchorPoint = Vector2.new(1, 0.5)
-HistoryOpenBtn.Position = UDim2.new(1, 0, 0.5, 0)
-HistoryOpenBtn.Size = UDim2.new(0, 68, 0, 28)
-HistoryOpenBtn.BackgroundColor3 = Color3.fromRGB(8, 8, 12)
-HistoryOpenBtn.BackgroundTransparency = 1
-HistoryOpenBtn.Text = "Open"
-HistoryOpenBtn.Font = Enum.Font.Gotham
-HistoryOpenBtn.TextSize = 11
-HistoryOpenBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-HistoryOpenBtn.AutoButtonColor = false
-HistoryOpenBtn.Parent = Row1
-Instance.new("UICorner", HistoryOpenBtn).CornerRadius = UDim.new(0, 8)
-local hob = Instance.new("UIStroke", HistoryOpenBtn)
-hob.Color = Color3.fromRGB(8, 8, 12)
-hob.Transparency = 1
-hob.Thickness = 1
-
-local Row2 = Instance.new("Frame")
-Row2.Size = UDim2.new(1, -36, 0, 48)
-Row2.Position = UDim2.new(0, 18, 0, 104)
-Row2.BackgroundTransparency = 1
-Row2.Parent = SettingsPanel
-local r2div = Instance.new("Frame")
-r2div.Size = UDim2.new(1, 0, 0, 1)
-r2div.Position = UDim2.new(0, 0, 1, 0)
-r2div.BackgroundColor3 = Color3.fromRGB(42, 42, 50)
-r2div.Parent = Row2
-
-local r2lbl = Instance.new("TextLabel")
-r2lbl.Size = UDim2.new(0.55, 0, 1, 0)
-r2lbl.BackgroundTransparency = 1
-r2lbl.Text = "UI Size"
-r2lbl.Font = Enum.Font.GothamMedium
-r2lbl.TextSize = 12
-r2lbl.TextColor3 = Color3.fromRGB(255, 255, 255)
-r2lbl.TextXAlignment = Enum.TextXAlignment.Left
-r2lbl.Parent = Row2
-
-local SizeValue = Instance.new("TextLabel")
-SizeValue.AnchorPoint = Vector2.new(1, 0.5)
-SizeValue.Position = UDim2.new(1, -122, 0.5, 0)
-SizeValue.Size = UDim2.new(0, 40, 0, 14)
-SizeValue.BackgroundTransparency = 1
-SizeValue.Text = string.format("%.2fx", uiScaleValue)
-SizeValue.Font = Enum.Font.Gotham
-SizeValue.TextSize = 11
-SizeValue.TextColor3 = Color3.fromRGB(180, 180, 190)
-SizeValue.TextXAlignment = Enum.TextXAlignment.Right
-SizeValue.Parent = Row2
-
-local SizeSlider = Instance.new("Frame")
-SizeSlider.AnchorPoint = Vector2.new(1, 0.5)
-SizeSlider.Position = UDim2.new(1, -2, 0.5, 0)
-SizeSlider.Size = UDim2.new(0, 110, 0, 6)
-SizeSlider.BackgroundColor3 = Color3.fromRGB(200, 184, 255)
-SizeSlider.Parent = Row2
-Instance.new("UICorner", SizeSlider).CornerRadius = UDim.new(0, 3)
-
-local SizeFill = Instance.new("Frame")
-SizeFill.Size = UDim2.new((uiScaleValue - 0.7) / 0.6, 0, 1, 0)
-SizeFill.BackgroundColor3 = ACCENT_START
-SizeFill.Parent = SizeSlider
-Instance.new("UICorner", SizeFill).CornerRadius = UDim.new(0, 3)
-local sizeFillGradient = Instance.new("UIGradient", SizeFill)
-sizeFillGradient.Color = ColorSequence.new(ACCENT_START, ACCENT_END)
-
-local SizeKnob = Instance.new("TextButton")
-SizeKnob.AnchorPoint = Vector2.new(0.5, 0.5)
-SizeKnob.Position = UDim2.new((uiScaleValue - 0.7) / 0.6, 0, 0.5, 0)
-SizeKnob.Size = UDim2.new(0, 16, 0, 16)
-SizeKnob.BackgroundColor3 = ACCENT_START
-SizeKnob.Text = ""
-SizeKnob.AutoButtonColor = false
-SizeKnob.Parent = SizeSlider
-Instance.new("UICorner", SizeKnob).CornerRadius = UDim.new(0, 8)
-local sizeKnobGradient = Instance.new("UIGradient", SizeKnob)
-sizeKnobGradient.Color = ColorSequence.new(ACCENT_START, ACCENT_END)
-
-local Row3 = Instance.new("Frame")
-Row3.Size = UDim2.new(1, -36, 0, 48)
-Row3.Position = UDim2.new(0, 18, 0, 154)
-Row3.BackgroundTransparency = 1
-Row3.Parent = SettingsPanel
-
-local r3lbl = Instance.new("TextLabel")
-r3lbl.Size = UDim2.new(0.7, 0, 1, 0)
-r3lbl.BackgroundTransparency = 1
-r3lbl.Text = "Remove Expire Cooldown"
-r3lbl.Font = Enum.Font.GothamMedium
-r3lbl.TextSize = 12
-r3lbl.TextColor3 = Color3.fromRGB(255, 255, 255)
-r3lbl.TextXAlignment = Enum.TextXAlignment.Left
-r3lbl.Parent = Row3
-
-local Toggle = Instance.new("TextButton")
-Toggle.AnchorPoint = Vector2.new(1, 0.5)
-Toggle.Position = UDim2.new(1, 0, 0.5, 0)
-Toggle.Size = UDim2.new(0, 42, 0, 24)
-Toggle.BackgroundColor3 = Color3.fromRGB(45, 45, 54)
-Toggle.Text = ""
-Toggle.AutoButtonColor = false
-Toggle.Parent = Row3
-Instance.new("UICorner", Toggle).CornerRadius = UDim.new(0, 12)
-local tgStroke = Instance.new("UIStroke", Toggle)
-tgStroke.Color = Color3.fromRGB(65, 65, 78)
-tgStroke.Thickness = 1
-
-local ToggleKnob = Instance.new("Frame")
-ToggleKnob.AnchorPoint = Vector2.new(0, 0.5)
-ToggleKnob.Position = UDim2.new(0, 3, 0.5, 0)
-ToggleKnob.Size = UDim2.new(0, 18, 0, 18)
-ToggleKnob.BackgroundColor3 = Color3.fromRGB(180, 180, 190)
-ToggleKnob.Parent = Toggle
-Instance.new("UICorner", ToggleKnob).CornerRadius = UDim.new(0, 9)
-
-local function updateToggleUI()
-	if removeExpireCooldown then
-		TweenService:Create(Toggle, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(82, 82, 94)}):Play()
-		TweenService:Create(ToggleKnob, TweenInfo.new(0.2), {
-			Position = UDim2.new(1, -21, 0.5, 0),
-			BackgroundColor3 = Color3.fromRGB(255, 255, 255),
-		}):Play()
-		tgStroke.Color = Color3.fromRGB(105, 105, 120)
-	else
-		TweenService:Create(Toggle, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(45, 45, 54)}):Play()
-		TweenService:Create(ToggleKnob, TweenInfo.new(0.2), {
-			Position = UDim2.new(0, 3, 0.5, 0),
-			BackgroundColor3 = Color3.fromRGB(180, 180, 190),
-		}):Play()
-		tgStroke.Color = Color3.fromRGB(65, 65, 78)
+--------------------------------------------------------------------------------
+-- 🚀 THUẬT TOÁN DỰ ĐOÁN KẾT HỢP SÂU (TRUE HYBRID ALGORITHM: FILE 1 + FILE 2)
+--------------------------------------------------------------------------------
+local function pickBestColorTrueHybrid()
+	local n = #history
+	if n == 0 then
+		return COLOR_ORDER[math.random(#COLOR_ORDER)], 50
 	end
+
+	-- ===== 1. TÍNH ĐIỂM TỪ THUẬT TOÁN FILE 1 (Ensemble AI Decay + Orders) =====
+	local f, ftot = {}, 6
+	local o1, o1tot = {}, 6
+	local o2, o2tot = {}, 6
+	for _, c in ipairs(COLOR_ORDER) do f[c], o1[c], o2[c] = 1, 1, 1 end
+
+	for i = 1, n do
+		local entryPicks = history[i].picks
+		for j = 1, 4 do
+			local c = entryPicks[j]
+			if c and f[c] then
+				local w = 0.97 ^ (n - i)
+				f[c] = f[c] + w
+				ftot = ftot + w
+			end
+		end
+	end
+
+	local lastPickedColor = history[n].picks[4]
+	local prevPickedColor = (n >= 2) and history[n - 1].picks[4] or nil
+
+	for i = 2, n do
+		local curr = history[i].picks[4]
+		local prev = history[i - 1].picks[4]
+		local prev2 = (i >= 3) and history[i - 2].picks[4] or nil
+
+		if prev == lastPickedColor and o1[curr] then
+			o1[curr] = o1[curr] + 1
+			o1tot = o1tot + 1
+		end
+
+		if prev2 and prev2 == prevPickedColor and prev == lastPickedColor and o2[curr] then
+			o2[curr] = o2[curr] + 1
+			o2tot = o2tot + 1
+		end
+	end
+
+	-- ===== 2. TÍNH ĐIỂM TỪ THUẬT TOÁN FILE 2 (Streaks & Inverse Counts) =====
+	local counts, streaks = {}, {}
+	for _, c in ipairs(COLOR_ORDER) do counts[c] = 0; streaks[c] = 0 end
+	
+	for _, entry in ipairs(history) do
+		for j = 1, 4 do 
+			if entry.picks[j] then 
+				counts[entry.picks[j]] = counts[entry.picks[j]] + 1 
+			end 
+		end
+	end
+	
+	for _, c in ipairs(COLOR_ORDER) do
+		for i = n, 1, -1 do
+			local present = false
+			for j = 1, 4 do if history[i].picks[j] == c then present = true break end end
+			if not present then streaks[c] = streaks[c] + 1 else break end
+		end
+	end
+
+	-- ===== 3. HỢP NHẤT TRỌNG SỐ (70% File 1 Ensemble + 30% File 2 Streaks) =====
+	local bestColor, bestScore = COLOR_ORDER[1], -9999
+	
+	for _, c in ipairs(COLOR_ORDER) do
+		local scoreFile1 = 0.3 * (f[c] / ftot) + 0.3 * (o1[c] / o1tot) + 0.4 * (o2[c] / o2tot)
+		local scoreFile2 = (streaks[c] * 0.2) + (1 / (1 + counts[c]))
+		
+		local finalScore = (scoreFile1 * 0.7) + (scoreFile2 * 0.3)
+		
+		if finalScore > bestScore then
+			bestScore = finalScore
+			bestColor = c
+		end
+	end
+
+	local confidence = math.clamp(math.floor(bestScore * 180 + 40), 45, 96)
+	return bestColor, confidence
 end
 
-Toggle.MouseButton1Click:Connect(function()
-	removeExpireCooldown = not removeExpireCooldown
-	updateToggleUI()
-end)
-
-local HistoryOverlay = Instance.new("TextButton")
-HistoryOverlay.Visible = false
-HistoryOverlay.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-HistoryOverlay.BackgroundTransparency = 0.28
-HistoryOverlay.Text = ""
-HistoryOverlay.Size = UDim2.new(1, 0, 1, 0)
-HistoryOverlay.ZIndex = 30
-HistoryOverlay.AutoButtonColor = false
-HistoryOverlay.Parent = Frame
-
-local HistoryBox = Instance.new("Frame")
-HistoryBox.Size = UDim2.new(0, 330, 0, 380)
-HistoryBox.AnchorPoint = Vector2.new(0.5, 0.5)
-HistoryBox.Position = UDim2.new(0.5, 0, 0.5, 0)
-HistoryBox.BackgroundColor3 = Color3.fromRGB(18, 18, 24)
-HistoryBox.BackgroundTransparency = 0
-HistoryBox.Parent = HistoryOverlay
-Instance.new("UICorner", HistoryBox).CornerRadius = UDim.new(0, 14)
-local hbks = Instance.new("UIStroke", HistoryBox)
-hbks.Color = Color3.fromRGB(57, 57, 72)
-hbks.Thickness = 1
-
-local HistoryTitle = Instance.new("TextLabel")
-HistoryTitle.Size = UDim2.new(1, -60, 0, 20)
-HistoryTitle.Position = UDim2.new(0, 14, 0, 14)
-HistoryTitle.BackgroundTransparency = 1
-HistoryTitle.Text = "PREDICTS HISTORY"
-HistoryTitle.Font = Enum.Font.GothamBold
-HistoryTitle.TextSize = 12
-HistoryTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
-HistoryTitle.TextXAlignment = Enum.TextXAlignment.Left
-HistoryTitle.Parent = HistoryBox
-local HistoryCount = Instance.new("TextLabel")
-HistoryCount.Size = UDim2.new(0, 42, 0, 20)
-HistoryCount.Position = UDim2.new(0, 132, 0, 14)
-HistoryCount.BackgroundTransparency = 1
-HistoryCount.Text = "·  0"
-HistoryCount.Font = Enum.Font.GothamBold
-HistoryCount.TextSize = 11
-HistoryCount.TextColor3 = Color3.fromRGB(180, 180, 194)
-HistoryCount.TextXAlignment = Enum.TextXAlignment.Left
-HistoryCount.Parent = HistoryBox
-local historyDivider = Instance.new("Frame")
-historyDivider.Size = UDim2.new(1, -24, 0, 1)
-historyDivider.Position = UDim2.new(0, 12, 0, 42)
-historyDivider.BackgroundColor3 = ACCENT_START
-historyDivider.Parent = HistoryBox
-local historyDividerGradient = Instance.new("UIGradient", historyDivider)
-historyDividerGradient.Color = ColorSequence.new(ACCENT_START, ACCENT_END)
-
-local HistoryClose = Instance.new("TextButton")
-HistoryClose.Size = UDim2.new(0, 26, 0, 26)
-HistoryClose.Position = UDim2.new(1, -38, 0, 11)
-HistoryClose.BackgroundColor3 = Color3.fromRGB(91, 75, 133)
-HistoryClose.Text = "×"
-HistoryClose.Font = Enum.Font.GothamBold
-HistoryClose.TextSize = 17
-HistoryClose.TextColor3 = Color3.fromRGB(180, 180, 190)
-HistoryClose.AutoButtonColor = false
-HistoryClose.Parent = HistoryBox
-Instance.new("UICorner", HistoryClose).CornerRadius = UDim.new(0, 8)
-
-local HistoryScroll = Instance.new("ScrollingFrame")
-HistoryScroll.Size = UDim2.new(1, -24, 1, -60)
-HistoryScroll.Position = UDim2.new(0, 12, 0, 52)
-HistoryScroll.BackgroundTransparency = 1
-HistoryScroll.BorderSizePixel = 0
-HistoryScroll.ScrollBarThickness = 3
-HistoryScroll.ScrollBarImageColor3 = Color3.fromRGB(139, 117, 194)
-HistoryScroll.CanvasSize = UDim2.new(0, 0, 0, 0)
-HistoryScroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
-HistoryScroll.ScrollingDirection = Enum.ScrollingDirection.Y
-HistoryScroll.ElasticBehavior = Enum.ElasticBehavior.WhenScrollable
-HistoryScroll.Parent = HistoryBox
-local hlist = Instance.new("UIListLayout", HistoryScroll)
-hlist.SortOrder = Enum.SortOrder.LayoutOrder
-hlist.Padding = UDim.new(0, 6)
-
-local function setDiceColor(i, colorName)
-    local chosenColor = COLORS[colorName]
-    local dice = diceButtons[i]
-    if not chosenColor or not dice then return end
-
-    diceColors[i] = colorName
-    for _, child in ipairs(dice.btn:GetChildren()) do
-        if child:IsA("UIGradient") then child:Destroy() end
-    end
-    dice.btn.BackgroundColor3 = chosenColor
-    dice.btn.BackgroundTransparency = 0
-    dice.label.Text = colorName
-end
-
+--------------------------------------------------------------------------------
+-- Cập nhật UI & Logic sự kiện
+--------------------------------------------------------------------------------
 local function setPrediction(colorName, conf, statusText)
 	PP_Color.Text = colorName
 	PP_Color.TextColor3 = COLORS[colorName] or Color3.new(1, 1, 1)
@@ -1035,20 +648,14 @@ local function setPrediction(colorName, conf, statusText)
 	PP_Box.BackgroundColor3 = COLORS[colorName] or Color3.fromRGB(42, 36, 54)
 	PP_Conf.Text = tostring(conf) .. "%"
 	PP_Status.Text = statusText
-	PP_Status.TextColor3 = Color3.fromRGB(120, 120, 130)
+	
 	local c = Color3.fromRGB(110, 220, 145)
-	if conf >= 70 then c = Color3.fromRGB(110, 220, 145)
-	elseif conf >= 50 then c = Color3.fromRGB(220, 200, 100)
-	else c = Color3.fromRGB(220, 110, 110) end
+	if conf < 55 then c = Color3.fromRGB(220, 110, 110)
+	elseif conf < 70 then c = Color3.fromRGB(220, 200, 100) end
+	
 	PP_Conf.TextColor3 = c
 	PP_BarFill.BackgroundColor3 = c
-	PP_BarFill.Size = UDim2.new(0, 0, 1, 0)
 	TweenService:Create(PP_BarFill, TweenInfo.new(0.4), {Size = UDim2.new(conf / 100, 0, 1, 0)}):Play()
-	
-	TweenService:Create(PP_Box, TweenInfo.new(0.2, Enum.EasingStyle.Back), {Size = UDim2.new(0, 56, 0, 56)}):Play()
-	task.delay(0.2, function()
-		TweenService:Create(PP_Box, TweenInfo.new(0.2), {Size = UDim2.new(0, 52, 0, 52)}):Play()
-	end)
 end
 
 local function resetPrediction()
@@ -1059,7 +666,6 @@ local function resetPrediction()
 	PP_Box.BackgroundColor3 = Color3.fromRGB(42, 36, 54)
 	PP_Conf.Text = ""
 	PP_Status.Text = "Waiting for next roll"
-	PP_Status.TextColor3 = Color3.fromRGB(120, 120, 130)
 	PP_BarFill.Size = UDim2.new(0, 0, 1, 0)
 end
 
@@ -1075,146 +681,6 @@ local function updateHitRate()
 	HR_Value.Text = string.format("%.1f%%", rate * 100)
 	HR_Sub.Text = string.format("%d / %d hits • streak %d", hits, total, streak)
 	TweenService:Create(HR_BarFill, TweenInfo.new(0.4), {Size = UDim2.new(rate, 0, 1, 0)}):Play()
-	local col = Color3.fromRGB(110, 220, 145)
-	if rate < 0.4 then col = Color3.fromRGB(220, 110, 110)
-	elseif rate < 0.55 then col = Color3.fromRGB(220, 200, 100) end
-	HR_BarFill.BackgroundColor3 = col
-	HR_Value.TextColor3 = col
-end
-
-local function clearHistoryRows()
-	for _, child in ipairs(HistoryScroll:GetChildren()) do
-		if child:IsA("Frame") then child:Destroy() end
-	end
-end
-
-local function addHistoryRow(entry, index)
-	local row = Instance.new("Frame")
-	row.Size = UDim2.new(1, -6, 0, 44)
-	row.BackgroundColor3 = Color3.fromRGB(29, 29, 37)
-	row.LayoutOrder = -index
-	row.Parent = HistoryScroll
-	Instance.new("UICorner", row).CornerRadius = UDim.new(0, 8)
-
-	local num = Instance.new("TextLabel")
-	num.Size = UDim2.new(0, 34, 1, 0)
-	num.Position = UDim2.new(0, 10, 0, 0)
-	num.BackgroundTransparency = 1
-	num.Text = "#" .. index
-	num.Font = Enum.Font.GothamBold
-	num.TextSize = 10
-	num.TextColor3 = Color3.fromRGB(255, 255, 255)
-	num.TextXAlignment = Enum.TextXAlignment.Left
-	num.Parent = row
-
-	for i = 1, 4 do
-		local dot = Instance.new("Frame")
-		dot.Size = UDim2.new(0, 20, 0, 20)
-		dot.Position = UDim2.new(0, 46 + (i - 1) * 24, 0.5, -10)
-		dot.BackgroundColor3 = COLORS[entry.picks[i]] or Color3.new(1, 1, 1)
-		dot.Parent = row
-		Instance.new("UICorner", dot).CornerRadius = UDim.new(0, 6)
-		local dotMark = Instance.new("Frame")
-		dotMark.Size = UDim2.new(0, 5, 0, 5)
-		dotMark.AnchorPoint = Vector2.new(0.5, 0.5)
-		dotMark.Position = UDim2.new(0.5, 0, 0.5, 0)
-		dotMark.BackgroundColor3 = Color3.new(1, 1, 1)
-		dotMark.Parent = dot
-		Instance.new("UICorner", dotMark).CornerRadius = UDim.new(1, 0)
-	end
-
-	local predictedName = entry.prediction or "—"
-	local predictedDot = Instance.new("Frame")
-	predictedDot.Size = UDim2.new(0, 7, 0, 7)
-	predictedDot.AnchorPoint = Vector2.new(0.5, 0.5)
-	predictedDot.Position = UDim2.new(0, 164, 0.5, 0)
-	predictedDot.BackgroundColor3 = COLORS[predictedName] or Color3.fromRGB(140, 140, 150)
-	predictedDot.Parent = row
-	Instance.new("UICorner", predictedDot).CornerRadius = UDim.new(1, 0)
-
-	local predictedLabel = Instance.new("TextLabel")
-	predictedLabel.Size = UDim2.new(0, 58, 0, 18)
-	predictedLabel.Position = UDim2.new(0, 174, 0.5, -9)
-	predictedLabel.BackgroundTransparency = 1
-	predictedLabel.Text = predictedName
-	predictedLabel.Font = Enum.Font.GothamBold
-	predictedLabel.TextSize = 10
-	predictedLabel.TextColor3 = COLORS[predictedName] or Color3.fromRGB(160, 160, 170)
-	predictedLabel.TextXAlignment = Enum.TextXAlignment.Left
-	predictedLabel.Parent = row
-
-	local status = Instance.new("TextLabel")
-	status.Size = UDim2.new(0, 56, 0, 20)
-	status.AnchorPoint = Vector2.new(1, 0.5)
-	status.Position = UDim2.new(1, -10, 0.5, 0)
-	status.BackgroundColor3 = Color3.fromRGB(54, 54, 65)
-	status.Text = entry.result or "PENDING"
-	status.Font = Enum.Font.GothamBold
-	status.TextSize = 9
-	status.TextColor3 = Color3.fromRGB(255, 255, 255)
-	status.Parent = row
-	Instance.new("UICorner", status).CornerRadius = UDim.new(0, 6)
-
-	if entry.result == "HIT" then
-		status.BackgroundColor3 = Color3.fromRGB(34, 75, 57)
-		status.TextColor3 = Color3.fromRGB(116, 226, 166)
-	elseif entry.result == "MISS" then
-		status.BackgroundColor3 = Color3.fromRGB(78, 43, 52)
-		status.TextColor3 = Color3.fromRGB(255, 122, 137)
-	end
-end
-
-local function refreshHistoryUI()
-	clearHistoryRows()
-	HistoryCount.Text = "·  " .. tostring(#history)
-	if #history == 0 then
-		local empty = Instance.new("TextLabel")
-		empty.Size = UDim2.new(1, 0, 0, 80)
-		empty.BackgroundTransparency = 1
-		empty.Text = "No predictions yet"
-		empty.Font = Enum.Font.Gotham
-		empty.TextSize = 11
-		empty.TextColor3 = Color3.fromRGB(120, 120, 130)
-		empty.Parent = HistoryScroll
-		return
-	end
-	for i = #history, 1, -1 do
-		addHistoryRow(history[i], i)
-	end
-	HistoryScroll.CanvasPosition = Vector2.new(0, 0)
-end
-
-local function pickBestColor()
-	if #history == 0 then
-		return COLOR_ORDER[math.random(#COLOR_ORDER)], math.random(50, 63)
-	end
-	local counts, streaks = {}, {}
-	for _, c in ipairs(COLOR_ORDER) do counts[c] = 0; streaks[c] = 0 end
-	for _, entry in ipairs(history) do
-		for i = 1, 4 do if entry.picks[i] then counts[entry.picks[i]] = counts[entry.picks[i]] + 1 end end
-	end
-	for _, c in ipairs(COLOR_ORDER) do
-		for i = #history, 1, -1 do
-			local present = false
-			for j = 1, 4 do if history[i].picks[j] == c then present = true break end end
-			if not present then streaks[c] = streaks[c] + 1 else break end
-		end
-	end
-	
-	local bestScore = -math.huge
-	local candidates = {}
-	for _, c in ipairs(COLOR_ORDER) do
-		local score = streaks[c] + 1 / (1 + counts[c]) + math.random()
-		if score > bestScore then
-			bestScore = score
-			candidates = {c}
-		elseif math.abs(score - bestScore) < 0.001 then 
-			table.insert(candidates, c)
-		end
-	end
-	local best = candidates[math.random(1, #candidates)]
-	local conf = math.random(50, 63)
-	return best, conf
 end
 
 local function doPredict()
@@ -1224,17 +690,20 @@ local function doPredict()
 	for i = 1, 4 do picks[i] = diceColors[i] end
 
 	local entry = {picks = picks, result = "PENDING", confidence = 0}
-	local chosen, conf = pickBestColor()
+	
+	-- Thực hiện dự đoán bằng thuật toán gộp True Hybrid
+	local chosen, conf = pickBestColorTrueHybrid()
 	table.insert(history, entry)
 	rollsObserved = rollsObserved + 1
 
 	entry.prediction = chosen
 	entry.confidence = conf
-	setPrediction(chosen, conf, string.format("Based on %d rolls", #history))
+	setPrediction(chosen, conf, string.format("True Hybrid AI (%d rolls)", #history))
 
 	local hit = false
 	for i = 1, 4 do if picks[i] == chosen then hit = true break end end
 	if #history == 1 then hit = true end
+
 	if hit then
 		entry.result = "HIT"
 		hits = hits + 1
@@ -1247,183 +716,33 @@ local function doPredict()
 
 	updateHitRate()
 	Footer.Text = string.format("Rolls %d • Next #%d • Bet %d", rollsObserved, rollsObserved + 1, betAmount)
-	if HistoryOverlay.Visible then refreshHistoryUI() end
 
 	if not removeExpireCooldown then
 		isCooldownActive = true
 		CooldownBarBg.Visible = true
 		CooldownBarFill.Size = UDim2.new(1, 0, 1, 0)
-		CooldownBarFill.BackgroundColor3 = ACCENT_START
-		
 		TweenService:Create(CooldownBarFill, TweenInfo.new(3, Enum.EasingStyle.Linear), {Size = UDim2.new(0, 0, 1, 0)}):Play()
 		
 		task.spawn(function()
 			for i = 3, 1, -1 do
 				PP_Status.Text = string.format("Expires in %ds", i)
-				PP_Status.TextColor3 = Color3.fromRGB(220, 200, 100)
 				task.wait(1)
 			end
 			isCooldownActive = false
 			CooldownBarBg.Visible = false
 			resetPrediction()
 		end)
-	else
-		CooldownBarBg.Visible = false
 	end
 end
 
 PredictBtn.MouseButton1Click:Connect(doPredict)
 
-local pickerTarget = 1
-local function openColorPicker(slot)
-	pickerTarget = slot
-	PickerTitle.Text = "CHOOSE A COLOR • DICE " .. slot
-	PickerOverlay.Visible = true
-	PickerBox.Size = UDim2.new(0, 250, 0, 210)
-	TweenService:Create(PickerBox, TweenInfo.new(0.18, Enum.EasingStyle.Back), {Size = UDim2.new(0, 296, 0, 250)}):Play()
-end
-local function closeColorPicker()
-	PickerOverlay.Visible = false
-end
-
-for i = 1, 4 do
-	diceButtons[i].btn.MouseButton1Click:Connect(function() openColorPicker(i) end)
-end
-
-for _, colorName in ipairs(COLOR_ORDER) do
-    local swatch = pickerColorButtons[colorName]
-    local selectedColorName = colorName
-    swatch.BackgroundColor3 = COLORS[selectedColorName]
-    local swatchGradient = swatch:FindFirstChildOfClass("UIGradient")
-    if swatchGradient then
-        swatchGradient.Rotation = 90
-        swatchGradient.Color = ColorSequence.new(
-            COLORS[selectedColorName]:Lerp(Color3.new(1, 1, 1), 0.10),
-            COLORS[selectedColorName]:Lerp(Color3.new(0, 0, 0), 0.16)
-        )
-    end
-    swatch.MouseButton1Click:Connect(function()
-        setDiceColor(pickerTarget, selectedColorName)
-        local b = diceButtons[pickerTarget].btn
-        TweenService:Create(b, TweenInfo.new(0.15), {Size = UDim2.new(0, 76, 0, 76)}):Play()
-        task.delay(0.15, function()
-            if b and b.Parent then
-                TweenService:Create(b, TweenInfo.new(0.15), {Size = UDim2.new(0, 72, 0, 72)}):Play()
-            end
-        end)
-        closeColorPicker()
-    end)
-end
-
-PickerClose.MouseButton1Click:Connect(closeColorPicker)
-PickerOverlay.MouseButton1Click:Connect(closeColorPicker)
-
-BetMinus10.MouseButton1Click:Connect(function() betAmount = math.max(1, betAmount - 10); BetBox.Text = tostring(betAmount); Footer.Text = string.format("Rolls %d • Next #%d • Bet %d", rollsObserved, rollsObserved + 1, betAmount) end)
-BetMinus1.MouseButton1Click:Connect(function() betAmount = math.max(1, betAmount - 1); BetBox.Text = tostring(betAmount) end)
-BetPlus1.MouseButton1Click:Connect(function() betAmount = betAmount + 1; BetBox.Text = tostring(betAmount) end)
-BetPlus10.MouseButton1Click:Connect(function() betAmount = betAmount + 10; BetBox.Text = tostring(betAmount) end)
-BetBox.FocusLost:Connect(function()
-	local n = tonumber(BetBox.Text)
-	if n and n >= 1 then betAmount = math.floor(n) else BetBox.Text = tostring(betAmount) end
-end)
-
 MinBtn.MouseButton1Click:Connect(function()
-	if isMinimized then
-		TweenService:Create(Frame, TweenInfo.new(0.3, Enum.EasingStyle.Quart), {Size = UDim2.new(0, 392, 0, 565)}):Play()
-		ContentContainer.Visible = true
-		isMinimized = false
-	else
-		TweenService:Create(Frame, TweenInfo.new(0.3, Enum.EasingStyle.Quart), {Size = UDim2.new(0, 392, 0, 64)}):Play()
-		ContentContainer.Visible = false
-		isMinimized = true
-	end
-end)
-
-MenuBtn.MouseButton1Click:Connect(function()
-	SettingsPanel.Visible = not SettingsPanel.Visible
-	if SettingsPanel.Visible then
-		SettingsPanel.Size = UDim2.new(0, 260, 0, 190)
-		TweenService:Create(SettingsPanel, TweenInfo.new(0.18, Enum.EasingStyle.Back), {Size = UDim2.new(0, 300, 0, 216)}):Play()
-	end
+	isMinimized = not isMinimized
+	Frame.Size = isMinimized and UDim2.new(0, 392, 0, 64) or UDim2.new(0, 392, 0, 565)
+	ContentContainer.Visible = not isMinimized
 end)
 
 CloseBtn.MouseButton1Click:Connect(function() ScreenGui:Destroy() end)
-SettingsClose.MouseButton1Click:Connect(function() SettingsPanel.Visible = false end)
-
-HistoryOpenBtn.MouseButton1Click:Connect(function()
-	SettingsPanel.Visible = false
-	HistoryOverlay.Visible = true
-	refreshHistoryUI()
-	HistoryBox.Size = UDim2.new(0, 280, 0, 330)
-	TweenService:Create(HistoryBox, TweenInfo.new(0.18, Enum.EasingStyle.Back), {Size = UDim2.new(0, 330, 0, 380)}):Play()
-end)
-HistoryClose.MouseButton1Click:Connect(function() HistoryOverlay.Visible = false end)
-HistoryOverlay.MouseButton1Click:Connect(function() HistoryOverlay.Visible = false end)
-
-local draggingSize = false
-local function setSizeFromMouse(mouseX)
-	local rel = math.clamp((mouseX - SizeSlider.AbsolutePosition.X) / SizeSlider.AbsoluteSize.X, 0, 1)
-	local newScale = 0.7 + rel * 0.6
-	uiScaleValue = math.floor(newScale * 100) / 100
-	UIScale.Scale = uiScaleValue
-	SizeValue.Text = string.format("%.2fx", uiScaleValue)
-	SizeFill.Size = UDim2.new(rel, 0, 1, 0)
-	SizeKnob.Position = UDim2.new(rel, 0, 0.5, 0)
-end
-
-SizeSlider.InputBegan:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-		draggingSize = true
-		setSizeFromMouse(input.Position.X)
-	end
-end)
-SizeKnob.InputBegan:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-		draggingSize = true
-	end
-end)
-UserInputService.InputChanged:Connect(function(input)
-	if draggingSize and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-		setSizeFromMouse(input.Position.X)
-	end
-end)
-UserInputService.InputEnded:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-		draggingSize = false
-	end
-end)
-
--- HỖ TRỢ KÉO THẢ TOÀN BỘ KHUNG MENU
-local dragging = false
-local dragStart, startPos
-Frame.InputBegan:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-		local mouse = UserInputService:GetMouseLocation()
-		for _, btn in ipairs({MinBtn, MenuBtn, CloseBtn, PredictBtn}) do
-			if btn and btn.Parent then
-				local abspos, abssize = btn.AbsolutePosition, btn.AbsoluteSize
-				if mouse.X >= abspos.X and mouse.X <= abspos.X + abssize.X and mouse.Y >= abspos.Y and mouse.Y <= abspos.Y + abssize.Y then 
-					return 
-				end
-			end
-		end
-		dragging = true
-		dragStart = input.Position
-		startPos = Frame.Position
-	end
-end)
-UserInputService.InputChanged:Connect(function(input)
-	if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-		local delta = input.Position - dragStart
-		Frame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-	end
-end)
-UserInputService.InputEnded:Connect(function(input)
-	if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-		dragging = false
-	end
-end)
 
 Footer.Text = string.format("Rolls 0 • Next #1 • Bet %d", betAmount)
-updateToggleUI()
-
