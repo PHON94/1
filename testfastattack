@@ -1,6 +1,6 @@
 -- Configuration
-local CorrectKey = "MY_SECRET_KEY_123"
-local MainScriptUrl = "https://raw.githubusercontent.com/EdgeIY/infiniteyield/master/source" -- Replace with your raw script URL
+local CorrectKey = "Phong"
+local MainScriptUrl = "https://raw.githubusercontent.com/PHON94/1/refs/heads/main/source" -- Replace with your raw script URL
 
 -- UI Setup
 local ScreenGui = Instance.new("ScreenGui")
