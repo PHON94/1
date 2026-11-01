@@ -48,7 +48,7 @@ ScreenGui.Parent = PlayerGui
 -- Fa4e7xx ur dad btw
 local Frame = Instance.new("Frame")
 Frame.AnchorPoint = Vector2.new(0.5, 0)
-Frame.Position = UDim2.new(0.5, 0, 0.5, -270)
+Frame.Position = UDim2.new(0.5, -196, 0.5, -282)
 Frame.Size = UDim2.new(0, 392, 0, 565) 
 Frame.BackgroundColor3 = Color3.fromRGB(10, 9, 15)
 Frame.BackgroundTransparency = 0
