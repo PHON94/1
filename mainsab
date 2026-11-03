@@ -1,1073 +1,491 @@
---[[
-    PHONG HUB - STEAL A BRAINROT
-    Version: 1.2
-    Features: ESP, Xray, Invisible Tag, Speed, Carpet Speed, Infinite Jump, Aim Assist, Auto Defense, Item Assist
-    Auto Steal has been removed.
-]]
+
+-- KEEP MAIN | STEAL A BRAINROT
+-- Draggable + Minimize + Auto Steal
+-- Uses normal ProximityPrompt interaction.
 
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
-local Workspace = game:GetService("Workspace")
 
-local LocalPlayer = Players.LocalPlayer
-
---==================================================
--- CONFIG
---==================================================
+local Player = Players.LocalPlayer
 
 local Config = {
-    PlayerESP = false,
-    BrainrotESP = false,
-
-    PlayerName = true,
-    PlayerDistance = true,
-    PlayerBox = true,
-    PlayerChams = false,
-
-    BrainrotName = true,
-    BrainrotDistance = true,
-    BrainrotBox = true,
-    BrainrotChams = false,
-
-    Xray = false,
-    XrayTransparency = 0.72,
-
-    PlayerInvisibleTag = true,
-    Speed = false,
-    WalkSpeed = 30,
-    CarpetSpeed = false,
-    CarpetSpeedValue = 130,
-    InfiniteJump = false,
-    Aimbot = false,
-    AimTargetPart = "HumanoidRootPart",
-    AimTargetMode = "Nearest Distance",
-    AimMaxDistance = 250,
-    AimFOV = 180,
-    AimTeamCheck = false,
-    AimVisibleCheck = false,
-    AutoDefense = false,
-    AutoPotionShield = false,
-
-    UpdateDelay = 0.25,
+    AutoSteal = false,
+    StealRadius = 60,
+    ScanDelay = 0.15,
+    AntiBat = false,
+    Visuals = {
+        PlayerESP = false, PlayerBox = false, PlayerTracer = false,
+        PlayerName = true, PlayerDistance = true, PlayerHealth = true,
+        BaseESP = false, TimerESP = false, DeliveryESP = false,
+        CloneESP = false, MineESP = false
+    }
 }
-
-local COLORS = {
-    Background = Color3.fromRGB(15, 17, 24),
-    Header = Color3.fromRGB(23, 27, 38),
-    Panel = Color3.fromRGB(25, 29, 41),
-    Row = Color3.fromRGB(32, 37, 51),
-    RowHover = Color3.fromRGB(40, 47, 64),
-    Accent = Color3.fromRGB(0, 166, 255),
-    AccentDark = Color3.fromRGB(0, 112, 190),
-    Text = Color3.fromRGB(240, 243, 250),
-    Muted = Color3.fromRGB(145, 155, 174),
-    Green = Color3.fromRGB(70, 210, 140),
-    Red = Color3.fromRGB(245, 95, 105),
-}
-
---==================================================
--- GUI PARENT
---==================================================
 
 local Gui = Instance.new("ScreenGui")
-Gui.Name = "PhongHubVisuals"
+Gui.Name = "KeepMainUI"
 Gui.ResetOnSpawn = false
-Gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
-local parented = false
+if syn and syn.protect_gui then
+    syn.protect_gui(Gui)
+    Gui.Parent = game:GetService("CoreGui")
+elseif gethui then
+    Gui.Parent = gethui()
+else
+    Gui.Parent = Player:WaitForChild("PlayerGui")
+end
 
-pcall(function()
-    if syn and syn.protect_gui then
-        syn.protect_gui(Gui)
-        Gui.Parent = game:GetService("CoreGui")
-        parented = true
+local function Create(class, props, parent)
+    local obj = Instance.new(class)
+    for k, v in pairs(props) do
+        obj[k] = v
     end
-end)
-
-if not parented then
-    pcall(function()
-        if type(gethui) == "function" then
-            Gui.Parent = gethui()
-            parented = true
-        end
-    end)
+    obj.Parent = parent
+    return obj
 end
 
-if not parented then
-    Gui.Parent = LocalPlayer:WaitForChild("PlayerGui")
-end
-
---==================================================
--- UI HELPERS
---==================================================
-
-local function Create(className, properties, parent)
-    local object = Instance.new(className)
-
-    for property, value in pairs(properties or {}) do
-        object[property] = value
-    end
-
-    object.Parent = parent
-    return object
-end
-
-local function Corner(object, radius)
+local function Corner(obj, radius)
     Create("UICorner", {
         CornerRadius = UDim.new(0, radius)
-    }, object)
+    }, obj)
 end
 
-local function Stroke(object, color, thickness, transparency)
-    return Create("UIStroke", {
-        Color = color or COLORS.Accent,
-        Thickness = thickness or 1,
-        Transparency = transparency or 0,
-    }, object)
-end
-
-local function Tween(object, properties, duration)
+local function Tween(obj, props, duration)
     TweenService:Create(
-        object,
+        obj,
         TweenInfo.new(
-            duration or 0.18,
+            duration or 0.25,
             Enum.EasingStyle.Quart,
             Enum.EasingDirection.Out
         ),
-        properties
+        props
     ):Play()
 end
 
-local function MakeLabel(parent, text, size, position, fontSize, color, bold)
-    return Create("TextLabel", {
-        BackgroundTransparency = 1,
-        Position = position or UDim2.new(),
-        Size = size,
-        Text = text,
-        TextColor3 = color or COLORS.Text,
-        Font = bold and Enum.Font.GothamBold or Enum.Font.Gotham,
-        TextSize = fontSize or 12,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        TextYAlignment = Enum.TextYAlignment.Center,
-    }, parent)
-end
-
---==================================================
--- MAIN WINDOW
---==================================================
+-- WINDOW
 
 local Main = Create("Frame", {
-    Name = "Main",
-    Size = UDim2.fromOffset(560, 380),
-    Position = UDim2.new(0.5, -280, 0.5, -190),
-    BackgroundColor3 = COLORS.Background,
+    Name = "MainFrame",
+    Size = UDim2.fromOffset(420, 430),
+    Position = UDim2.new(0.5, -210, 0.5, -215),
+    BackgroundColor3 = Color3.fromRGB(17, 19, 27),
     BorderSizePixel = 0,
     Active = true,
-    ClipsDescendants = true,
+    ClipsDescendants = true
 }, Gui)
 
-Corner(Main, 13)
-Stroke(Main, COLORS.Accent, 1.4, 0.15)
+Corner(Main, 12)
 
-local Header = Create("Frame", {
-    Name = "Header",
-    Size = UDim2.new(1, 0, 0, 45),
-    BackgroundColor3 = COLORS.Header,
-    BorderSizePixel = 0,
-    Active = true,
+Create("UIStroke", {
+    Color = Color3.fromRGB(0, 160, 255),
+    Thickness = 1.5
 }, Main)
 
-Corner(Header, 13)
+-- HEADER
 
-MakeLabel(
-    Header,
-    "PHONG HUB",
-    UDim2.new(0, 150, 1, 0),
-    UDim2.fromOffset(16, 0),
-    15,
-    COLORS.Text,
-    true
-)
+local Header = Create("Frame", {
+    Size = UDim2.new(1, 0, 0, 48),
+    BackgroundColor3 = Color3.fromRGB(25, 29, 42),
+    BorderSizePixel = 0,
+    Active = true
+}, Main)
 
-MakeLabel(
-    Header,
-    "STEAL A BRAINROT  •  VISUALS",
-    UDim2.new(0, 260, 1, 0),
-    UDim2.fromOffset(128, 0),
-    10,
-    COLORS.Muted,
-    false
-)
+Corner(Header, 12)
+
+Create("TextLabel", {
+    Position = UDim2.fromOffset(15, 0),
+    Size = UDim2.new(1, -65, 1, 0),
+    BackgroundTransparency = 1,
+    Text = "KEEP MAIN  |  STEAL A BRAINROT",
+    TextColor3 = Color3.fromRGB(255, 255, 255),
+    Font = Enum.Font.GothamBold,
+    TextSize = 14,
+    TextXAlignment = Enum.TextXAlignment.Left
+}, Header)
 
 local Minimize = Create("TextButton", {
-    Position = UDim2.new(1, -42, 0, 9),
+    Position = UDim2.new(1, -40, 0, 9),
     Size = UDim2.fromOffset(27, 27),
-    BackgroundColor3 = COLORS.Row,
+    BackgroundColor3 = Color3.fromRGB(40, 45, 60),
     Text = "–",
-    TextColor3 = COLORS.Text,
+    TextColor3 = Color3.fromRGB(255, 255, 255),
     Font = Enum.Font.GothamBold,
-    TextSize = 20,
-    AutoButtonColor = false,
+    TextSize = 20
 }, Header)
 
 Corner(Minimize, 7)
 
-local TabBar = Create("Frame", {
-    Position = UDim2.fromOffset(10, 51),
-    Size = UDim2.new(1, -20, 0, 30),
-    BackgroundTransparency = 1,
+-- CONTENT
+
+local Content = Create("Frame", {
+    Position = UDim2.fromOffset(15, 60),
+    Size = UDim2.new(1, -30, 1, -75),
+    BackgroundTransparency = 1
 }, Main)
 
-local TabLayout = Create("UIListLayout", {
-    FillDirection = Enum.FillDirection.Horizontal,
-    SortOrder = Enum.SortOrder.LayoutOrder,
-    Padding = UDim.new(0, 5),
-}, TabBar)
-
-local PageHolder = Create("Frame", {
-    Position = UDim2.fromOffset(10, 88),
-    Size = UDim2.new(1, -20, 1, -98),
+Create("TextLabel", {
+    Size = UDim2.new(1, 0, 0, 30),
     BackgroundTransparency = 1,
-    ClipsDescendants = true,
-}, Main)
+    Text = "AUTO STEAL",
+    TextColor3 = Color3.fromRGB(255, 255, 255),
+    Font = Enum.Font.GothamBold,
+    TextSize = 19,
+    TextXAlignment = Enum.TextXAlignment.Left
+}, Content)
 
-local TabNames = {
-    "Stealing",
-    "Player",
-    "Visuals",
-    "Admin",
-    "Misc",
-    "Configs",
+Create("TextLabel", {
+    Position = UDim2.fromOffset(0, 30),
+    Size = UDim2.new(1, 0, 0, 22),
+    BackgroundTransparency = 1,
+    Text = "Automatic ProximityPrompt interaction",
+    TextColor3 = Color3.fromRGB(145, 155, 175),
+    Font = Enum.Font.Gotham,
+    TextSize = 11,
+    TextXAlignment = Enum.TextXAlignment.Left
+}, Content)
+
+-- TOGGLE
+
+local Toggle = Create("TextButton", {
+    Position = UDim2.fromOffset(0, 65),
+    Size = UDim2.new(1, 0, 0, 42),
+    BackgroundColor3 = Color3.fromRGB(35, 40, 52),
+    Text = "AUTO STEAL: OFF",
+    TextColor3 = Color3.fromRGB(255, 255, 255),
+    Font = Enum.Font.GothamBold,
+    TextSize = 13,
+    AutoButtonColor = false
+}, Content)
+
+Corner(Toggle, 8)
+
+local AntiBatToggle = Create("TextButton", {
+    Position = UDim2.fromOffset(0, 115),
+    Size = UDim2.new(1, 0, 0, 38),
+    BackgroundColor3 = Color3.fromRGB(35, 40, 52),
+    Text = "ANTI BAT: OFF",
+    TextColor3 = Color3.fromRGB(255, 255, 255),
+    Font = Enum.Font.GothamBold,
+    TextSize = 13,
+    AutoButtonColor = false
+}, Content)
+
+Corner(AntiBatToggle, 8)
+
+local Status = Create("TextLabel", {
+    Position = UDim2.fromOffset(0, 160),
+    Size = UDim2.new(1, 0, 0, 24),
+    BackgroundTransparency = 1,
+    Text = "● SYSTEM READY",
+    TextColor3 = Color3.fromRGB(80, 210, 140),
+    Font = Enum.Font.Gotham,
+    TextSize = 11,
+    TextXAlignment = Enum.TextXAlignment.Left
+}, Content)
+
+local AntiBatStatus = Create("TextLabel", {
+    Position = UDim2.fromOffset(0, 182),
+    Size = UDim2.new(1, 0, 0, 20),
+    BackgroundTransparency = 1,
+    Text = "● ANTI BAT DISABLED",
+    TextColor3 = Color3.fromRGB(180, 180, 190),
+    Font = Enum.Font.Gotham,
+    TextSize = 10,
+    TextXAlignment = Enum.TextXAlignment.Left
+}, Content)
+
+-- RADIUS CONTROL
+
+Create("TextLabel", {
+    Position = UDim2.fromOffset(0, 210),
+    Size = UDim2.fromOffset(130, 25),
+    BackgroundTransparency = 1,
+    Text = "STEAL RADIUS",
+    TextColor3 = Color3.fromRGB(190, 195, 210),
+    Font = Enum.Font.GothamBold,
+    TextSize = 11,
+    TextXAlignment = Enum.TextXAlignment.Left
+}, Content)
+
+local RadiusValue = Create("TextLabel", {
+    Position = UDim2.new(1, -55, 0, 210),
+    Size = UDim2.fromOffset(55, 25),
+    BackgroundTransparency = 1,
+    Text = "60",
+    TextColor3 = Color3.fromRGB(0, 180, 255),
+    Font = Enum.Font.GothamBold,
+    TextSize = 13
+}, Content)
+
+local Minus = Create("TextButton", {
+    Position = UDim2.fromOffset(0, 240),
+    Size = UDim2.fromOffset(42, 30),
+    BackgroundColor3 = Color3.fromRGB(35, 40, 52),
+    Text = "-",
+    TextColor3 = Color3.fromRGB(255, 255, 255),
+    Font = Enum.Font.GothamBold,
+    TextSize = 18
+}, Content)
+
+Corner(Minus, 6)
+
+local Plus = Create("TextButton", {
+    Position = UDim2.fromOffset(50, 240),
+    Size = UDim2.fromOffset(42, 30),
+    BackgroundColor3 = Color3.fromRGB(35, 40, 52),
+    Text = "+",
+    TextColor3 = Color3.fromRGB(255, 255, 255),
+    Font = Enum.Font.GothamBold,
+    TextSize = 18
+}, Content)
+
+Corner(Plus, 6)
+
+local function UpdateRadius()
+    RadiusValue.Text = tostring(Config.StealRadius)
+end
+
+Minus.MouseButton1Click:Connect(function()
+    Config.StealRadius = math.max(10, Config.StealRadius - 5)
+    UpdateRadius()
+end)
+
+Plus.MouseButton1Click:Connect(function()
+    Config.StealRadius = math.min(150, Config.StealRadius + 5)
+    UpdateRadius()
+end)
+
+-- PROGRESS BAR
+
+local BarBackground = Create("Frame", {
+    Position = UDim2.fromOffset(0, 285),
+    Size = UDim2.new(1, 0, 0, 9),
+    BackgroundColor3 = Color3.fromRGB(35, 40, 52),
+    BorderSizePixel = 0,
+    ClipsDescendants = true
+}, Content)
+
+Corner(BarBackground, 10)
+
+local BarFill = Create("Frame", {
+    Size = UDim2.new(0, 0, 1, 0),
+    BackgroundColor3 = Color3.fromRGB(0, 160, 255),
+    BorderSizePixel = 0
+}, BarBackground)
+
+Corner(BarFill, 10)
+
+local function SetProgress(value)
+    Tween(BarFill, {
+        Size = UDim2.new(math.clamp(value, 0, 1), 0, 1, 0)
+    }, 0.12)
+end
+
+
+-- VISUALS PANEL ENTRY
+local VisualsButton = Create("TextButton", {
+    Position = UDim2.fromOffset(0, 305),
+    Size = UDim2.new(1, 0, 0, 34),
+    BackgroundColor3 = Color3.fromRGB(28, 75, 105),
+    Text = "OPEN VISUALS  >",
+    TextColor3 = Color3.fromRGB(255, 255, 255),
+    Font = Enum.Font.GothamBold,
+    TextSize = 12,
+    AutoButtonColor = false
+}, Content)
+Corner(VisualsButton, 7)
+
+-- CHARACTER
+
+local function GetRoot()
+    local character = Player.Character
+    if not character then return nil end
+
+    return character:FindFirstChild("HumanoidRootPart")
+        or character:FindFirstChild("UpperTorso")
+end
+
+
+-- ANTI BAT GUARD (adapted from the supplied Slaxer source)
+-- No remote loader, no hidden HttpGet, and no external code execution.
+local SAFE_GUARD = {
+    SpikeDelta = 110,
+    MaxFrameDelta = 0.2,
+    MaxVerticalAfterHit = 80,
+    RecoverRagdoll = true
 }
 
-local Tabs = {}
-local Pages = {}
+local antiBatConnection = nil
+local lastAntiBatVelocity = Vector3.new(0, 0, 0)
 
-local function MakePage(name)
-    local page = Create("ScrollingFrame", {
-        Name = name .. "Page",
-        Size = UDim2.fromScale(1, 1),
-        BackgroundTransparency = 1,
-        BorderSizePixel = 0,
-        ScrollBarThickness = 3,
-        ScrollBarImageColor3 = COLORS.Accent,
-        CanvasSize = UDim2.new(),
-        AutomaticCanvasSize = Enum.AutomaticSize.Y,
-        Visible = false,
-    }, PageHolder)
-
-    Create("UIPadding", {
-        PaddingTop = UDim.new(0, 3),
-        PaddingBottom = UDim.new(0, 8),
-        PaddingLeft = UDim.new(0, 3),
-        PaddingRight = UDim.new(0, 7),
-    }, page)
-
-    Create("UIListLayout", {
-        Padding = UDim.new(0, 9),
-        SortOrder = Enum.SortOrder.LayoutOrder,
-    }, page)
-
-    Pages[name] = page
-    return page
+local function GetHumanoid()
+    local character = Player.Character
+    return character and character:FindFirstChildOfClass("Humanoid")
 end
 
-local function SelectTab(name)
-    for tabName, tabData in pairs(Tabs) do
-        local selected = tabName == name
-
-        Tween(tabData.Button, {
-            BackgroundColor3 = selected and COLORS.AccentDark or COLORS.Header,
-            TextColor3 = selected and COLORS.Text or COLORS.Muted,
-        }, 0.15)
-
-        tabData.Underline.Visible = selected
-        Pages[tabName].Visible = selected
+local function GetVelocity(root)
+    local ok, velocity = pcall(function()
+        return root.AssemblyLinearVelocity
+    end)
+    if ok and typeof(velocity) == "Vector3" then
+        return velocity
     end
+    return root.Velocity
 end
 
-for index, name in ipairs(TabNames) do
-    local button = Create("TextButton", {
-        Name = name .. "Tab",
-        Size = UDim2.new(1 / #TabNames, -5, 1, 0),
-        BackgroundColor3 = COLORS.Header,
-        BorderSizePixel = 0,
-        Text = name,
-        TextColor3 = COLORS.Muted,
-        Font = Enum.Font.GothamBold,
-        TextSize = 9,
-        AutoButtonColor = false,
-        LayoutOrder = index,
-    }, TabBar)
-
-    Corner(button, 7)
-
-    local underline = Create("Frame", {
-        AnchorPoint = Vector2.new(0.5, 1),
-        Position = UDim2.new(0.5, 0, 1, -2),
-        Size = UDim2.new(0.55, 0, 0, 2),
-        BackgroundColor3 = COLORS.Accent,
-        BorderSizePixel = 0,
-        Visible = false,
-    }, button)
-
-    Corner(underline, 2)
-
-    MakePage(name)
-
-    Tabs[name] = {
-        Button = button,
-        Underline = underline,
-    }
-
-    button.MouseButton1Click:Connect(function()
-        SelectTab(name)
+local function SetVelocity(root, velocity)
+    local ok = pcall(function()
+        root.AssemblyLinearVelocity = velocity
     end)
-end
-
---==================================================
--- PAGE / CONTROL HELPERS
---==================================================
-
-local function MakeCard(parent, title, description)
-    local card = Create("Frame", {
-        Size = UDim2.new(1, -5, 0, 0),
-        AutomaticSize = Enum.AutomaticSize.Y,
-        BackgroundColor3 = COLORS.Panel,
-        BorderSizePixel = 0,
-    }, parent)
-
-    Corner(card, 9)
-    Stroke(card, Color3.fromRGB(55, 64, 82), 1, 0.65)
-
-    local padding = Create("UIPadding", {
-        PaddingTop = UDim.new(0, 10),
-        PaddingBottom = UDim.new(0, 10),
-        PaddingLeft = UDim.new(0, 11),
-        PaddingRight = UDim.new(0, 11),
-    }, card)
-
-    local layout = Create("UIListLayout", {
-        Padding = UDim.new(0, 7),
-        SortOrder = Enum.SortOrder.LayoutOrder,
-    }, card)
-
-    local heading = MakeLabel(
-        card,
-        title,
-        UDim2.new(1, 0, 0, 19),
-        nil,
-        12,
-        COLORS.Accent,
-        true
-    )
-    heading.LayoutOrder = 1
-
-    if description then
-        local desc = MakeLabel(
-            card,
-            description,
-            UDim2.new(1, 0, 0, 25),
-            nil,
-            10,
-            COLORS.Muted,
-            false
-        )
-        desc.TextWrapped = true
-        desc.LayoutOrder = 2
-    end
-
-    return card
-end
-
-local function AddToggle(parent, title, description, configKey, callback)
-    local row = Create("TextButton", {
-        Size = UDim2.new(1, 0, 0, description and 51 or 39),
-        BackgroundColor3 = COLORS.Row,
-        BorderSizePixel = 0,
-        Text = "",
-        AutoButtonColor = false,
-    }, parent)
-
-    Corner(row, 7)
-
-    local titleLabel = MakeLabel(
-        row,
-        title,
-        UDim2.new(1, -75, 0, 20),
-        UDim2.fromOffset(10, description and 5 or 9),
-        11,
-        COLORS.Text,
-        true
-    )
-
-    if description then
-        local descLabel = MakeLabel(
-            row,
-            description,
-            UDim2.new(1, -75, 0, 17),
-            UDim2.fromOffset(10, 26),
-            9,
-            COLORS.Muted,
-            false
-        )
-        descLabel.TextTruncate = Enum.TextTruncate.AtEnd
-    end
-
-    local switch = Create("Frame", {
-        AnchorPoint = Vector2.new(1, 0.5),
-        Position = UDim2.new(1, -10, 0.5, 0),
-        Size = UDim2.fromOffset(36, 19),
-        BackgroundColor3 = Config[configKey] and COLORS.Accent or Color3.fromRGB(65, 72, 88),
-        BorderSizePixel = 0,
-    }, row)
-
-    Corner(switch, 20)
-
-    local knob = Create("Frame", {
-        Size = UDim2.fromOffset(13, 13),
-        Position = Config[configKey] and UDim2.new(1, -16, 0.5, -6) or UDim2.fromOffset(3, 3),
-        BackgroundColor3 = Color3.fromRGB(255, 255, 255),
-        BorderSizePixel = 0,
-    }, switch)
-
-    Corner(knob, 20)
-
-    local function Refresh()
-        local enabled = Config[configKey]
-        Tween(switch, {
-            BackgroundColor3 = enabled and COLORS.Accent or Color3.fromRGB(65, 72, 88),
-        }, 0.13)
-
-        Tween(knob, {
-            Position = enabled and UDim2.new(1, -16, 0.5, -6) or UDim2.fromOffset(3, 3),
-        }, 0.13)
-    end
-
-    row.MouseEnter:Connect(function()
-        Tween(row, { BackgroundColor3 = COLORS.RowHover }, 0.12)
-    end)
-
-    row.MouseLeave:Connect(function()
-        Tween(row, { BackgroundColor3 = COLORS.Row }, 0.12)
-    end)
-
-    row.MouseButton1Click:Connect(function()
-        Config[configKey] = not Config[configKey]
-        Refresh()
-
-        if callback then
-            callback(Config[configKey])
-        end
-    end)
-
-    return Refresh
-end
-
-local function AddSlider(parent, title, configKey, minimum, maximum, step, callback)
-    local row = Create("Frame", {
-        Size = UDim2.new(1, 0, 0, 54),
-        BackgroundColor3 = COLORS.Row,
-        BorderSizePixel = 0,
-    }, parent)
-
-    Corner(row, 7)
-
-    MakeLabel(
-        row,
-        title,
-        UDim2.new(1, -65, 0, 19),
-        UDim2.fromOffset(10, 5),
-        11,
-        COLORS.Text,
-        true
-    )
-
-    local valueLabel = MakeLabel(
-        row,
-        string.format("%.2f", Config[configKey]),
-        UDim2.fromOffset(55, 19),
-        UDim2.new(1, -63, 0, 5),
-        10,
-        COLORS.Accent,
-        true
-    )
-    valueLabel.TextXAlignment = Enum.TextXAlignment.Right
-
-    local track = Create("Frame", {
-        Position = UDim2.fromOffset(10, 34),
-        Size = UDim2.new(1, -20, 0, 6),
-        BackgroundColor3 = Color3.fromRGB(60, 68, 83),
-        BorderSizePixel = 0,
-    }, row)
-
-    Corner(track, 5)
-
-    local fill = Create("Frame", {
-        Size = UDim2.new(
-            (Config[configKey] - minimum) / (maximum - minimum),
-            0,
-            1,
-            0
-        ),
-        BackgroundColor3 = COLORS.Accent,
-        BorderSizePixel = 0,
-    }, track)
-
-    Corner(fill, 5)
-
-    local hitbox = Create("TextButton", {
-        Position = UDim2.new(0, 0, 0.5, -10),
-        Size = UDim2.new(1, 0, 0, 20),
-        BackgroundTransparency = 1,
-        Text = "",
-        AutoButtonColor = false,
-    }, track)
-
-    local dragging = false
-
-    local function SetFromX(x)
-        local alpha = math.clamp(
-            (x - track.AbsolutePosition.X) / math.max(track.AbsoluteSize.X, 1),
-            0,
-            1
-        )
-
-        local value = minimum + (maximum - minimum) * alpha
-        value = math.floor(value / step + 0.5) * step
-        value = math.clamp(value, minimum, maximum)
-
-        Config[configKey] = value
-        fill.Size = UDim2.new(
-            (value - minimum) / (maximum - minimum),
-            0,
-            1,
-            0
-        )
-        valueLabel.Text = string.format("%.2f", value)
-
-        if callback then
-            callback(value)
-        end
-    end
-
-    hitbox.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1
-            or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = true
-            SetFromX(input.Position.X)
-        end
-    end)
-
-    UserInputService.InputChanged:Connect(function(input)
-        if dragging and (
-            input.UserInputType == Enum.UserInputType.MouseMovement
-            or input.UserInputType == Enum.UserInputType.Touch
-        ) then
-            SetFromX(input.Position.X)
-        end
-    end)
-
-    UserInputService.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1
-            or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = false
-        end
-    end)
-end
-
-local function AddCycle(parent, title, configKey, options)
-    local row = Create("TextButton", {
-        Size = UDim2.new(1, 0, 0, 39),
-        BackgroundColor3 = COLORS.Row,
-        BorderSizePixel = 0,
-        Text = "",
-        AutoButtonColor = false,
-    }, parent)
-    Corner(row, 7)
-
-    MakeLabel(
-        row,
-        title,
-        UDim2.new(1, -125, 1, 0),
-        UDim2.fromOffset(10, 0),
-        11,
-        COLORS.Text,
-        true
-    )
-
-    local valueLabel = MakeLabel(
-        row,
-        tostring(Config[configKey]),
-        UDim2.fromOffset(112, 25),
-        UDim2.new(1, -120, 0.5, -12),
-        9,
-        COLORS.Accent,
-        true
-    )
-    valueLabel.TextXAlignment = Enum.TextXAlignment.Right
-
-    local function refresh()
-        valueLabel.Text = tostring(Config[configKey])
-    end
-
-    row.MouseEnter:Connect(function()
-        Tween(row, { BackgroundColor3 = COLORS.RowHover }, 0.12)
-    end)
-    row.MouseLeave:Connect(function()
-        Tween(row, { BackgroundColor3 = COLORS.Row }, 0.12)
-    end)
-    row.MouseButton1Click:Connect(function()
-        local currentIndex = table.find(options, Config[configKey]) or 0
-        currentIndex += 1
-        if currentIndex > #options then currentIndex = 1 end
-        Config[configKey] = options[currentIndex]
-        refresh()
-    end)
-
-    return refresh
-end
-
-local function AddInfo(parent, title, message)
-    local box = Create("Frame", {
-        Size = UDim2.new(1, 0, 0, 62),
-        BackgroundColor3 = COLORS.Row,
-        BorderSizePixel = 0,
-    }, parent)
-
-    Corner(box, 7)
-
-    MakeLabel(
-        box,
-        title,
-        UDim2.new(1, -20, 0, 20),
-        UDim2.fromOffset(10, 6),
-        11,
-        COLORS.Accent,
-        true
-    )
-
-    local body = MakeLabel(
-        box,
-        message,
-        UDim2.new(1, -20, 0, 27),
-        UDim2.fromOffset(10, 29),
-        10,
-        COLORS.Muted,
-        false
-    )
-    body.TextWrapped = true
-end
-
---==================================================
--- VISUALS PAGE
---==================================================
-
-local VisualsPage = Pages.Visuals
-
-local playerCard = MakeCard(
-    VisualsPage,
-    "PLAYER ESP",
-    "Hiển thị thông tin người chơi khác trong trận."
-)
-
-AddToggle(playerCard, "Player ESP", "Bật/tắt toàn bộ ESP người chơi.", "PlayerESP")
-AddToggle(playerCard, "Name", "Hiển thị tên người chơi.", "PlayerName")
-AddToggle(playerCard, "Distance", "Hiển thị khoảng cách.", "PlayerDistance")
-AddToggle(playerCard, "Box", "Hiển thị viền quanh nhân vật.", "PlayerBox")
-AddToggle(playerCard, "Chams", "Tô sáng nhân vật qua vật cản.", "PlayerChams")
-AddToggle(playerCard, "Invisible Tag", "Đánh dấu người chơi có trạng thái tàng hình theo attribute của game.", "PlayerInvisibleTag")
-
-local brainrotCard = MakeCard(
-    VisualsPage,
-    "BRAINROT ESP",
-    "Quét các khu AnimalPodiums trong workspace.Plots."
-)
-
-AddToggle(brainrotCard, "Brainrot ESP", "Bật/tắt ESP vật thể trong các podium.", "BrainrotESP")
-AddToggle(brainrotCard, "Name", "Hiển thị tên model/podium.", "BrainrotName")
-AddToggle(brainrotCard, "Distance", "Hiển thị khoảng cách tới podium.", "BrainrotDistance")
-AddToggle(brainrotCard, "Box", "Hiển thị viền model.", "BrainrotBox")
-AddToggle(brainrotCard, "Chams", "Tô sáng model qua vật cản.", "BrainrotChams")
-
-local xrayCard = MakeCard(
-    VisualsPage,
-    "BASE X-RAY",
-    "Làm mờ các phần của base đối thủ ở góc nhìn của bạn."
-)
-
-AddToggle(xrayCard, "Xray", "Bật/tắt làm mờ tường và cấu trúc base đối thủ.", "Xray")
-AddSlider(
-    xrayCard,
-    "Transparency",
-    "XrayTransparency",
-    0,
-    1,
-    0.05
-)
-
---==================================================
--- OTHER TABS
---==================================================
-
-AddInfo(
-    Pages.Stealing,
-    "AUTO STEAL REMOVED",
-    "Chức năng Auto Steal cũ đã được gỡ khỏi bản này."
-)
-
-local movementCard = MakeCard(Pages.Player, "MOVEMENT", "Điều chỉnh tốc độ và khả năng nhảy.")
-AddToggle(movementCard, "Speed", "Bật tốc độ di chuyển tùy chỉnh.", "Speed")
-AddSlider(movementCard, "Walk Speed", "WalkSpeed", 16, 80, 1)
-AddToggle(movementCard, "Carpet Speed", "Tăng tốc khi đang cầm vật phẩm bay như thảm bay.", "CarpetSpeed")
-AddSlider(movementCard, "Carpet Speed Value", "CarpetSpeedValue", 16, 500, 1)
-
-AddToggle(movementCard, "Infinite Jump", "Cho phép nhảy liên tục khi đang ở trên không.", "InfiniteJump")
-
-local aimCard = MakeCard(Pages.Player, "AIM ASSIST", "Hỗ trợ chọn mục tiêu khi đang cầm vũ khí được game hỗ trợ.")
-AddToggle(aimCard, "Aimbot", "Bật/tắt hỗ trợ chọn mục tiêu; không tự động khai hỏa.", "Aimbot")
-AddCycle(aimCard, "Target Part", "AimTargetPart", {
-    "HumanoidRootPart",
-    "Head",
-    "UpperTorso",
-})
-AddCycle(aimCard, "Target Mode", "AimTargetMode", {
-    "Nearest Distance",
-    "Closest To Cursor",
-})
-AddSlider(aimCard, "Max Distance", "AimMaxDistance", 25, 500, 5)
-AddSlider(aimCard, "FOV Radius (0 = Off)", "AimFOV", 0, 500, 5)
-AddToggle(aimCard, "Team Check", "Bỏ qua người chơi cùng đội nếu game có Team.", "AimTeamCheck")
-AddToggle(aimCard, "Visibility Check", "Chỉ chọn mục tiêu không bị vật cản che khuất.", "AimVisibleCheck")
-
-local defenseCard = MakeCard(Pages.Admin, "AUTO DEFENSE", "Phát hiện người đang Stealing trong phạm vi base; cần Admin Panel và quyền chạy firesignal.")
-AddToggle(defenseCard, "Auto Defense", "Tự động phản ứng khi có người đang lấy đồ trong base.", "AutoDefense")
-
-local itemCard = MakeCard(Pages.Misc, "ITEM ASSIST", "Tự trang bị và kích hoạt vật phẩm có sẵn trong Backpack.")
-AddToggle(itemCard, "Auto Giant Potion + Grief Shield", "Tự dùng Grief Shield và Giant Potion khi đang bật.", "AutoPotionShield")
-
-AddInfo(
-    Pages.Configs,
-    "CONFIGS",
-    "Lưu và tải cấu hình sẽ được bổ sung ở bản tiếp theo."
-)
-
---==================================================
--- ESP ENGINE
---==================================================
-
-local ESPFolder = Create("Folder", {
-    Name = "PhongHubESP",
-}, Workspace)
-
-local ESPObjects = {}
-
-local function DestroyESP(key)
-    local data = ESPObjects[key]
-    if not data then
-        return
-    end
-
-    if data.Highlight then
+    if not ok then
         pcall(function()
-            data.Highlight:Destroy()
+            root.Velocity = velocity
         end)
     end
+end
 
-    if data.Billboard then
+local function SetAngularVelocity(root, velocity)
+    local ok = pcall(function()
+        root.AssemblyAngularVelocity = velocity
+    end)
+    if not ok then
         pcall(function()
-            data.Billboard:Destroy()
+            root.RotVelocity = velocity
         end)
     end
-
-    ESPObjects[key] = nil
 end
 
-local function ClearESP()
-    for key in pairs(ESPObjects) do
-        DestroyESP(key)
+local function IsRagdollState(humanoid)
+    local state = humanoid:GetState()
+    return state == Enum.HumanoidStateType.Physics
+        or state == Enum.HumanoidStateType.Ragdoll
+        or state == Enum.HumanoidStateType.FallingDown
+end
+
+local function ReenableMotors(character)
+    for _, item in ipairs(character:GetDescendants()) do
+        if item:IsA("Motor6D") and not item.Enabled then
+            item.Enabled = true
+        end
     end
 end
 
-local function GetAdornee(model)
-    if not model then
-        return nil
-    end
-
-    if model:IsA("BasePart") then
-        return model
-    end
-
-    if model:IsA("Model") then
-        return model.PrimaryPart
-            or model:FindFirstChild("HumanoidRootPart")
-            or model:FindFirstChildWhichIsA("BasePart", true)
-    end
-
-    return nil
+local function EnablePlayerControls()
+    pcall(function()
+        local scripts = Player:FindFirstChild("PlayerScripts")
+        local module = scripts and scripts:FindFirstChild("PlayerModule")
+        local controls = module and module:FindFirstChild("ControlModule")
+        if controls then
+            require(controls):Enable()
+        end
+    end)
 end
 
-local function GetObjectPosition(model, adornee)
-    if model and model:IsA("Model") then
-        local success, pivot = pcall(function()
-            return model:GetPivot()
+local function AntiBatStep(dt)
+    if not Config.AntiBat then return end
+
+    local character = Player.Character
+    local humanoid = GetHumanoid()
+    local root = GetRoot()
+
+    if not character or not humanoid or not root or humanoid.Health <= 0 then
+        return
+    end
+
+    local velocity = GetVelocity(root)
+    local velocityDelta = (velocity - lastAntiBatVelocity).Magnitude
+    local ragdolled = IsRagdollState(humanoid)
+    local suddenHit = velocityDelta > SAFE_GUARD.SpikeDelta
+        and dt > 0
+        and dt < SAFE_GUARD.MaxFrameDelta
+
+    if ragdolled and SAFE_GUARD.RecoverRagdoll then
+        pcall(function()
+            humanoid:ChangeState(Enum.HumanoidStateType.Running)
         end)
 
-        if success then
-            return pivot.Position
+        local camera = workspace.CurrentCamera
+        if camera then
+            camera.CameraSubject = humanoid
         end
+
+        EnablePlayerControls()
+        SetVelocity(root, Vector3.zero)
+        SetAngularVelocity(root, Vector3.zero)
+        ReenableMotors(character)
+
+    elseif suddenHit then
+        -- Keep normal movement input while limiting an abnormal launch.
+        local intended = humanoid.MoveDirection * humanoid.WalkSpeed
+        local safeY = math.clamp(
+            velocity.Y,
+            -SAFE_GUARD.MaxVerticalAfterHit,
+            SAFE_GUARD.MaxVerticalAfterHit
+        )
+
+        SetVelocity(root, Vector3.new(intended.X, safeY, intended.Z))
+        SetAngularVelocity(root, Vector3.zero)
     end
 
-    return adornee and adornee.Position or nil
+    lastAntiBatVelocity = GetVelocity(root)
 end
 
-local function CreateESP(key, model, adornee, color)
-    local data = ESPObjects[key]
+local function StartAntiBat()
+    if antiBatConnection then return end
 
-    if data and (
-        data.Model ~= model
-        or data.Adornee ~= adornee
-    ) then
-        DestroyESP(key)
-        data = nil
-    end
-
-    if not data then
-        local highlight = Create("Highlight", {
-            Name = "PhongHubHighlight",
-            Adornee = model,
-            Enabled = true,
-            FillColor = color,
-            OutlineColor = color,
-            FillTransparency = 1,
-            OutlineTransparency = 0,
-            DepthMode = Enum.HighlightDepthMode.AlwaysOnTop,
-        }, ESPFolder)
-
-        local billboard = Create("BillboardGui", {
-            Name = "PhongHubLabel",
-            Adornee = adornee,
-            AlwaysOnTop = true,
-            LightInfluence = 0,
-            MaxDistance = 2500,
-            Size = UDim2.fromOffset(190, 42),
-            StudsOffset = Vector3.new(0, 3.1, 0),
-            Enabled = true,
-        }, Gui)
-
-        local label = Create("TextLabel", {
-            Size = UDim2.fromScale(1, 1),
-            BackgroundTransparency = 1,
-            Text = "",
-            TextColor3 = color,
-            TextStrokeColor3 = Color3.new(0, 0, 0),
-            TextStrokeTransparency = 0.15,
-            Font = Enum.Font.GothamBold,
-            TextSize = 12,
-            TextWrapped = true,
-            TextYAlignment = Enum.TextYAlignment.Bottom,
-        }, billboard)
-
-        data = {
-            Model = model,
-            Adornee = adornee,
-            Highlight = highlight,
-            Billboard = billboard,
-            Label = label,
-        }
-
-        ESPObjects[key] = data
-    end
-
-    data.Highlight.Adornee = model
-    data.Billboard.Adornee = adornee
-
-    return data
+    local root = GetRoot()
+    lastAntiBatVelocity = root and GetVelocity(root) or Vector3.zero
+    antiBatConnection = RunService.Heartbeat:Connect(AntiBatStep)
 end
 
-local function PaintESP(data, color, text, boxEnabled, chamsEnabled)
-    data.Highlight.FillColor = color
-    data.Highlight.OutlineColor = color
-    data.Highlight.OutlineTransparency = boxEnabled and 0 or 1
-    data.Highlight.FillTransparency = chamsEnabled and 0.68 or 1
-    data.Highlight.Enabled = boxEnabled or chamsEnabled
-
-    data.Label.TextColor3 = color
-    data.Label.Text = text
-    data.Billboard.Enabled = text ~= ""
-end
-
---==================================================
--- PLAYER ESP
---==================================================
-
-local function UpdatePlayerESP(alive)
-    if not Config.PlayerESP then
-        return
-    end
-
-    local myCharacter = LocalPlayer.Character
-    local myRoot = myCharacter and myCharacter:FindFirstChild("HumanoidRootPart")
-
-    for _, target in ipairs(Players:GetPlayers()) do
-        if target ~= LocalPlayer then
-            local character = target.Character
-            local root = character and character:FindFirstChild("HumanoidRootPart")
-
-            if character and root then
-                local key = "Player_" .. tostring(target.UserId)
-                alive[key] = true
-
-                local color = Color3.fromRGB(245, 245, 255)
-                local lines = {}
-
-                if Config.PlayerName then
-                    lines[#lines + 1] = target.DisplayName or target.Name
-                end
-
-                if Config.PlayerDistance and myRoot then
-                    local distance = math.floor(
-                        (root.Position - myRoot.Position).Magnitude
-                    )
-                    lines[#lines + 1] = tostring(distance) .. "m"
-                end
-
-                if Config.PlayerInvisibleTag then
-                    local invisLevel = character:GetAttribute("InvisibilityLevel")
-                    if type(invisLevel) == "number" and invisLevel > 0 then
-                        local modelParts = 0
-                        for _, child in ipairs(character:GetChildren()) do
-                            if child:IsA("Model") then
-                                for _, descendant in ipairs(child:GetDescendants()) do
-                                    if descendant:IsA("BasePart") then
-                                        modelParts += 1
-                                        if modelParts >= 2 then break end
-                                    end
-                                end
-                            end
-                            if modelParts >= 2 then break end
-                        end
-                        if modelParts < 2 then
-                            lines[#lines + 1] = "INVISIBLE"
-                        end
-                    end
-                end
-
-                local data = CreateESP(
-                    key,
-                    character,
-                    root,
-                    color
-                )
-
-                PaintESP(
-                    data,
-                    color,
-                    table.concat(lines, "\n"),
-                    Config.PlayerBox,
-                    Config.PlayerChams
-                )
-            end
-        end
+local function StopAntiBat()
+    if antiBatConnection then
+        antiBatConnection:Disconnect()
+        antiBatConnection = nil
     end
 end
 
---==================================================
--- BRAINROT ESP
---==================================================
-
-local function GetPodiumModel(podium)
-    if podium:IsA("Model") then
-        return podium
-    end
-
-    local nestedModel = podium:FindFirstChildWhichIsA("Model", true)
-    if nestedModel then
-        return nestedModel
-    end
-
-    return podium
-end
-
-local function UpdateBrainrotESP(alive)
-    if not Config.BrainrotESP then
-        return
-    end
-
-    local plots = Workspace:FindFirstChild("Plots")
-    if not plots then
-        return
-    end
-
-    local myCharacter = LocalPlayer.Character
-    local myRoot = myCharacter and myCharacter:FindFirstChild("HumanoidRootPart")
-
-    for _, plot in ipairs(plots:GetChildren()) do
-        local podiums = plot:FindFirstChild("AnimalPodiums")
-
-        if podiums then
-            for _, podium in ipairs(podiums:GetChildren()) do
-                local model = GetPodiumModel(podium)
-                local adornee = GetAdornee(model)
-
-                if model and adornee then
-                    local key = "Brainrot_" .. podium:GetFullName()
-                    alive[key] = true
-
-                    local position = GetObjectPosition(model, adornee)
-                    local lines = {}
-
-                    if Config.BrainrotName then
-                        local displayName = model.Name
-
-                        -- Try to use a visible name label if the game has one.
-                        for _, descendant in ipairs(podium:GetDescendants()) do
-                            if descendant:IsA("TextLabel")
-                                and descendant.Visible
-                                and descendant.Text ~= "" then
-                                displayName = descendant.Text
-                                break
-                            end
-                        end
-
-                        lines[#lines + 1] = displayName
-                    end
-
-                    if Config.BrainrotDistance and myRoot and position then
-                        local distance = math.floor(
-                            (position - myRoot.Position).Magnitude
-                        )
-                        lines[#lines + 1] = tostring(distance) .. "m"
-                    end
-
-                    local color = Color3.fromRGB(255, 205, 90)
-                    local data = CreateESP(
-                        key,
-                        model,
-                        adornee,
-                        color
-                    )
-
-                    PaintESP(
-                        data,
-                        color,
-                        table.concat(lines, "\n"),
-                        Config.BrainrotBox,
-                        Config.BrainrotChams
-                    )
-                end
-            end
-        end
+local function UpdateAntiBatUI()
+    if Config.AntiBat then
+        AntiBatToggle.Text = "ANTI BAT: ON"
+        AntiBatToggle.BackgroundColor3 = Color3.fromRGB(150, 45, 55)
+        AntiBatStatus.Text = "● ANTI BAT ACTIVE"
+        AntiBatStatus.TextColor3 = Color3.fromRGB(100, 230, 140)
+    else
+        AntiBatToggle.Text = "ANTI BAT: OFF"
+        AntiBatToggle.BackgroundColor3 = Color3.fromRGB(35, 40, 52)
+        AntiBatStatus.Text = "● ANTI BAT DISABLED"
+        AntiBatStatus.TextColor3 = Color3.fromRGB(180, 180, 190)
     end
 end
 
---==================================================
--- X-RAY ENGINE
---==================================================
+AntiBatToggle.MouseButton1Click:Connect(function()
+    Config.AntiBat = not Config.AntiBat
 
-local XrayOriginals = {}
+    if Config.AntiBat then
+        StartAntiBat()
+    else
+        StopAntiBat()
+    end
+
+    UpdateAntiBatUI()
+end)
+
+Player.CharacterAdded:Connect(function()
+    lastAntiBatVelocity = Vector3.zero
+
+    task.wait(0.35)
+    if Config.AntiBat then
+        StopAntiBat()
+        StartAntiBat()
+    end
+end)
+
+Gui.Destroying:Connect(StopAntiBat)
+UpdateAntiBatUI()
+
+-- OWN PLOT CHECK
 
 local function IsMyPlot(plot)
     local sign = plot:FindFirstChild("PlotSign")
@@ -1078,497 +496,602 @@ local function IsMyPlot(plot)
         and yourBase.Enabled
 end
 
-local function RestoreXray()
-    for part, oldValue in pairs(XrayOriginals) do
-        if part and part.Parent then
-            pcall(function()
-                part.LocalTransparencyModifier = oldValue
-            end)
+-- PROMPT POSITION
+
+local function GetPromptPosition(prompt)
+    local parent = prompt.Parent
+
+    while parent and parent ~= workspace do
+        if parent:IsA("BasePart") then
+            return parent.Position
         end
 
-        XrayOriginals[part] = nil
+        parent = parent.Parent
     end
+
+    return nil
 end
 
-local function UpdateXray()
-    if not Config.Xray then
-        if next(XrayOriginals) then
-            RestoreXray()
-        end
-        return
-    end
+-- FIND NEAREST PROMPT
 
-    local plots = Workspace:FindFirstChild("Plots")
-    if not plots then
-        return
-    end
+local function FindNearestPrompt()
+    local root = GetRoot()
+    if not root then return nil end
 
-    local currentParts = {}
+    local plots = workspace:FindFirstChild("Plots")
+    if not plots then return nil end
+
+    local nearest = nil
+    local nearestDistance = math.huge
 
     for _, plot in ipairs(plots:GetChildren()) do
-        if not IsMyPlot(plot) then
-            local podiums = plot:FindFirstChild("AnimalPodiums")
+        if IsMyPlot(plot) then
+            continue
+        end
 
-            for _, part in ipairs(plot:GetDescendants()) do
-                if part:IsA("BasePart")
-                    and part.Transparency < 1
-                    and part.Name ~= "Spawn"
-                    and not (podiums and part:IsDescendantOf(podiums)) then
+        local podiums = plot:FindFirstChild("AnimalPodiums")
+        if not podiums then continue end
 
-                    currentParts[part] = true
+        for _, podium in ipairs(podiums:GetChildren()) do
+            local base = podium:FindFirstChild("Base")
+            local spawn = base and base:FindFirstChild("Spawn")
+            local attachment = spawn and spawn:FindFirstChild("PromptAttachment")
 
-                    if XrayOriginals[part] == nil then
-                        XrayOriginals[part] = part.LocalTransparencyModifier
+            if not attachment then continue end
+
+            for _, prompt in ipairs(attachment:GetChildren()) do
+                if prompt:IsA("ProximityPrompt")
+                    and prompt.ActionText:find("Steal") then
+
+                    local position = GetPromptPosition(prompt)
+
+                    if position then
+                        local distance = (position - root.Position).Magnitude
+
+                        if distance <= Config.StealRadius
+                            and distance < nearestDistance then
+
+                            nearest = prompt
+                            nearestDistance = distance
+                        end
                     end
-
-                    part.LocalTransparencyModifier = Config.XrayTransparency
                 end
             end
         end
     end
 
-    -- Restore parts that are no longer inside an enemy plot.
-    for part, oldValue in pairs(XrayOriginals) do
-        if not currentParts[part] then
-            if part and part.Parent then
-                pcall(function()
-                    part.LocalTransparencyModifier = oldValue
-                end)
+    return nearest, nearestDistance
+end
+
+-- AUTO STEAL LOOP
+
+local busy = false
+local currentPrompt = nil
+
+local function Interact(prompt)
+    if busy or not Config.AutoSteal then return end
+    if not prompt or not prompt.Enabled then return end
+
+    busy = true
+    currentPrompt = prompt
+
+    Status.Text = "● INTERACTING..."
+    Status.TextColor3 = Color3.fromRGB(255, 190, 70)
+
+    local success, err = pcall(function()
+        local root = GetRoot()
+        local position = GetPromptPosition(prompt)
+
+        if not root or not position then
+            error("Target unavailable")
+        end
+
+        local distance = (position - root.Position).Magnitude
+
+        if distance > prompt.MaxActivationDistance then
+            error("Target outside interaction range")
+        end
+
+        prompt:InputHoldBegin()
+
+        local duration = prompt.HoldDuration
+        local started = os.clock()
+
+        while os.clock() - started < duration do
+            if not Config.AutoSteal or not prompt.Enabled then
+                break
             end
 
-            XrayOriginals[part] = nil
+            SetProgress(
+                (os.clock() - started) / math.max(duration, 0.01)
+            )
+
+            task.wait(0.03)
         end
+
+        prompt:InputHoldEnd()
+    end)
+
+    if success then
+        Status.Text = "● INTERACTION FINISHED"
+        Status.TextColor3 = Color3.fromRGB(80, 210, 140)
+    else
+        Status.Text = "● " .. tostring(err)
+        Status.TextColor3 = Color3.fromRGB(255, 90, 90)
+        warn("Keep Main:", err)
     end
+
+    SetProgress(0)
+    currentPrompt = nil
+    busy = false
 end
 
---==================================================
--- AURORA-STYLE PLAYER / ITEM SYSTEMS
---==================================================
+task.spawn(function()
+    while Gui.Parent do
+        if Config.AutoSteal and not busy then
+            local success, prompt = pcall(FindNearestPrompt)
 
-local running = true
-local originalWalkSpeed = nil
-local function getCharacter()
-    local character = LocalPlayer.Character
-    return character, character and character:FindFirstChildOfClass("Humanoid"),
-        character and character:FindFirstChild("HumanoidRootPart")
+            if success and prompt then
+                task.spawn(Interact, prompt)
+            end
+        end
+
+        task.wait(Config.ScanDelay)
+    end
+end)
+
+-- TOGGLE CONNECTION
+
+Toggle.MouseButton1Click:Connect(function()
+    Config.AutoSteal = not Config.AutoSteal
+
+    if Config.AutoSteal then
+        Toggle.Text = "AUTO STEAL: ON"
+        Toggle.BackgroundColor3 = Color3.fromRGB(0, 130, 90)
+        Status.Text = "● AUTO STEAL ENABLED"
+        Status.TextColor3 = Color3.fromRGB(80, 210, 140)
+    else
+        Toggle.Text = "AUTO STEAL: OFF"
+        Toggle.BackgroundColor3 = Color3.fromRGB(35, 40, 52)
+        Status.Text = "● AUTO STEAL DISABLED"
+        Status.TextColor3 = Color3.fromRGB(180, 180, 190)
+
+        if currentPrompt then
+            pcall(function()
+                currentPrompt:InputHoldEnd()
+            end)
+        end
+
+        SetProgress(0)
+    end
+end)
+
+
+-- VISUALS SYSTEM
+-- Uses Roblox instances (Highlight, BillboardGui, and optional Drawing lines).
+-- Object ESP uses conservative name/type matching because game object names
+-- can change between updates.
+
+local VisualsPanel = Create("Frame", {
+    Name = "VisualsPanel",
+    Size = UDim2.fromOffset(300, 430),
+    Position = UDim2.new(0.5, 220, 0.5, -215),
+    BackgroundColor3 = Color3.fromRGB(17, 19, 27),
+    BorderSizePixel = 0,
+    Visible = false,
+    Active = true,
+    ClipsDescendants = true
+}, Gui)
+Corner(VisualsPanel, 10)
+Create("UIStroke", {
+    Color = Color3.fromRGB(0, 160, 255),
+    Thickness = 1.25
+}, VisualsPanel)
+
+local VisualHeader = Create("Frame", {
+    Size = UDim2.new(1, 0, 0, 42),
+    BackgroundColor3 = Color3.fromRGB(25, 29, 42),
+    BorderSizePixel = 0
+}, VisualsPanel)
+Corner(VisualHeader, 10)
+
+Create("TextLabel", {
+    Position = UDim2.fromOffset(12, 0),
+    Size = UDim2.new(1, -55, 1, 0),
+    BackgroundTransparency = 1,
+    Text = "VISUALS  |  ESP",
+    TextColor3 = Color3.fromRGB(255, 255, 255),
+    Font = Enum.Font.GothamBold,
+    TextSize = 13,
+    TextXAlignment = Enum.TextXAlignment.Left
+}, VisualHeader)
+
+local VisualClose = Create("TextButton", {
+    Position = UDim2.new(1, -34, 0, 8),
+    Size = UDim2.fromOffset(25, 25),
+    BackgroundColor3 = Color3.fromRGB(55, 60, 75),
+    Text = "X",
+    TextColor3 = Color3.fromRGB(255, 255, 255),
+    Font = Enum.Font.GothamBold,
+    TextSize = 12
+}, VisualHeader)
+Corner(VisualClose, 6)
+
+local VisualScroll = Create("ScrollingFrame", {
+    Position = UDim2.fromOffset(10, 50),
+    Size = UDim2.new(1, -20, 1, -60),
+    BackgroundTransparency = 1,
+    BorderSizePixel = 0,
+    ScrollBarThickness = 4,
+    CanvasSize = UDim2.fromOffset(0, 0),
+    AutomaticCanvasSize = Enum.AutomaticSize.Y
+}, VisualsPanel)
+
+Create("UIListLayout", {
+    Padding = UDim.new(0, 6),
+    SortOrder = Enum.SortOrder.LayoutOrder
+}, VisualScroll)
+
+local function VisualSection(title)
+    return Create("TextLabel", {
+        Size = UDim2.new(1, -4, 0, 24),
+        BackgroundTransparency = 1,
+        Text = title,
+        TextColor3 = Color3.fromRGB(0, 185, 255),
+        Font = Enum.Font.GothamBold,
+        TextSize = 11,
+        TextXAlignment = Enum.TextXAlignment.Left
+    }, VisualScroll)
 end
 
-local function equipAndUse(toolName)
-    local character, humanoid = getCharacter()
-    local backpack = LocalPlayer:FindFirstChildOfClass("Backpack")
-    local tool = (character and character:FindFirstChild(toolName))
-        or (backpack and backpack:FindFirstChild(toolName))
-    if not (tool and humanoid) then return false end
-    if tool.Parent ~= character then
-        pcall(function() humanoid:EquipTool(tool) end)
-        task.wait(0.1)
+local visualButtons = {}
+local function VisualToggle(key, title, defaultValue)
+    if Config.Visuals[key] == nil then
+        Config.Visuals[key] = defaultValue == true
     end
-    if tool.Parent == character then
-        pcall(function() tool:Activate() end)
-        return true
+
+    local button = Create("TextButton", {
+        Size = UDim2.new(1, -4, 0, 32),
+        BackgroundColor3 = Config.Visuals[key]
+            and Color3.fromRGB(0, 115, 85)
+            or Color3.fromRGB(35, 40, 52),
+        Text = title .. (Config.Visuals[key] and ": ON" or ": OFF"),
+        TextColor3 = Color3.fromRGB(245, 245, 250),
+        Font = Enum.Font.GothamSemibold,
+        TextSize = 11,
+        AutoButtonColor = false
+    }, VisualScroll)
+    Corner(button, 6)
+
+    visualButtons[key] = {button = button, title = title}
+    button.MouseButton1Click:Connect(function()
+        Config.Visuals[key] = not Config.Visuals[key]
+        button.Text = title .. (Config.Visuals[key] and ": ON" or ": OFF")
+        button.BackgroundColor3 = Config.Visuals[key]
+            and Color3.fromRGB(0, 115, 85)
+            or Color3.fromRGB(35, 40, 52)
+    end)
+end
+
+VisualSection("PLAYER ESP")
+VisualToggle("PlayerESP", "Player ESP", false)
+VisualToggle("PlayerBox", "Highlight / Box", false)
+VisualToggle("PlayerTracer", "Tracers", false)
+VisualToggle("PlayerName", "Player Names", true)
+VisualToggle("PlayerDistance", "Distance", true)
+VisualToggle("PlayerHealth", "Health Bar", true)
+
+VisualSection("WORLD ESP")
+VisualToggle("BaseESP", "Base ESP", false)
+VisualToggle("TimerESP", "Timer ESP", false)
+VisualToggle("DeliveryESP", "Delivery ESP", false)
+VisualToggle("CloneESP", "Clone ESP", false)
+VisualToggle("MineESP", "Mine ESP", false)
+
+VisualsButton.MouseButton1Click:Connect(function()
+    VisualsPanel.Visible = not VisualsPanel.Visible
+end)
+VisualClose.MouseButton1Click:Connect(function()
+    VisualsPanel.Visible = false
+end)
+
+-- Drawing API is optional; the Billboard/Highlight ESP remains available
+-- in executors that do not expose Drawing.
+local drawingAvailable = false
+local tracerObjects = {}
+pcall(function()
+    drawingAvailable = Drawing ~= nil and type(Drawing.new) == "function"
+end)
+
+local playerVisuals = {}
+local objectVisuals = {}
+local visualsConnection
+
+local function RemovePlayerVisual(player)
+    local entry = playerVisuals[player]
+    if not entry then return end
+    for _, object in pairs(entry) do
+        pcall(function()
+            if object and object.Remove then object:Remove() else object:Destroy() end
+        end)
+    end
+    playerVisuals[player] = nil
+end
+
+local function MakePlayerVisual(player)
+    if player == Player or playerVisuals[player] then return end
+    local character = player.Character
+    local root = character and character:FindFirstChild("HumanoidRootPart")
+    local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+    if not character or not root or not humanoid then return end
+
+    local entry = {}
+
+    local highlight = Instance.new("Highlight")
+    highlight.Name = "KeepMainPlayerHighlight"
+    highlight.Adornee = character
+    highlight.FillColor = Color3.fromRGB(0, 170, 255)
+    highlight.OutlineColor = Color3.fromRGB(220, 245, 255)
+    highlight.FillTransparency = 0.78
+    highlight.OutlineTransparency = 0.05
+    highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+    highlight.Enabled = false
+    highlight.Parent = Gui
+    entry.highlight = highlight
+
+    local billboard = Instance.new("BillboardGui")
+    billboard.Name = "KeepMainPlayerInfo"
+    billboard.Adornee = root
+    billboard.Size = UDim2.fromOffset(150, 42)
+    billboard.StudsOffset = Vector3.new(0, 3.2, 0)
+    billboard.AlwaysOnTop = true
+    billboard.Enabled = false
+    billboard.Parent = Gui
+
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.fromScale(1, 1)
+    label.BackgroundTransparency = 1
+    label.TextColor3 = Color3.fromRGB(255, 255, 255)
+    label.TextStrokeTransparency = 0.25
+    label.Font = Enum.Font.GothamBold
+    label.TextSize = 11
+    label.TextWrapped = true
+    label.Parent = billboard
+    entry.billboard = billboard
+    entry.label = label
+
+    if drawingAvailable then
+        pcall(function()
+            local line = Drawing.new("Line")
+            line.Thickness = 1.5
+            line.Color = Color3.fromRGB(0, 190, 255)
+            line.Visible = false
+            entry.tracer = line
+        end)
+    end
+
+    playerVisuals[player] = entry
+end
+
+local function ClearObjectVisual(key)
+    local item = objectVisuals[key]
+    if not item then return end
+    pcall(function()
+        if item.highlight then item.highlight:Destroy() end
+        if item.billboard then item.billboard:Destroy() end
+    end)
+    objectVisuals[key] = nil
+end
+
+local function IsVisualTarget(name, mode)
+    local lower = string.lower(name or "")
+    if mode == "Delivery" then
+        return lower:find("deliver") or lower:find("truck") or lower:find("dropoff")
+    elseif mode == "Clone" then
+        return lower:find("clone") or lower:find("copy")
+    elseif mode == "Mine" then
+        return lower:find("mine") or lower:find("mining")
+    elseif mode == "Timer" then
+        return lower:find("timer") or lower:find("cooldown") or lower:find("countdown")
     end
     return false
 end
 
--- Quick item action matching Aurora's Flash + Invis helper.
-do
-    local action = Create("TextButton", {
-        Size = UDim2.new(1, 0, 0, 34),
-        BackgroundColor3 = COLORS.AccentDark,
-        BorderSizePixel = 0,
-        Text = "FLASH + INVIS",
-        TextColor3 = COLORS.Text,
-        Font = Enum.Font.GothamBold,
-        TextSize = 11,
-        AutoButtonColor = false,
-    }, itemCard)
-    Corner(action, 7)
-    action.MouseButton1Click:Connect(function()
-        local cloak = equipAndUse("Invisibility Cloak")
-        task.wait(0.15)
-        local flash = equipAndUse("Flash Teleport")
-        if not cloak and not flash then
-            warn("[Phong Hub] Cần Invisibility Cloak hoặc Flash Teleport trong Backpack.")
-        end
-    end)
+local function GetAdornee(instance)
+    if instance:IsA("BasePart") then return instance end
+    if instance:IsA("Model") then
+        return instance.PrimaryPart or instance:FindFirstChildWhichIsA("BasePart", true)
+    end
+    return instance:FindFirstAncestorWhichIsA("Model")
+        and (instance:FindFirstAncestorWhichIsA("Model").PrimaryPart
+        or instance:FindFirstAncestorWhichIsA("Model"):FindFirstChildWhichIsA("BasePart", true))
 end
 
--- Speed and infinite jump
-local jumpConnection = UserInputService.JumpRequest:Connect(function()
-    if not Config.InfiniteJump then return end
-    local _, humanoid, root = getCharacter()
-    if humanoid and root and humanoid.Health > 0 then
-        root.AssemblyLinearVelocity = Vector3.new(
-            root.AssemblyLinearVelocity.X,
-            math.max(humanoid.JumpPower, 50),
-            root.AssemblyLinearVelocity.Z
-        )
-    end
-end)
+local function AddObjectVisual(instance, key, labelText, color)
+    if objectVisuals[key] then return end
+    local adornee = GetAdornee(instance)
+    if not adornee then return end
 
-task.spawn(function()
-    while running and Gui.Parent do
-        local _, humanoid = getCharacter()
-        if humanoid then
-            if Config.Speed then
-                if originalWalkSpeed == nil then originalWalkSpeed = humanoid.WalkSpeed end
-                humanoid.WalkSpeed = Config.WalkSpeed
-            elseif originalWalkSpeed ~= nil then
-                humanoid.WalkSpeed = originalWalkSpeed
-                originalWalkSpeed = nil
+    local highlight = Instance.new("Highlight")
+    highlight.Name = "KeepMainWorldHighlight"
+    highlight.Adornee = instance:IsA("Model") and instance or adornee
+    highlight.FillColor = color
+    highlight.OutlineColor = color
+    highlight.FillTransparency = 0.82
+    highlight.OutlineTransparency = 0.08
+    highlight.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+    highlight.Parent = Gui
+
+    local billboard = Instance.new("BillboardGui")
+    billboard.Name = "KeepMainWorldLabel"
+    billboard.Adornee = adornee
+    billboard.Size = UDim2.fromOffset(130, 26)
+    billboard.StudsOffset = Vector3.new(0, 2.4, 0)
+    billboard.AlwaysOnTop = true
+    billboard.Parent = Gui
+
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.fromScale(1, 1)
+    label.BackgroundTransparency = 1
+    label.Text = labelText
+    label.TextColor3 = color
+    label.TextStrokeTransparency = 0.2
+    label.Font = Enum.Font.GothamBold
+    label.TextSize = 11
+    label.Parent = billboard
+
+    objectVisuals[key] = {highlight = highlight, billboard = billboard}
+end
+
+local function ScanWorldVisuals()
+    local plots = workspace:FindFirstChild("Plots")
+
+    if Config.Visuals.BaseESP and plots then
+        for _, plot in ipairs(plots:GetChildren()) do
+            local sign = plot:FindFirstChild("PlotSign")
+            local basePart = plot:FindFirstChildWhichIsA("BasePart", true)
+            if sign and basePart then
+                local key = "base_" .. plot:GetFullName()
+                AddObjectVisual(plot, key, "BASE", Color3.fromRGB(70, 180, 255))
             end
-            if Config.CarpetSpeed then
-                local character = LocalPlayer.Character
-                local tool = character and character:FindFirstChildOfClass("Tool")
-                local isFlyingGear = false
-                if tool then
-                    local name = tool.Name:lower()
-                    for _, key in ipairs({"carpet", "wings", "broom", "waverider", "sleigh"}) do
-                        if name:find(key, 1, true) then
-                            isFlyingGear = true
-                            break
-                        end
-                    end
-                end
-                local root = character and character:FindFirstChild("HumanoidRootPart")
-                if isFlyingGear and root and humanoid.MoveDirection.Magnitude > 0 then
-                    local direction = humanoid.MoveDirection.Unit
-                    local velocity = root.AssemblyLinearVelocity
-                    root.AssemblyLinearVelocity = Vector3.new(
-                        direction.X * Config.CarpetSpeedValue,
-                        velocity.Y,
-                        direction.Z * Config.CarpetSpeedValue
-                    )
+        end
+    end
+
+    local modes = {
+        {key = "TimerESP", name = "Timer", color = Color3.fromRGB(255, 205, 75)},
+        {key = "DeliveryESP", name = "Delivery", color = Color3.fromRGB(90, 220, 150)},
+        {key = "CloneESP", name = "Clone", color = Color3.fromRGB(190, 120, 255)},
+        {key = "MineESP", name = "Mine", color = Color3.fromRGB(255, 120, 100)}
+    }
+
+    for _, mode in ipairs(modes) do
+        if Config.Visuals[mode.key] then
+            for _, item in ipairs(workspace:GetDescendants()) do
+                if item ~= workspace and IsVisualTarget(item.Name, mode.name) then
+                    local key = mode.name .. "_" .. item:GetFullName()
+                    AddObjectVisual(item, key, mode.name:upper(), mode.color)
                 end
             end
         end
-        task.wait(0.05)
-    end
-end)
-
--- Auto use defensive items (same item names as Aurora)
-task.spawn(function()
-    while running and Gui.Parent do
-        if Config.AutoPotionShield then
-            equipAndUse("Grief Shield")
-            task.wait(0.15)
-            equipAndUse("Giant Potion")
-        end
-        task.wait(1.0)
-    end
-end)
-
--- Aurora-style item-aware aim assist with configurable target filters.
--- It only updates the game's PlayerMouse target; it does not auto-fire.
-local AIM_ITEMS = {
-    ["Blackhole Bomb"] = true, ["BlowDryer"] = true, ["Candy Launcher"] = true,
-    ["Candycane Bow"] = true, ["Christmas Launcher"] = true, ["Freeze Ray"] = true,
-    ["Gravity Gun"] = true, ["Hunter Crossbow"] = true, ["Jelly Gun"] = true,
-    ["Laser Cape"] = true, ["Lava Blaster"] = true, ["Paintball Gun"] = true,
-    ["Pumpkin Launcher"] = true, ["Radioactive Airstrike"] = true, ["Sabuk Bepak"] = true,
-    ["Sandal Jepit"] = true, ["Slingshot"] = true, ["Snowball"] = true,
-    ["Snowball Cannon"] = true, ["Summer Soaker"] = true, ["Super-GLS33"] = true,
-    ["Taser Gun"] = true, ["Tripple Plungers"] = true, ["Web Slinger"] = true,
-    ["Wormhole Tunneler"] = true, ["Zombie Blaster"] = true,
-}
-
-local playerMouse
-pcall(function()
-    local replicated = game:GetService("ReplicatedStorage")
-    playerMouse = require(replicated:WaitForChild("Packages"):WaitForChild("PlayerMouse"))
-end)
-
-local function getAimPart(character)
-    if not character then return nil end
-
-    local preferred = Config.AimTargetPart
-    local part = character:FindFirstChild(preferred)
-    if part and part:IsA("BasePart") then
-        return part
     end
 
-    local fallback = character:FindFirstChild("HumanoidRootPart")
-    if fallback and fallback:IsA("BasePart") then
-        return fallback
-    end
-    return character:FindFirstChildWhichIsA("BasePart")
-end
-
-local function isAimTargetVisible(camera, targetCharacter, targetPart)
-    local origin = camera.CFrame.Position
-    local direction = targetPart.Position - origin
-    if direction.Magnitude <= 0 then return true end
-
-    local params = RaycastParams.new()
-    params.FilterType = Enum.RaycastFilterType.Exclude
-    params.FilterDescendantsInstances = { LocalPlayer.Character }
-
-    local result = Workspace:Raycast(origin, direction, params)
-    return result == nil or result.Instance:IsDescendantOf(targetCharacter)
-end
-
-task.spawn(function()
-    local target, lastScan = nil, 0
-
-    while running and Gui.Parent do
-        if Config.Aimbot and playerMouse then
-            local character, _, root = getCharacter()
-            local tool = character and character:FindFirstChildOfClass("Tool")
-            local camera = Workspace.CurrentCamera
-
-            if root and tool and AIM_ITEMS[tool.Name] and camera then
-                if not target or not target.Parent or os.clock() - lastScan > 0.05 then
-                    lastScan = os.clock()
-
-                    local bestScore = math.huge
-                    target = nil
-
-                    local mousePosition = UserInputService:GetMouseLocation()
-                    local maxDistance = tonumber(Config.AimMaxDistance) or 250
-                    local fovRadius = tonumber(Config.AimFOV) or 0
-
-                    for _, player in ipairs(Players:GetPlayers()) do
-                        if player ~= LocalPlayer then
-                            local targetCharacter = player.Character
-                            local targetPart = getAimPart(targetCharacter)
-                            local targetHumanoid = targetCharacter
-                                and targetCharacter:FindFirstChildOfClass("Humanoid")
-
-                            local valid = targetPart
-                                and targetHumanoid
-                                and targetHumanoid.Health > 0
-                                and (targetPart.Position - root.Position).Magnitude <= maxDistance
-
-                            if valid and Config.AimTeamCheck
-                                and LocalPlayer.Team ~= nil
-                                and player.Team == LocalPlayer.Team then
-                                valid = false
-                            end
-
-                            if valid then
-                                local screenPoint, onScreen = camera:WorldToViewportPoint(targetPart.Position)
-                                local screenDistance = (
-                                    Vector2.new(screenPoint.X, screenPoint.Y) - mousePosition
-                                ).Magnitude
-
-                                if fovRadius > 0 and (not onScreen or screenDistance > fovRadius) then
-                                    valid = false
-                                elseif Config.AimTargetMode == "Closest To Cursor" and not onScreen then
-                                    valid = false
-                                end
-                            end
-
-                            if valid and Config.AimVisibleCheck then
-                                valid = isAimTargetVisible(camera, targetCharacter, targetPart)
-                            end
-
-                            if valid then
-                                local score
-                                if Config.AimTargetMode == "Closest To Cursor" then
-                                    local screenPoint = camera:WorldToViewportPoint(targetPart.Position)
-                                    score = (
-                                        Vector2.new(screenPoint.X, screenPoint.Y) - mousePosition
-                                    ).Magnitude
-                                else
-                                    score = (targetPart.Position - root.Position).Magnitude
-                                end
-
-                                if score < bestScore then
-                                    bestScore = score
-                                    target = targetPart
-                                end
-                            end
-                        end
-                    end
-                end
-
-                if target and target.Parent then
-                    pcall(function()
-                        playerMouse.Hit = CFrame.new(target.Position)
-                        playerMouse.Target = target
-                    end)
-                end
-            else
-                target = nil
-            end
+    -- Remove stale world markers when a feature is disabled.
+    for key, item in pairs(objectVisuals) do
+        local keep = false
+        if key:sub(1, 5) == "base_" then
+            keep = Config.Visuals.BaseESP
         else
-            target = nil
+            local prefix = key:match("^([^_]+)_")
+            keep = (prefix == "Timer" and Config.Visuals.TimerESP)
+                or (prefix == "Delivery" and Config.Visuals.DeliveryESP)
+                or (prefix == "Clone" and Config.Visuals.CloneESP)
+                or (prefix == "Mine" and Config.Visuals.MineESP)
         end
-
-        task.wait(0.04)
+        if not keep then ClearObjectVisual(key) end
     end
-end)
-
--- Auto Defense: uses the game's AdminPanel command buttons when available.
-local function findMyBase()
-    local plots = Workspace:FindFirstChild("Plots")
-    if not plots then return nil end
-    for _, plot in ipairs(plots:GetChildren()) do
-        local sign = plot:FindFirstChild("PlotSign")
-        local yourBase = sign and sign:FindFirstChild("YourBase")
-        if yourBase and yourBase.Enabled then return plot end
-    end
-    return nil
 end
 
-local function adminPanel()
-    local playerGui = LocalPlayer:FindFirstChildOfClass("PlayerGui")
-    local gui = playerGui and playerGui:FindFirstChild("AdminPanel")
-    return gui, gui and gui:FindFirstChild("AdminPanel")
-end
+local visualScanClock = 0
+visualsConnection = RunService.RenderStepped:Connect(function(dt)
+    local anyPlayerFeature = Config.Visuals.PlayerESP
+        or Config.Visuals.PlayerBox or Config.Visuals.PlayerTracer
 
-local function pressGuiButton(button)
-    if type(firesignal) ~= "function" then return false end
-    local ok = pcall(function()
-        firesignal(button.Activated)
-        firesignal(button.MouseButton1Click)
-    end)
-    return ok
-end
-
-local function runAdminCommand(command, target)
-    local gui, panel = adminPanel()
-    if not (gui and panel and target) then return false end
-    local commandButton
-    for _, button in ipairs(panel:GetDescendants()) do
-        if button:IsA("GuiButton") and button.Name ~= "Template" then
-            local label = button:FindFirstChild("Command")
-            if label and label:IsA("TextLabel")
-                and label.Text:lower():gsub("^;", "") == command then
-                commandButton = button
-                break
+    for _, target in ipairs(Players:GetPlayers()) do
+        if target ~= Player then
+            if anyPlayerFeature then
+                MakePlayerVisual(target)
             end
-        end
-    end
-    if not commandButton then return false end
-    local timer = commandButton:FindFirstChild("Timer")
-    if timer and timer:IsA("TextLabel") and timer.Visible then
-        local cooldown = tonumber(timer.Text:match("(%d+)")) or 0
-        if cooldown > 0 then return false end
-    end
 
-    local wasVisible = panel.Visible
-    panel.Visible = true
-    pressGuiButton(commandButton)
-    task.wait(0.15)
-    local selected = false
-    for _, button in ipairs(gui:GetDescendants()) do
-        if button:IsA("GuiButton") and button.Visible and button ~= commandButton then
-            local hit = button.Name == target.Name or button.Name == tostring(target.UserId)
-            if not hit then
-                for _, label in ipairs(button:GetDescendants()) do
-                    if label:IsA("TextLabel") and (
-                        label.Text == target.Name or label.Text == target.DisplayName
-                        or label.Text == "@" .. target.Name
-                    ) then
-                        hit = true
-                        break
+            local entry = playerVisuals[target]
+            local character = target.Character
+            local root = character and character:FindFirstChild("HumanoidRootPart")
+            local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+            local active = anyPlayerFeature and root and humanoid and humanoid.Health > 0
+
+            if entry then
+                if entry.highlight then
+                    entry.highlight.Adornee = character
+                    entry.highlight.Enabled = active and (Config.Visuals.PlayerESP or Config.Visuals.PlayerBox)
+                end
+                if entry.billboard then
+                    entry.billboard.Adornee = root
+                    entry.billboard.Enabled = active and Config.Visuals.PlayerESP
+                    if active then
+                        local bits = {}
+                        if Config.Visuals.PlayerName then table.insert(bits, target.DisplayName) end
+                        if Config.Visuals.PlayerDistance then
+                            local myRoot = GetRoot()
+                            if myRoot then
+                                table.insert(bits, tostring(math.floor((root.Position - myRoot.Position).Magnitude)) .. "m")
+                            end
+                        end
+                        if Config.Visuals.PlayerHealth then
+                            table.insert(bits, "HP " .. tostring(math.floor(humanoid.Health)))
+                        end
+                        entry.label.Text = table.concat(bits, "  |  ")
                     end
                 end
-            end
-            if hit then
-                pressGuiButton(button)
-                selected = true
-                break
-            end
-        end
-    end
-    panel.Visible = wasVisible
-    return selected
-end
-
-task.spawn(function()
-    local lastDefense = 0
-    while running and Gui.Parent do
-        if Config.AutoDefense and os.clock() - lastDefense > 2 then
-            local base = findMyBase()
-            if base then
-                local ok, center = pcall(function() return base:GetPivot().Position end)
-                if ok then
-                    local thieves = {}
-                    for _, player in ipairs(Players:GetPlayers()) do
-                        if player ~= LocalPlayer and player:GetAttribute("Stealing") then
-                            local root = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-                            if root and (root.Position - center).Magnitude < 70 then
-                                thieves[#thieves + 1] = {
-                                    player = player,
-                                    distance = (root.Position - center).Magnitude
-                                }
-                            end
-                        end
-                    end
-                    if #thieves > 0 then
-                        lastDefense = os.clock()
-                        table.sort(thieves, function(a, b) return a.distance < b.distance end)
-                        local commands = {"balloon", "ragdoll", "rocket", "inverse", "tiny", "jumpscare"}
-                        local targetCount = math.min(#thieves, 2)
-                        for index = 1, targetCount do
-                            local targetPlayer = thieves[index].player
-                            for _, command in ipairs(commands) do
-                                if runAdminCommand(command, targetPlayer) then break end
-                            end
-                        end
+                if entry.tracer then
+                    local camera = workspace.CurrentCamera
+                    local point, onScreen = camera:WorldToViewportPoint(root.Position)
+                    entry.tracer.Visible = active and Config.Visuals.PlayerTracer and onScreen
+                    if entry.tracer.Visible then
+                        local viewport = camera.ViewportSize
+                        entry.tracer.From = Vector2.new(viewport.X / 2, viewport.Y - 8)
+                        entry.tracer.To = Vector2.new(point.X, point.Y)
                     end
                 end
             end
         end
-        task.wait(0.35)
+    end
+
+    for target in pairs(playerVisuals) do
+        if not target.Parent then RemovePlayerVisual(target) end
+    end
+
+    visualScanClock = visualScanClock + dt
+    if visualScanClock >= 1.5 then
+        visualScanClock = 0
+        pcall(ScanWorldVisuals)
     end
 end)
 
---==================================================
--- UPDATE LOOP
---==================================================
+Players.PlayerRemoving:Connect(RemovePlayerVisual)
 
-task.spawn(function()
-    while running and Gui.Parent do
-        local alive = {}
-
-        local success, err = pcall(function()
-            UpdatePlayerESP(alive)
-            UpdateBrainrotESP(alive)
-            UpdateXray()
-        end)
-
-        if not success then
-            warn("[Phong Hub] Visual update error:", err)
-        end
-
-        for key in pairs(ESPObjects) do
-            if not alive[key] then
-                DestroyESP(key)
-            end
-        end
-
-        task.wait(Config.UpdateDelay)
-    end
+Gui.Destroying:Connect(function()
+    if visualsConnection then visualsConnection:Disconnect() end
+    for target in pairs(playerVisuals) do RemovePlayerVisual(target) end
+    for key in pairs(objectVisuals) do ClearObjectVisual(key) end
 end)
 
---==================================================
--- DRAG WINDOW + MINIMIZE CIRCLE
---==================================================
+-- MINIMIZE
 
 local Circle = Create("TextButton", {
-    Name = "PhongHubMini",
-    Size = UDim2.fromOffset(54, 54),
-    Position = UDim2.new(0, 35, 0.5, -27),
-    BackgroundColor3 = COLORS.AccentDark,
+    Size = UDim2.fromOffset(55, 55),
+    Position = UDim2.new(0, 30, 0.5, -27),
+    BackgroundColor3 = Color3.fromRGB(0, 140, 230),
     Text = "P",
-    TextColor3 = Color3.new(1, 1, 1),
+    TextColor3 = Color3.fromRGB(255, 255, 255),
     Font = Enum.Font.GothamBlack,
     TextSize = 23,
     Visible = false,
-    AutoButtonColor = false,
+    AutoButtonColor = false
 }, Gui)
 
 Corner(Circle, 100)
-Stroke(Circle, Color3.fromRGB(115, 215, 255), 2, 0.05)
+
+Create("UIStroke", {
+    Color = Color3.fromRGB(100, 210, 255),
+    Thickness = 2
+}, Circle)
+
+-- DRAG
 
 local function MakeDraggable(object, handle)
     local dragging = false
-    local dragInput
     local dragStart
     local startPosition
+    local dragInput
 
     handle.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1
@@ -1589,15 +1112,13 @@ local function MakeDraggable(object, handle)
     handle.InputChanged:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseMovement
             or input.UserInputType == Enum.UserInputType.Touch then
+
             dragInput = input
         end
     end)
 
     UserInputService.InputChanged:Connect(function(input)
-        if dragging and (
-            input == dragInput
-            or input.UserInputType == Enum.UserInputType.Touch
-        ) then
+        if dragging and input == dragInput then
             local delta = input.Position - dragStart
 
             object.Position = UDim2.new(
@@ -1613,37 +1134,29 @@ end
 MakeDraggable(Main, Header)
 MakeDraggable(Circle, Circle)
 
+local originalSize = Main.Size
+
 Minimize.MouseButton1Click:Connect(function()
     Circle.Position = Main.Position
+    VisualsPanel.Visible = false
     Main.Visible = false
     Circle.Visible = true
+    Circle.Size = UDim2.fromOffset(0, 0)
+
+    Tween(Circle, {
+        Size = UDim2.fromOffset(55, 55)
+    }, 0.25)
 end)
 
 Circle.MouseButton1Click:Connect(function()
     Circle.Visible = false
     Main.Visible = true
     Main.Position = Circle.Position
+    Main.Size = UDim2.fromOffset(0, 0)
+
+    Tween(Main, {
+        Size = originalSize
+    }, 0.25)
 end)
 
---==================================================
--- CLEANUP
---==================================================
-
-Gui.Destroying:Connect(function()
-    running = false
-    if jumpConnection then jumpConnection:Disconnect() end
-    local _, humanoid = getCharacter()
-    if humanoid and originalWalkSpeed then
-        pcall(function() humanoid.WalkSpeed = originalWalkSpeed end)
-    end
-    ClearESP()
-    RestoreXray()
-
-    pcall(function()
-        ESPFolder:Destroy()
-    end)
-end)
-
-SelectTab("Visuals")
-
-print("[Phong Hub] v1.2 loaded - ESP, Xray, Player, Movement, Configurable Aim Assist, Auto Defense, Item Assist. Auto Steal removed.")
+print("KEEP MAIN + Anti Bat loaded successfully")
