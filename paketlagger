@@ -1,1 +1,1478 @@
-print("co cai dai")
+-- deob by prince
+
+local unpack_ = unpack or table.unpack
+local game_ = game
+local v5 = game_.GetService(game_, "Players")
+local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+local t2 = {
+	value1 = game:GetService("HttpService"),
+	value2 = game:GetService("Stats"),
+	value3 = game:GetService("ReplicatedStorage"),
+	value4 = v5.LocalPlayer
+}
+local PlayerGui = t2.value4:FindFirstChild("PlayerGui") or t2.value4:WaitForChild("PlayerGui", 15)
+
+if not PlayerGui then
+	return
+end
+
+if _G.__IrishHubCleanup then
+	pcall(_G.__IrishHubCleanup)
+	_G.__IrishHubCleanup = nil
+end
+
+for _, child in ipairs(PlayerGui:GetChildren()) do
+	if child.Name == "IrishHub" then
+		child:Destroy()
+	end
+end
+
+local t1 = {
+	value1 = 3828369377014
+}
+local image = "rbxassetid://78094456792780"
+
+function t1.value2(p1, p2, p3, p4)
+	local UIStroke = Instance.new("UIStroke")
+
+	UIStroke.Color = p1
+	UIStroke.Thickness = p2
+	UIStroke.Transparency = p3
+	UIStroke.Parent = p4
+
+	return UIStroke
+end
+function t1.value3(p5, p6)
+	local UICorner = Instance.new("UICorner")
+
+	UICorner.CornerRadius = UDim.new(0, p5)
+	UICorner.Parent = p6
+
+	return UICorner
+end
+function t1.value4(p7)
+	local v14 = (p7 - 0.5) / 0.1 + 0.5
+	local v15 = math.floor(v14)
+
+	return math.clamp(v15 * 0.1 + 0.5, 0.5, 1.5)
+end
+
+local n1 = 0.7
+local u17 = false
+local u18 = nil
+local u19 = nil
+local u20 = false
+local u21 = false
+local thread = nil
+local n2 = 0
+
+function t1.value5()
+	if u18 then
+		local v24 = u19
+
+		return {
+			Name = u18.Name,
+			Type = v24
+		}
+	else
+		return nil
+	end
+end
+
+local s1 = "PC"
+local u26 = false
+local Position = nil
+
+function t1.value6()
+	return t2.value3:WaitForChild("Packages"):WaitForChild("Net")
+end
+
+local Position2 = nil
+local u29 = false
+local Position3 = nil
+local Position4 = nil
+local t3 = {}
+local u33 = false
+local n3 = 15
+local n4 = 0.06
+local n5 = 75000
+
+local function v37(p8)
+	local v38 = t3
+
+	table.insert(v38, p8)
+
+	return p8
+end
+
+local value4 = t1.value4
+local value5 = t1.value5
+
+function t1.value7()
+	pcall(function()
+		writefile("packetlaggg.json", t2.value1:JSONEncode({
+			Tab = "PC",
+			GuiSize = n1,
+			Toggle = u17,
+			Keybind = value5(),
+			SpeedEnabled = u33,
+			SpeedStuds = n3,
+			SpeedInterval = n4,
+			CustomIntensity = n5
+		}))
+	end)
+end
+
+local value7 = t1.value7
+
+function t1.value7()
+	if not isfile("packetlaggg.json") then
+		return
+	end
+
+	local ok, result = pcall(readfile, "packetlaggg.json")
+
+	if not ok or (not result or result == "") then
+		return
+	end
+
+	local function v44()
+		return t2.value1:JSONDecode(result)
+	end
+
+	local ok2, result2 = pcall(v44)
+
+	if not ok2 or type(result2) ~= "table" then
+		return
+	end
+
+	if result2.Tab == "PC" or (result2.Tab == "Mobile" or result2.Tab == "Custom") then
+		local _ = result2.Tab
+
+		s1 = result2.Tab
+	end
+
+	if result2.GuiSize then
+		local v48 = value4
+		local GuiSize = result2.GuiSize
+
+		n1 = v48(tonumber(GuiSize) or 0.7)
+	end
+
+	if result2.Toggle ~= nil then
+		u17 = result2.Toggle
+	end
+
+	if result2.Keybind then
+		local Keybind = result2.Keybind
+		local Type = nil
+		local v52 = nil
+
+		if type(Keybind) == "table" then
+			local Name = Keybind.Name
+
+			Type = Keybind.Type
+			Keybind = Name
+		elseif type(Keybind) == "string" then
+			Type = "Keyboard"
+		else
+			Keybind = v52
+		end
+
+		local v54 = Keybind and Enum.KeyCode[Keybind]
+
+		if v54 then
+			u18 = v54
+			u19 = Type or "Keyboard"
+		end
+	end
+
+	if result2.SpeedEnabled ~= nil then
+		u33 = result2.SpeedEnabled
+	end
+
+	if result2.SpeedStuds then
+		local SpeedStuds = result2.SpeedStuds
+
+		n3 = tonumber(SpeedStuds) or 15
+	end
+
+	if result2.SpeedInterval then
+		local SpeedInterval = result2.SpeedInterval
+
+		n4 = tonumber(SpeedInterval) or 0.06
+	end
+
+	if not result2.CustomIntensity then
+		return
+	end
+
+	local CustomIntensity = result2.CustomIntensity
+	local v58 = tonumber(CustomIntensity) or 75000
+
+	n5 = math.clamp(v58, 1, 500000)
+end
+
+t1.value7()
+
+local u59 = nil
+local ok, value10 = pcall(t1.value6)
+
+t1.value9 = ok
+t1.value10 = value10
+
+local value9 = t1.value9
+
+if value9 then
+	value9 = t1.value10
+end
+
+t1.value8 = value9
+
+if t1.value8 then
+	u59 = t1.value10:GetChildren()[230]
+end
+
+t1.value10 = nil
+t1.value9 = nil
+
+function t1.value10()
+	return s1 == "PC" and 50000 or (s1 == "Mobile" and 25000 or n5)
+end
+function t1.value6(p9)
+	if not u59 then
+		local function v63()
+			return t2.value3:WaitForChild("Packages"):WaitForChild("Net")
+		end
+
+		local ok2, result = pcall(v63)
+
+		if ok2 and result then
+			u59 = result:GetChildren()[230]
+		end
+
+		if not u59 then
+			return
+		end
+	end
+
+	local v66 = table.create(p9, function() end)
+
+	for _ = 1, 3 do
+		local function v68()
+			u59:FireServer(v66)
+		end
+
+		pcall(v68)
+	end
+end
+
+local value102 = t1.value10
+local value6 = t1.value6
+local value12 = nil
+
+function t1.value12()
+	while u21 do
+		local v72 = value102()
+
+		task.spawn(function()
+			value6(v72)
+		end)
+		task.wait(0.01)
+	end
+end
+function t1.value13()
+	local v73 = thread
+
+	if not v73 then
+		if not v73 then
+			u21 = true
+			n2 = os.clock()
+			thread = coroutine.create(value12)
+			coroutine.resume(thread)
+		end
+
+		return
+	end
+
+	v73 = coroutine.status(thread) ~= "dead"
+
+	if not v73 then
+		u21 = true
+		n2 = os.clock()
+		thread = coroutine.create(value12)
+		coroutine.resume(thread)
+	end
+end
+
+value12 = t1.value12
+
+local value13 = t1.value13
+
+t1.value14 = pairs
+
+local workspace_ = workspace
+local GetDescendants = workspace_.GetDescendants
+local u77 = n1
+local u78 = n3
+local u79 = u33
+local u80 = u19
+local u81 = n5
+local v82 = s1
+local KeyCode = u18
+local u84 = n4
+local u85 = u17
+
+for _, v in t1.value14(GetDescendants(workspace_)) do
+	if v:IsA("Texture") or v:IsA("Decal") then
+		v:Destroy()
+	else
+		local isPart = v:IsA("Part")
+
+		if isPart then
+			isPart = v.Material ~= Enum.Material.Neon
+
+			if isPart then
+				isPart = v.Material ~= Enum.Material.ForceField
+			end
+		end
+
+		if isPart then
+			v.Material = Enum.Material.SmoothPlastic
+		end
+	end
+end
+
+t1.value11 = Instance.new("ScreenGui")
+
+local value11 = t1.value11
+
+t1.value11 = value11
+t1.value11.Name = "PhongHub"
+t1.value11 = value11
+t1.value11.ResetOnSpawn = false
+t1.value11 = value11
+t1.value11.IgnoreGuiInset = true
+t1.value11 = value11
+t1.value11.DisplayOrder = 999
+t1.value11 = value11
+t1.value11.Parent = PlayerGui
+
+local Frame = Instance.new("Frame")
+
+Frame.Name = "Main"
+Frame.AnchorPoint = Vector2.new(0.5, 0.5)
+Frame.Position = UDim2.new(0.5, 0, 0.5, 0)
+Frame.Size = UDim2.new(0, 300, 0, 400)
+Frame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+Frame.BorderSizePixel = 0
+Frame.Active = true
+Frame.Parent = value11
+t1.value3(12, Frame)
+t1.value2(Color3.fromRGB(20, 110, 45), 1.5, 0.2, Frame)
+
+local UIScale = Instance.new("UIScale")
+
+UIScale.Scale = u77
+UIScale.Parent = Frame
+
+local ImageLabel = Instance.new("ImageLabel")
+
+ImageLabel.Size = UDim2.new(1, 0, 1, 0)
+ImageLabel.BackgroundTransparency = 1
+ImageLabel.Image = image
+ImageLabel.ScaleType = Enum.ScaleType.Crop
+ImageLabel.ImageTransparency = 0.35
+ImageLabel.BorderSizePixel = 0
+ImageLabel.ZIndex = 1
+ImageLabel.Parent = Frame
+t1.value3(12, ImageLabel)
+
+local Frame2 = Instance.new("Frame")
+
+Frame2.Size = UDim2.new(1, -24, 0, 48)
+Frame2.Position = UDim2.new(0, 12, 0, 12)
+Frame2.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+Frame2.BackgroundTransparency = 0.4
+Frame2.BorderSizePixel = 0
+Frame2.Active = true
+Frame2.ZIndex = 2
+Frame2.Parent = Frame
+t1.value3(10, Frame2)
+t1.value2(Color3.fromRGB(20, 110, 45), 1, 0.6, Frame2)
+
+local Frame3 = Instance.new("Frame")
+
+Frame3.Size = UDim2.new(0, 3, 0, 26)
+Frame3.Position = UDim2.new(0, 10, 0, 11)
+Frame3.BackgroundColor3 = Color3.fromRGB(30, 200, 80)
+Frame3.BorderSizePixel = 0
+Frame3.ZIndex = 3
+Frame3.Parent = Frame2
+t1.value3(2, Frame3)
+
+local TextLabel = Instance.new("TextLabel")
+
+TextLabel.Size = UDim2.new(0, 220, 0, 20)
+TextLabel.Position = UDim2.new(0, 20, 0, 6)
+TextLabel.BackgroundTransparency = 1
+TextLabel.Text = "Irish Hub"
+TextLabel.Font = Enum.Font.GothamBold
+TextLabel.TextSize = 14
+TextLabel.TextColor3 = Color3.fromRGB(30, 200, 80)
+TextLabel.TextXAlignment = Enum.TextXAlignment.Left
+TextLabel.ZIndex = 3
+TextLabel.Parent = Frame2
+
+local TextLabel2 = Instance.new("TextLabel")
+
+TextLabel2.Size = UDim2.new(0, 200, 0, 12)
+TextLabel2.Position = UDim2.new(0, 20, 0, 28)
+TextLabel2.BackgroundTransparency = 1
+TextLabel2.Text = "discord.gg/irsh"
+TextLabel2.Font = Enum.Font.Gotham
+TextLabel2.TextSize = 10
+TextLabel2.TextColor3 = Color3.fromRGB(150, 150, 150)
+TextLabel2.TextXAlignment = Enum.TextXAlignment.Left
+TextLabel2.ZIndex = 3
+TextLabel2.Parent = Frame2
+
+local TextLabel3 = Instance.new("TextLabel")
+
+TextLabel3.Size = UDim2.new(0, 60, 0, 12)
+TextLabel3.Position = UDim2.new(1, -70, 0, 8)
+TextLabel3.BackgroundTransparency = 1
+TextLabel3.Text = "Ping: 0ms"
+TextLabel3.Font = Enum.Font.GothamBold
+TextLabel3.TextSize = 10
+TextLabel3.TextColor3 = Color3.fromRGB(150, 150, 150)
+TextLabel3.TextXAlignment = Enum.TextXAlignment.Right
+TextLabel3.ZIndex = 3
+TextLabel3.Parent = Frame2
+
+local TextLabel4 = Instance.new("TextLabel")
+
+TextLabel4.Size = UDim2.new(0, 60, 0, 12)
+TextLabel4.Position = UDim2.new(1, -70, 0, 24)
+TextLabel4.BackgroundTransparency = 1
+TextLabel4.Text = "FPS: 0"
+TextLabel4.Font = Enum.Font.GothamBold
+TextLabel4.TextSize = 10
+TextLabel4.TextColor3 = Color3.fromRGB(150, 150, 150)
+TextLabel4.TextXAlignment = Enum.TextXAlignment.Right
+TextLabel4.ZIndex = 3
+TextLabel4.Parent = Frame2
+
+local Frame4 = Instance.new("Frame")
+
+Frame4.Size = UDim2.new(0, 70, 0, 28)
+Frame4.Position = UDim2.new(0, 12, 0, 68)
+Frame4.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+Frame4.BackgroundTransparency = 0.4
+Frame4.BorderSizePixel = 0
+Frame4.ZIndex = 2
+Frame4.Parent = Frame
+t1.value3(8, Frame4)
+t1.value2(Color3.fromRGB(20, 110, 45), 1, 0.6, Frame4)
+
+local TextButton = Instance.new("TextButton")
+
+TextButton.Size = UDim2.new(0, 22, 1, 0)
+TextButton.BackgroundTransparency = 1
+TextButton.Text = "-"
+TextButton.Font = Enum.Font.GothamBold
+TextButton.TextSize = 14
+TextButton.TextColor3 = Color3.fromRGB(240, 240, 240)
+TextButton.AutoButtonColor = false
+TextButton.Active = true
+TextButton.ZIndex = 3
+TextButton.Parent = Frame4
+
+local TextLabel5 = Instance.new("TextLabel")
+
+TextLabel5.Size = UDim2.new(0, 26, 1, 0)
+TextLabel5.Position = UDim2.new(0, 22, 0, 0)
+TextLabel5.BackgroundTransparency = 1
+TextLabel5.Text = "70%"
+TextLabel5.Font = Enum.Font.GothamBold
+TextLabel5.TextSize = 10
+TextLabel5.TextColor3 = Color3.fromRGB(240, 240, 240)
+TextLabel5.TextXAlignment = Enum.TextXAlignment.Center
+TextLabel5.ZIndex = 3
+TextLabel5.Parent = Frame4
+
+local TextButton2 = Instance.new("TextButton")
+
+TextButton2.Size = UDim2.new(0, 22, 1, 0)
+TextButton2.Position = UDim2.new(1, -22, 0, 0)
+TextButton2.BackgroundTransparency = 1
+TextButton2.Text = "+"
+TextButton2.Font = Enum.Font.GothamBold
+TextButton2.TextSize = 14
+TextButton2.TextColor3 = Color3.fromRGB(240, 240, 240)
+TextButton2.AutoButtonColor = false
+TextButton2.Active = true
+TextButton2.ZIndex = 3
+TextButton2.Parent = Frame4
+
+local v103 = nil
+
+local function v104(p10)
+	u77 = value4(p10)
+	UIScale.Scale = u77
+	v103()
+	value7()
+end
+
+v103 = function()
+	local v105 = TextLabel5
+	local v106 = u77 * 100 + 0.5
+	local v107 = math.floor(v106)
+
+	v105.Text = tostring(v107) .. "%"
+end
+v37(TextButton.MouseButton1Click:Connect(function()
+	v104(u77 - 0.1)
+end))
+v37(TextButton2.MouseButton1Click:Connect(function()
+	v104(u77 + 0.1)
+end))
+
+local Frame5 = Instance.new("Frame")
+
+Frame5.Size = UDim2.new(1, -106, 0, 28)
+Frame5.Position = UDim2.new(0, 94, 0, 68)
+Frame5.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+Frame5.BackgroundTransparency = 0.4
+Frame5.BorderSizePixel = 0
+Frame5.Active = true
+Frame5.Interactable = true
+Frame5.ZIndex = 2
+Frame5.Parent = Frame
+t1.value3(8, Frame5)
+
+local color3 = Color3.fromRGB
+
+t1.value2(color3(20, 110, 45), 1, 0.6, Frame5)
+
+local TextButton3 = Instance.new("TextButton")
+
+TextButton3.Size = UDim2.new(0.333, -2, 1, -6)
+TextButton3.Position = UDim2.new(0, 3, 0, 3)
+TextButton3.BackgroundColor3 = Color3.fromRGB(20, 110, 45)
+TextButton3.BorderSizePixel = 0
+TextButton3.AutoButtonColor = false
+TextButton3.Active = true
+TextButton3.Text = "PC"
+TextButton3.Font = Enum.Font.GothamBold
+TextButton3.TextSize = 11
+TextButton3.TextColor3 = Color3.fromRGB(240, 240, 240)
+TextButton3.ZIndex = 3
+TextButton3.Parent = Frame5
+t1.value3(6, TextButton3)
+
+local v111 = t1.value2(Color3.fromRGB(30, 200, 80), 1.5, 0.1, TextButton3)
+local TextButton4 = Instance.new("TextButton")
+
+TextButton4.Size = UDim2.new(0.333, -2, 1, -6)
+TextButton4.Position = UDim2.new(0.333, 0, 0, 3)
+TextButton4.BackgroundColor3 = Color3.fromRGB(12, 12, 12)
+TextButton4.BorderSizePixel = 0
+TextButton4.AutoButtonColor = false
+TextButton4.Active = true
+TextButton4.Text = "MOBILE"
+TextButton4.Font = Enum.Font.GothamBold
+TextButton4.TextSize = 10
+TextButton4.TextColor3 = Color3.fromRGB(150, 150, 150)
+TextButton4.ZIndex = 3
+TextButton4.Parent = Frame5
+t1.value3(6, TextButton4)
+
+local color32 = Color3.fromRGB
+local v114 = t1.value2(color32(20, 110, 45), 1, 0.6, TextButton4)
+local TextButton5 = Instance.new("TextButton")
+
+TextButton5.Size = UDim2.new(0.334, -2, 1, -6)
+TextButton5.Position = UDim2.new(0.667, 0, 0, 3)
+TextButton5.BackgroundColor3 = Color3.fromRGB(12, 12, 12)
+TextButton5.BorderSizePixel = 0
+TextButton5.AutoButtonColor = false
+TextButton5.Active = true
+TextButton5.Text = "CUSTOM"
+TextButton5.Font = Enum.Font.GothamBold
+TextButton5.TextSize = 10
+TextButton5.TextColor3 = Color3.fromRGB(150, 150, 150)
+TextButton5.ZIndex = 3
+TextButton5.Parent = Frame5
+t1.value3(6, TextButton5)
+
+local v116 = t1.value2(Color3.fromRGB(20, 110, 45), 1, 0.6, TextButton5)
+local Frame6 = Instance.new("Frame")
+
+Frame6.Size = UDim2.new(1, -24, 0, 36)
+Frame6.Position = UDim2.new(0, 12, 0, 318)
+Frame6.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+Frame6.BackgroundTransparency = 0.4
+Frame6.BorderSizePixel = 0
+Frame6.Visible = false
+Frame6.ZIndex = 2
+Frame6.Parent = Frame
+t1.value3(8, Frame6)
+t1.value2(Color3.fromRGB(20, 110, 45), 1, 0.6, Frame6)
+
+local TextLabel6 = Instance.new("TextLabel")
+
+TextLabel6.Size = UDim2.new(0, 90, 1, 0)
+TextLabel6.Position = UDim2.new(0, 12, 0, 0)
+TextLabel6.BackgroundTransparency = 1
+TextLabel6.Text = "Intensity"
+TextLabel6.Font = Enum.Font.GothamBold
+TextLabel6.TextSize = 12
+TextLabel6.TextColor3 = Color3.fromRGB(200, 200, 200)
+TextLabel6.TextXAlignment = Enum.TextXAlignment.Left
+TextLabel6.ZIndex = 3
+TextLabel6.Parent = Frame6
+
+local TextBox = Instance.new("TextBox")
+
+TextBox.Size = UDim2.new(0, 120, 0, 24)
+TextBox.Position = UDim2.new(1, -132, 0.5, -12)
+TextBox.BackgroundColor3 = Color3.fromRGB(12, 12, 12)
+TextBox.BorderSizePixel = 0
+TextBox.Text = tostring(u81)
+TextBox.Font = Enum.Font.GothamBold
+TextBox.TextSize = 11
+TextBox.TextColor3 = Color3.fromRGB(240, 240, 240)
+TextBox.ClearTextOnFocus = false
+TextBox.ZIndex = 3
+TextBox.Parent = Frame6
+t1.value3(5, TextBox)
+t1.value2(Color3.fromRGB(20, 110, 45), 1, 0.4, TextBox)
+
+local FocusLost = TextBox.FocusLost
+local t4 = { FocusLost.Connect(FocusLost, function()
+		local Text = TextBox.Text
+		local v123 = tonumber(Text)
+
+		if not v123 then
+			v130 = u81
+			TextBox.Text = tostring(v130)
+			value7()
+
+			return
+		end
+
+		local v124 = math.floor(v123)
+
+		u81 = math.clamp(v124, 1, 500000)
+
+		local v125 = u81
+
+		TextBox.Text = tostring(v125)
+		value7()
+	end) }
+
+local function v126()
+	local function v127(p11, p12, p13)
+		if p13 then
+			p11.BackgroundColor3 = Color3.fromRGB(20, 110, 45)
+			p11.TextColor3 = Color3.fromRGB(240, 240, 240)
+			p12.Color = Color3.fromRGB(30, 200, 80)
+			p12.Transparency = 0.1
+		else
+			p11.BackgroundColor3 = Color3.fromRGB(12, 12, 12)
+			p11.TextColor3 = Color3.fromRGB(150, 150, 150)
+			p12.Color = Color3.fromRGB(20, 110, 45)
+			p12.Transparency = 0.6
+		end
+	end
+
+	v127(TextButton3, v111, v82 == "PC")
+	v127(TextButton4, v114, v82 == "Mobile")
+	v127(TextButton5, v116, v82 == "Custom")
+	Frame6.Visible = v82 == "Custom"
+end
+
+v37(unpack_(t4))
+
+local function v128(p14)
+	local v129 = p14 ~= "PC"
+
+	if not v129 then
+		if not v129 then
+			v126()
+			value7()
+		end
+
+		return
+	end
+
+	if p14 == "Mobile" then
+		v129 = false
+	else
+		v129 = p14 ~= "Custom"
+	end
+
+	if not v129 then
+		v126()
+		value7()
+	end
+end
+
+v37(TextButton3.MouseButton1Click:Connect(function()
+	v128("PC")
+end))
+v37(TextButton4.MouseButton1Click:Connect(function()
+	v128("Mobile")
+end))
+v37(TextButton5.MouseButton1Click:Connect(function()
+	v128("Custom")
+end))
+
+local Frame7 = Instance.new("Frame")
+
+Frame7.Size = UDim2.new(1, -24, 0, 38)
+Frame7.Position = UDim2.new(0, 12, 0, 104)
+Frame7.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+Frame7.BackgroundTransparency = 0.4
+Frame7.BorderSizePixel = 0
+Frame7.ZIndex = 2
+Frame7.Parent = Frame
+t1.value3(8, Frame7)
+
+local color33 = Color3.fromRGB
+
+t1.value2(color33(20, 110, 45), 1, 0.6, Frame7)
+
+local Frame8 = Instance.new("Frame")
+
+Frame8.Size = UDim2.new(0, 10, 0, 10)
+Frame8.Position = UDim2.new(0, 12, 0.5, -5)
+Frame8.BackgroundColor3 = Color3.fromRGB(90, 90, 90)
+Frame8.BorderSizePixel = 0
+Frame8.ZIndex = 3
+Frame8.Parent = Frame7
+t1.value3(5, Frame8)
+
+local TextLabel7 = Instance.new("TextLabel")
+
+TextLabel7.Size = UDim2.new(0, 100, 1, 0)
+TextLabel7.Position = UDim2.new(0, 28, 0, 0)
+TextLabel7.BackgroundTransparency = 1
+TextLabel7.Text = "IDLE"
+TextLabel7.Font = Enum.Font.GothamBold
+TextLabel7.TextSize = 12
+TextLabel7.TextColor3 = Color3.fromRGB(150, 150, 150)
+TextLabel7.TextXAlignment = Enum.TextXAlignment.Left
+TextLabel7.ZIndex = 3
+TextLabel7.Parent = Frame7
+
+local TextLabel8 = Instance.new("TextLabel")
+
+TextLabel8.Size = UDim2.new(0, 60, 1, 0)
+TextLabel8.Position = UDim2.new(1, -70, 0, 0)
+TextLabel8.BackgroundTransparency = 1
+TextLabel8.Text = "00:00"
+TextLabel8.Font = Enum.Font.GothamMedium
+TextLabel8.TextSize = 12
+TextLabel8.TextColor3 = Color3.fromRGB(150, 150, 150)
+TextLabel8.TextXAlignment = Enum.TextXAlignment.Right
+TextLabel8.ZIndex = 3
+TextLabel8.Parent = Frame7
+
+local Frame9 = Instance.new("Frame")
+
+Frame9.Size = UDim2.new(1, -24, 0, 44)
+Frame9.Position = UDim2.new(0, 12, 0, 150)
+Frame9.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+Frame9.BackgroundTransparency = 0.4
+Frame9.BorderSizePixel = 0
+Frame9.Active = true
+Frame9.ZIndex = 2
+Frame9.Parent = Frame
+t1.value3(8, Frame9)
+t1.value2(Color3.fromRGB(20, 110, 45), 1, 0.6, Frame9)
+
+local TextButton6 = Instance.new("TextButton")
+
+TextButton6.Size = UDim2.new(0, 70, 0, 26)
+TextButton6.Position = UDim2.new(0, 12, 0.5, -13)
+TextButton6.BackgroundColor3 = Color3.fromRGB(12, 12, 12)
+TextButton6.BorderSizePixel = 0
+TextButton6.AutoButtonColor = false
+TextButton6.Active = true
+TextButton6.Text = "?"
+TextButton6.Font = Enum.Font.GothamBold
+TextButton6.TextSize = 10
+TextButton6.TextColor3 = Color3.fromRGB(240, 240, 240)
+TextButton6.ZIndex = 3
+TextButton6.Parent = Frame9
+t1.value3(6, TextButton6)
+
+local color34 = Color3.fromRGB(20, 110, 45)
+local v138 = t1.value2(color34, 1, 0.4, TextButton6)
+local v139 = 36 - 6
+local Frame10 = Instance.new("Frame")
+
+Frame10.Size = UDim2.new(0, 56, 0, 26)
+Frame10.Position = UDim2.new(1, -70, 0.5, -13)
+Frame10.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+Frame10.BorderSizePixel = 0
+Frame10.ZIndex = 3
+Frame10.Parent = Frame9
+t1.value3(13, Frame10)
+t1.value2(Color3.fromRGB(20, 110, 45), 1, 0.5, Frame10)
+
+local Frame11 = Instance.new("Frame")
+
+Frame11.Size = UDim2.new(0, 0, 1, 0)
+Frame11.BackgroundColor3 = Color3.fromRGB(20, 110, 45)
+Frame11.BorderSizePixel = 0
+Frame11.ZIndex = 4
+Frame11.Parent = Frame10
+t1.value3(13, Frame11)
+
+local Frame12 = Instance.new("Frame")
+
+Frame12.Size = UDim2.new(0, 20, 0, 20)
+Frame12.Position = UDim2.new(0, 3, 0.5, -10)
+Frame12.BackgroundColor3 = Color3.fromRGB(150, 150, 150)
+Frame12.BorderSizePixel = 0
+Frame12.ZIndex = 5
+Frame12.Parent = Frame10
+t1.value3(10, Frame12)
+
+local color35 = Color3.fromRGB
+local v144 = t1.value2(color35(20, 110, 45), 1, 0.5, Frame12)
+local TextButton7 = Instance.new("TextButton")
+
+TextButton7.Size = UDim2.new(1, 0, 1, 0)
+TextButton7.BackgroundTransparency = 1
+TextButton7.Text = ""
+TextButton7.AutoButtonColor = false
+TextButton7.Active = true
+TextButton7.ZIndex = 6
+TextButton7.Parent = Frame10
+
+local function v146()
+	Frame10.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+	Frame11.BackgroundColor3 = Color3.fromRGB(20, 110, 45)
+	Frame11:TweenSize(UDim2.new(0, 0, 1, 0), "Out", "Quad", 0.15, true)
+	Frame12:TweenPosition(UDim2.new(0, 3, 0.5, -10), "Out", "Quad", 0.15, true)
+	Frame12.BackgroundColor3 = Color3.fromRGB(150, 150, 150)
+	v144.Color = Color3.fromRGB(20, 110, 45)
+end
+local function v147()
+	if u21 then
+		Frame8.BackgroundColor3 = Color3.fromRGB(30, 200, 80)
+		TextLabel7.Text = "ACTIVE"
+		TextLabel7.TextColor3 = Color3.fromRGB(30, 200, 80)
+	else
+		Frame8.BackgroundColor3 = Color3.fromRGB(90, 90, 90)
+		TextLabel7.Text = "IDLE"
+		TextLabel7.TextColor3 = Color3.fromRGB(150, 150, 150)
+	end
+end
+local function v148()
+	Frame10.BackgroundColor3 = Color3.fromRGB(20, 110, 45)
+	Frame11.BackgroundColor3 = Color3.fromRGB(30, 200, 80)
+	Frame11:TweenSize(UDim2.new(1, 0, 1, 0), "Out", "Quad", 0.15, true)
+	Frame12:TweenPosition(UDim2.new(0, 3 + v139, 0.5, -10), "Out", "Quad", 0.15, true)
+	Frame12.BackgroundColor3 = Color3.fromRGB(240, 240, 240)
+	v144.Color = Color3.fromRGB(30, 200, 80)
+end
+
+v37(TextButton7.MouseButton1Click:Connect(function()
+	local v149 = not u85
+
+	u85 = v149
+
+	if v149 then
+		v148()
+		value13()
+	else
+		v146()
+		u21 = false
+
+		if not thread then
+			v147()
+			value7()
+
+			return
+		end
+
+		local function v150()
+			coroutine.close(thread)
+		end
+
+		pcall(v150)
+		thread = nil
+	end
+
+	v147()
+	value7()
+end))
+
+local InputBegan = Frame10.InputBegan
+
+v37(InputBegan.Connect(InputBegan, function(p15)
+	if not (p15.UserInputType == Enum.UserInputType.MouseButton1 or p15.UserInputType == Enum.UserInputType.Touch) then
+		return
+	end
+
+	u26 = true
+	Position = p15.Position
+	Position2 = Frame12.Position
+end))
+v37(UserInputService.InputChanged:Connect(function(input)
+	local v152 = u26
+
+	if v152 then
+		v152 = input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch
+	end
+
+	if not v152 then
+		return
+	end
+
+	local X = (input.Position - Position).X
+	local v154 = Position2.X.Offset + X
+	local v155 = 3 + v139
+	local v156 = math.clamp(v154, 3, v155)
+
+	Frame12.Position = UDim2.new(0, v156, 0.5, -10)
+end))
+v37(UserInputService.InputEnded:Connect(function(input)
+	local v157 = u26
+
+	if v157 then
+		v157 = input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch
+	end
+
+	if not v157 then
+		return
+	end
+
+	local v158 = Frame12.Position.X.Offset >= 3 + v139 / 2
+
+	u85 = v158
+
+	if v158 then
+		v148()
+		value13()
+	else
+		v146()
+		u21 = false
+
+		if thread then
+			local function v159()
+				coroutine.close(thread)
+			end
+
+			pcall(v159)
+			thread = nil
+		end
+	end
+
+	v147()
+	value7()
+end))
+v37(TextButton6.MouseButton1Click:Connect(function()
+	u20 = true
+	TextButton6.Text = "..."
+	v138.Color = Color3.fromRGB(30, 200, 80)
+end))
+v37(UserInputService.InputBegan:Connect(function(input, gameProcessed)
+	if not u20 then
+		if gameProcessed then
+			return
+		end
+
+		if not KeyCode then
+			return
+		end
+
+		if input.KeyCode ~= KeyCode then
+			return
+		end
+
+		local v160 = u80 == "Keyboard"
+
+		if v160 then
+			v160 = input.UserInputType ~= Enum.UserInputType.Keyboard
+		end
+
+		if v160 then
+			return
+		end
+
+		local v161 = u80 == "Gamepad"
+
+		if v161 then
+			v161 = input.UserInputType ~= Enum.UserInputType.Gamepad1
+		end
+
+		if v161 then
+			return
+		end
+
+		local v162 = not u85
+
+		u85 = v162
+
+		if v162 then
+			v148()
+			value13()
+		else
+			v146()
+			u21 = false
+
+			if not thread then
+				v147()
+				value7()
+
+				return
+			end
+
+			local function v163()
+				coroutine.close(thread)
+			end
+
+			pcall(v163)
+			thread = nil
+		end
+
+		v147()
+		value7()
+
+		return
+	end
+
+	if input.UserInputType == Enum.UserInputType.Keyboard then
+		if input.KeyCode == Enum.KeyCode.Unknown then
+			return
+		else
+			KeyCode = input.KeyCode
+			u80 = "Keyboard"
+			TextButton6.Text = input.KeyCode.Name
+			v138.Color = Color3.fromRGB(20, 110, 45)
+			value7()
+
+			return
+		end
+	end
+
+	if not (input.UserInputType == Enum.UserInputType.Gamepad1 and input.KeyCode ~= Enum.KeyCode.Unknown) then
+		return
+	end
+
+	KeyCode = input.KeyCode
+	u80 = "Gamepad"
+	TextButton6.Text = input.KeyCode.Name
+	v138.Color = Color3.fromRGB(20, 110, 45)
+	value7()
+end))
+
+local TextLabel9 = Instance.new("TextLabel")
+
+TextLabel9.Size = UDim2.new(1, -24, 0, 16)
+TextLabel9.Position = UDim2.new(0, 12, 0, 202)
+TextLabel9.BackgroundTransparency = 1
+TextLabel9.Text = "SPEED"
+TextLabel9.Font = Enum.Font.GothamBold
+TextLabel9.TextSize = 11
+TextLabel9.TextColor3 = Color3.fromRGB(30, 200, 80)
+TextLabel9.TextXAlignment = Enum.TextXAlignment.Left
+TextLabel9.ZIndex = 3
+TextLabel9.Parent = Frame
+
+local Frame13 = Instance.new("Frame")
+
+Frame13.Size = UDim2.new(1, -24, 0, 44)
+Frame13.Position = UDim2.new(0, 12, 0, 220)
+Frame13.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+Frame13.BackgroundTransparency = 0.4
+Frame13.BorderSizePixel = 0
+Frame13.Active = true
+Frame13.ZIndex = 2
+Frame13.Parent = Frame
+t1.value3(8, Frame13)
+t1.value2(Color3.fromRGB(20, 110, 45), 1, 0.6, Frame13)
+
+local TextLabel10 = Instance.new("TextLabel")
+
+TextLabel10.Size = UDim2.new(0, 80, 1, 0)
+TextLabel10.Position = UDim2.new(0, 12, 0, 0)
+TextLabel10.BackgroundTransparency = 1
+TextLabel10.Text = "Speed"
+TextLabel10.Font = Enum.Font.GothamBold
+TextLabel10.TextSize = 12
+TextLabel10.TextColor3 = Color3.fromRGB(240, 240, 240)
+TextLabel10.TextXAlignment = Enum.TextXAlignment.Left
+TextLabel10.ZIndex = 3
+TextLabel10.Parent = Frame13
+
+local Frame14 = Instance.new("Frame")
+
+Frame14.Size = UDim2.new(0, 56, 0, 26)
+Frame14.Position = UDim2.new(1, -70, 0.5, -13)
+Frame14.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+Frame14.BorderSizePixel = 0
+Frame14.ZIndex = 3
+Frame14.Parent = Frame13
+t1.value3(13, Frame14)
+
+local color36 = Color3.fromRGB(20, 110, 45)
+
+t1.value2(color36, 1, 0.5, Frame14)
+
+local Frame15 = Instance.new("Frame")
+
+Frame15.Size = UDim2.new(0, 0, 1, 0)
+Frame15.BackgroundColor3 = Color3.fromRGB(20, 110, 45)
+Frame15.BorderSizePixel = 0
+Frame15.ZIndex = 4
+Frame15.Parent = Frame14
+t1.value3(13, Frame15)
+
+local Frame16 = Instance.new("Frame")
+
+Frame16.Size = UDim2.new(0, 20, 0, 20)
+Frame16.Position = UDim2.new(0, 3, 0.5, -10)
+Frame16.BackgroundColor3 = Color3.fromRGB(150, 150, 150)
+Frame16.BorderSizePixel = 0
+Frame16.ZIndex = 5
+Frame16.Parent = Frame14
+t1.value3(10, Frame16)
+
+local color37 = Color3.fromRGB
+local v172 = t1.value2(color37(20, 110, 45), 1, 0.5, Frame16)
+local TextButton8 = Instance.new("TextButton")
+
+TextButton8.Size = UDim2.new(1, 0, 1, 0)
+TextButton8.BackgroundTransparency = 1
+TextButton8.Text = ""
+TextButton8.AutoButtonColor = false
+TextButton8.Active = true
+TextButton8.ZIndex = 6
+
+local function v174()
+	Frame14.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+	Frame15.BackgroundColor3 = Color3.fromRGB(20, 110, 45)
+	Frame15:TweenSize(UDim2.new(0, 0, 1, 0), "Out", "Quad", 0.15, true)
+	Frame16:TweenPosition(UDim2.new(0, 3, 0.5, -10), "Out", "Quad", 0.15, true)
+	Frame16.BackgroundColor3 = Color3.fromRGB(150, 150, 150)
+	v172.Color = Color3.fromRGB(20, 110, 45)
+end
+
+TextButton8.Parent = Frame14
+
+local function v175()
+	Frame14.BackgroundColor3 = Color3.fromRGB(20, 110, 45)
+	Frame15.BackgroundColor3 = Color3.fromRGB(30, 200, 80)
+	Frame15:TweenSize(UDim2.new(1, 0, 1, 0), "Out", "Quad", 0.15, true)
+	Frame16:TweenPosition(UDim2.new(0, 3 + v139, 0.5, -10), "Out", "Quad", 0.15, true)
+	Frame16.BackgroundColor3 = Color3.fromRGB(240, 240, 240)
+	v172.Color = Color3.fromRGB(30, 200, 80)
+end
+local function v176(p16)
+	u79 = p16
+
+	if p16 then
+		v175()
+	else
+		v174()
+	end
+
+	value7()
+end
+
+v37(TextButton8.MouseButton1Click:Connect(function()
+	v176(not u79)
+end))
+
+local Frame17 = Instance.new("Frame")
+
+Frame17.Size = UDim2.new(1, -24, 0, 32)
+Frame17.Position = UDim2.new(0, 12, 0, 270)
+Frame17.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+Frame17.BackgroundTransparency = 0.4
+Frame17.BorderSizePixel = 0
+Frame17.ZIndex = 2
+Frame17.Parent = Frame
+t1.value3(8, Frame17)
+
+local color38 = Color3.fromRGB
+
+t1.value2(color38(20, 110, 45), 1, 0.6, Frame17)
+
+local TextLabel11 = Instance.new("TextLabel")
+
+TextLabel11.Size = UDim2.new(0, 40, 1, 0)
+TextLabel11.Position = UDim2.new(0, 10, 0, 0)
+TextLabel11.BackgroundTransparency = 1
+TextLabel11.Text = "Studs"
+TextLabel11.Font = Enum.Font.GothamBold
+TextLabel11.TextSize = 11
+TextLabel11.TextColor3 = Color3.fromRGB(200, 200, 200)
+TextLabel11.TextXAlignment = Enum.TextXAlignment.Left
+TextLabel11.ZIndex = 3
+TextLabel11.Parent = Frame17
+
+local TextBox2 = Instance.new("TextBox")
+
+TextBox2.Size = UDim2.new(0, 50, 0, 22)
+TextBox2.Position = UDim2.new(0, 52, 0.5, -11)
+TextBox2.BackgroundColor3 = Color3.fromRGB(12, 12, 12)
+TextBox2.BorderSizePixel = 0
+TextBox2.Text = tostring(u78)
+TextBox2.Font = Enum.Font.GothamBold
+TextBox2.TextSize = 11
+TextBox2.TextColor3 = Color3.fromRGB(240, 240, 240)
+TextBox2.ClearTextOnFocus = false
+TextBox2.ZIndex = 3
+TextBox2.Parent = Frame17
+t1.value3(5, TextBox2)
+
+local color39 = Color3.fromRGB
+
+t1.value2(color39(20, 110, 45), 1, 0.4, TextBox2)
+
+local TextLabel12 = Instance.new("TextLabel")
+
+TextLabel12.Size = UDim2.new(0, 50, 1, 0)
+TextLabel12.Position = UDim2.new(0.5, 0, 0, 0)
+TextLabel12.BackgroundTransparency = 1
+TextLabel12.Text = "Interval"
+TextLabel12.Font = Enum.Font.GothamBold
+TextLabel12.TextSize = 11
+TextLabel12.TextColor3 = Color3.fromRGB(200, 200, 200)
+TextLabel12.TextXAlignment = Enum.TextXAlignment.Left
+TextLabel12.ZIndex = 3
+TextLabel12.Parent = Frame17
+
+local TextBox3 = Instance.new("TextBox")
+
+TextBox3.Size = UDim2.new(0, 50, 0, 22)
+TextBox3.Position = UDim2.new(0.5, 52, 0.5, -11)
+TextBox3.BackgroundColor3 = Color3.fromRGB(12, 12, 12)
+TextBox3.BorderSizePixel = 0
+TextBox3.Text = tostring(u84)
+TextBox3.Font = Enum.Font.GothamBold
+TextBox3.TextSize = 11
+TextBox3.TextColor3 = Color3.fromRGB(240, 240, 240)
+TextBox3.ClearTextOnFocus = false
+TextBox3.ZIndex = 3
+TextBox3.Parent = Frame17
+t1.value3(5, TextBox3)
+
+local color310 = Color3.fromRGB(20, 110, 45)
+
+t1.value2(color310, 1, 0.4, TextBox3)
+v37(TextBox2.FocusLost:Connect(function()
+	local Text = TextBox2.Text
+	local v186 = tonumber(Text)
+
+	if not v186 then
+		v203 = u78
+		TextBox2.Text = tostring(v203)
+		value7()
+
+		return
+	end
+
+	u78 = math.clamp(v186, 1, 500)
+
+	local v187 = u78
+
+	TextBox2.Text = tostring(v187)
+	value7()
+end))
+v37(TextBox3.FocusLost:Connect(function()
+	local Text = TextBox3.Text
+	local v189 = tonumber(Text)
+
+	if not v189 then
+		v206 = u84
+		TextBox3.Text = tostring(v206)
+		value7()
+
+		return
+	end
+
+	u84 = math.clamp(v189, 0.01, 5)
+
+	local v190 = u84
+
+	TextBox3.Text = tostring(v190)
+	value7()
+end))
+
+local n6 = 0
+
+local function v192(dt)
+	if not u21 then
+		return
+	end
+
+	if not u79 then
+		return
+	end
+
+	n6 = n6 + dt
+
+	if n6 < u84 then
+		return
+	end
+
+	local Character = t2.value4.Character
+	local Humanoid
+
+	if Character then
+		Humanoid = Character:FindFirstChildOfClass("Humanoid")
+	else
+		Humanoid = Character
+	end
+
+	if Character then
+		Character = Character:FindFirstChild("HumanoidRootPart")
+	end
+
+	if not (Humanoid and Character) then
+		return
+	end
+
+	local MoveDirection = Humanoid.MoveDirection
+
+	if not (MoveDirection.Magnitude > 0) then
+		return
+	end
+
+	local s2 = "CFrame"
+	local v197 = MoveDirection * u78
+
+	Character[s2] = Character[s2] + v197
+end
+
+v37(RunService.Heartbeat:Connect(v192))
+task.spawn(function()
+	while true do
+		repeat
+			task.wait(1)
+
+			local function v198()
+				return t2.value2.Network.ServerStatsItem["Data Ping"]:GetValue()
+			end
+
+			local ok2, result = pcall(v198)
+		until ok2 and result
+
+		local v201 = TextLabel3
+		local v202 = math.floor(v217)
+
+		v201.Text = "Ping: " .. tostring(v202) .. "ms"
+	end
+end)
+
+local n7 = 0
+local n8 = 0
+
+v37(RunService.Heartbeat:Connect(function(dt)
+	if u21 then
+		local v205 = os.clock() - n2
+		local v207 = math.floor(v205)
+		local v208 = TextLabel8
+		local format = string.format
+		local v209 = v207 / 60
+
+		v208.Text = format("%02d:%02d", math.floor(v209), v207 % 60)
+	else
+		TextLabel8.Text = "00:00"
+	end
+
+	n7 = n7 + 1
+	n8 = n8 + dt
+
+	if not (n8 >= 0.5) then
+		return
+	end
+
+	TextLabel4.Text = "FPS: " .. tostring(math.floor(n7 / n8 + 0.5))
+end))
+v37(Frame2.InputBegan:Connect(function(input)
+	if not (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
+		return
+	end
+
+	u29 = true
+	Position3 = input.Position
+	Position4 = Frame.Position
+end))
+v37(UserInputService.InputChanged:Connect(function(input)
+	local v210 = u29
+
+	if v210 then
+		v210 = input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch
+	end
+
+	if not v210 then
+		return
+	end
+
+	local v211 = input.Position - Position3
+
+	Frame.Position = UDim2.new(Position4.X.Scale, Position4.X.Offset + v211.X, Position4.Y.Scale, Position4.Y.Offset + v211.Y)
+end))
+v37(UserInputService.InputEnded:Connect(function(input)
+	local _ = input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch
+end))
+UIScale.Scale = u77
+v103()
+v126()
+
+if u85 then
+	v148()
+	value13()
+else
+	v146()
+end
+
+v147()
+
+if KeyCode then
+	TextButton6.Text = KeyCode.Name
+end
+
+if u79 then
+	v175()
+else
+	v174()
+end
+
+TextBox.Text = tostring(u81)
+
+function _G.__IrishHubCleanup()
+	if thread then
+		local function v213()
+			coroutine.close(thread)
+		end
+
+		pcall(v213)
+		thread = nil
+	end
+
+	for _, v in ipairs(t3) do
+		pcall(function()
+			v:Disconnect()
+		end)
+	end
+
+	if not value11 then
+		return
+	end
+
+	pcall(function()
+		value11:Destroy()
+	end)
+end
