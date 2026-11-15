@@ -7,66 +7,44 @@
     - Server hop, persistent counter, noclip, Furina UI
 ]]
 
--- Chờ game load cơ bản
-repeat task.wait() until game:IsLoaded()
-repeat task.wait() until game:FindFirstChild("CoreGui")
-
--- ── FireButton (BananaCat implementation) ───────────────────────────────────
-local function FireButton(btn)
-    btn.Selectable = true
-    game:GetService("GuiService").SelectedObject = btn
-    game:GetService("VirtualInputManager"):SendKeyEvent(true,  "Return", false, btn)
-    game:GetService("VirtualInputManager"):SendKeyEvent(false, "Return", false, btn)
-    btn.Activated:Connect(function()
-        game:GetService("GuiService").SelectedObject = nil
-    end)
+-- ── Chờ DataLoaded (giống QuantumOnyx) ──────────────────────────────────────
+while true do
+    task.wait()
+    if game:IsLoaded() and game.Players.LocalPlayer:FindFirstChild("DataLoaded") then
+        break
+    end
 end
 
--- ── Team selection — chạy song song, lặp đến khi character spawn ─────────────
--- Dùng task.spawn để không block phần còn lại của script.
--- Vòng lặp cứ thử chọn phe mỗi giây cho đến khi:
---   1. ChooseTeam biến mất (chọn thành công), HOẶC
---   2. Character đã có Humanoid sống (waiting for character kết thúc)
-task.spawn(function()
-    local lp = game:GetService("Players").LocalPlayer
+-- ── Team selection dùng firesignal (QuantumOnyx style) ───────────────────────
+local fn = cloneref or function(arg) return arg end
+local _players = fn(game:GetService("Players"))
+local _lp = _players.LocalPlayer
 
-    -- Chờ Main GUI xuất hiện (không giới hạn thời gian)
-    local _mainGui
-    repeat
-        task.wait(0.5)
-        _mainGui = lp.PlayerGui:FindFirstChild("Main (minimal)")
-                or lp.PlayerGui:FindFirstChild("Main")
-    until _mainGui
+if _lp.PlayerGui:FindFirstChild("Main (minimal)") then
+    -- Mặc định Pirates nếu chưa set, dùng PhongTeam để override
+    local team = getgenv().PhongTeam or "Marines"
 
-    -- Chờ ChooseTeam xuất hiện
-    repeat task.wait(0.3) until _mainGui:FindFirstChild("ChooseTeam")
+    local container = _lp.PlayerGui["Main (minimal)"]:WaitForChild("ChooseTeam"):WaitForChild("Container")
+    local textButton = nil
 
-    -- Lặp chọn phe cho đến khi character spawn xong
-    while true do
-        task.wait(0.5)
-
-        -- Dừng nếu character đã spawn (Humanoid sống = chọn phe thành công)
-        local char = lp.Character
-        local hum  = char and char:FindFirstChildOfClass("Humanoid")
-        if hum and hum.Health > 0 then
-            break
-        end
-
-        -- Dừng nếu ChooseTeam đã biến mất
-        local ct = _mainGui:FindFirstChild("ChooseTeam")
-        if not ct or not ct.Visible then
-            break
-        end
-
-        -- Thử chọn phe
-        pcall(function()
-            local team = (getgenv().PhongTeam == "Pirates") and "Pirates" or "Marines"
-            FireButton(ct.Container[team].Frame.TextButton)
-        end)
+    if team == "Pirates" then
+        textButton = container:WaitForChild("Pirates"):WaitForChild("Frame"):WaitForChild("TextButton")
+    else
+        textButton = container:WaitForChild("Marines"):WaitForChild("Frame"):WaitForChild("TextButton")
     end
 
-    game:GetService("GuiService").SelectedObject = nil
-end)
+    if textButton then
+        repeat
+            task.wait()
+            pcall(function()
+                firesignal(textButton.Activated)
+            end)
+        until not _lp.PlayerGui:FindFirstChild("Main (minimal)")
+    end
+end
+
+-- Chờ Main GUI chính xuất hiện
+repeat task.wait() until _lp.PlayerGui:FindFirstChild("Main")
 
     
 local Players = game:GetService("Players")
