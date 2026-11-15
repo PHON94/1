@@ -901,8 +901,7 @@ local function addFruitESP(handle, fruitName)
             local root = char and char:FindFirstChild("HumanoidRootPart")
             local dist = root and math.floor((root.Position - handle.Position).Magnitude) or 0
             label.Text = string.format(
-                "<b><font color='rgb(255,180,0)'>%s</font></b>
-<font color='rgb(210,210,210)'>%d studs</font>",
+                "<b><font color='rgb(255,180,0)'>%s</font></b>\n<font color='rgb(210,210,210)'>%d studs</font>",
                 fruitName, dist
             )
         end
