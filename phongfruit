@@ -7,7 +7,12 @@
     - Server hop, persistent counter, noclip, Furina UI
 ]]
 
+-- Chờ game load hoàn toàn (theo BananaCat)
 repeat task.wait() until game:IsLoaded()
+repeat task.wait() until game:FindFirstChild("CoreGui")
+repeat task.wait() until not game:GetService("Players").LocalPlayer.PlayerGui:FindFirstChild("LoadingScreen")
+repeat task.wait() until game:IsLoaded() and game:GetService("Players").LocalPlayer:FindFirstChild("DataLoaded")
+
 
 -- ── FireButton (BananaCat implementation) ───────────────────────────────────
 local function FireButton(btn)
