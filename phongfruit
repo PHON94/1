@@ -21,26 +21,26 @@ local fn = cloneref or function(arg) return arg end
 local _players = fn(game:GetService("Players"))
 local _lp = _players.LocalPlayer
 
-if _lp.PlayerGui:FindFirstChild("Main (minimal)") then
-    -- Mặc định Pirates nếu chưa set, dùng PhongTeam để override
+local _minimalGui = _lp.PlayerGui:FindFirstChild("Main (minimal)")
+if _minimalGui then
     local team = getgenv().PhongTeam or "Marines"
+    -- Dùng timeout 5s cho WaitForChild để không treo vĩnh viễn
+    local chooseTeam = _minimalGui:WaitForChild("ChooseTeam", 5)
+    local container = chooseTeam and chooseTeam:WaitForChild("Container", 5)
 
-    local container = _lp.PlayerGui["Main (minimal)"]:WaitForChild("ChooseTeam"):WaitForChild("Container")
-    local textButton = nil
+    if container then
+        local teamFolder = team == "Pirates"
+            and container:WaitForChild("Pirates", 5)
+            or  container:WaitForChild("Marines", 5)
+        local frame = teamFolder and teamFolder:WaitForChild("Frame", 5)
+        local textButton = frame and frame:WaitForChild("TextButton", 5)
 
-    if team == "Pirates" then
-        textButton = container:WaitForChild("Pirates"):WaitForChild("Frame"):WaitForChild("TextButton")
-    else
-        textButton = container:WaitForChild("Marines"):WaitForChild("Frame"):WaitForChild("TextButton")
-    end
-
-    if textButton then
-        repeat
-            task.wait()
-            pcall(function()
-                firesignal(textButton.Activated)
-            end)
-        until not _lp.PlayerGui:FindFirstChild("Main (minimal)")
+        if textButton then
+            repeat
+                task.wait()
+                pcall(function() firesignal(textButton.Activated) end)
+            until not _lp.PlayerGui:FindFirstChild("Main (minimal)")
+        end
     end
 end
 
@@ -464,7 +464,7 @@ local function sendDiscordNotify(fruitName, totalCount)
                     { name = "Server ID", value = "```" .. serverId .. "```", inline = false },
                 },
                 footer = { text = "Phong Fruit Collector • Blox Fruits" },
-                timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ"),
+                timestamp = DateTime.now():ToIsoDate(),
             }},
         })
 
@@ -521,23 +521,68 @@ LocalPlayer.CharacterAdded:Connect(function(character)
     watchContainer(character)
 end)
 
--- Fruit search follows the original source's Fruit-name + Handle check,
--- but chooses the nearest valid candidate instead of the first child.
+-- Fruit search: kết hợp BananaCat (whitelist từ server) + QuantumOnyx (quét workspace + Map, fallback PrimaryPart)
+-- Lấy danh sách tên trái hợp lệ từ server (giống BananaCat whitelistedfruit)
+local _fruitWhitelist = {}
+local function buildFruitWhitelist()
+    pcall(function()
+        local remotes = ReplicatedStorage:FindFirstChild("Remotes")
+        local commF = remotes and remotes:FindFirstChild("CommF_")
+        if not commF then return end
+        local ok, fruits = pcall(function()
+            return commF:InvokeServer("GetFruits", false)
+        end)
+        if ok and type(fruits) == "table" then
+            for _, g in pairs(fruits) do
+                if g and g.Name then
+                    -- BananaCat style: "Dragon-Dragon" → "Dragon Fruit"
+                    local shortName = string.split(g.Name, "-")[1]
+                    _fruitWhitelist[shortName .. " Fruit"] = true
+                end
+            end
+        end
+    end)
+end
+task.spawn(buildFruitWhitelist)
+
+local function isFruitModel(obj)
+    if not (obj:IsA("Tool") or obj:IsA("Model")) then return false end
+    local name = obj.Name
+    -- QuantumOnyx: tên đúng là "Fruit" (spawned) hoặc chứa "Fruit"
+    if name == "Fruit" then return true end
+    if not string.find(name, "Fruit", 1, true) then return false end
+    -- BananaCat: nếu whitelist đã load thì chỉ nhận tên trong whitelist
+    if next(_fruitWhitelist) ~= nil then
+        return _fruitWhitelist[name] == true
+    end
+    return true
+end
+
 local function findNearestFruit()
     local character = LocalPlayer.Character
     local root = character and character:FindFirstChild("HumanoidRootPart")
     if not root then return nil end
 
     local best, bestDistance = nil, math.huge
-    for _, obj in ipairs(workspace:GetChildren()) do
-        if (obj:IsA("Tool") or obj:IsA("Model"))
-            and string.find(string.lower(obj.Name), "fruit", 1, true) then
-            local handle = obj:FindFirstChild("Handle")
-            if handle and handle:IsA("BasePart") then
-                local distance = (handle.Position - root.Position).Magnitude
-                if distance < bestDistance then
-                    best = obj
-                    bestDistance = distance
+
+    -- Quét workspace (trái thả rơi) + workspace.Map (trái spawn trên đảo) giống BananaCat
+    local containers = { workspace }
+    local mapFolder = workspace:FindFirstChild("Map")
+    if mapFolder then
+        table.insert(containers, mapFolder)
+    end
+
+    for _, container in ipairs(containers) do
+        for _, obj in ipairs(container:GetChildren()) do
+            if isFruitModel(obj) then
+                -- QuantumOnyx: fallback sang PrimaryPart nếu không có Handle
+                local handle = obj:FindFirstChild("Handle") or obj.PrimaryPart
+                if handle and handle:IsA("BasePart") then
+                    local distance = (handle.Position - root.Position).Magnitude
+                    if distance < bestDistance then
+                        best = obj
+                        bestDistance = distance
+                    end
                 end
             end
         end
@@ -929,14 +974,22 @@ task.spawn(function()
                 _activeESPs[handle] = nil
             end
         end
-        -- Thêm ESP cho trái mới
-        for _, obj in ipairs(workspace:GetChildren()) do
-            if (obj:IsA("Tool") or obj:IsA("Model"))
-                and obj.Name:lower():find("fruit", 1, true) then
-                local handle = obj:FindFirstChild("Handle")
-                if handle and not _activeESPs[handle] then
-                    local name = obj.Name:gsub(" Fruit", "") 
-                    addFruitESP(handle, name)
+        -- Thêm ESP cho trái mới (quét workspace + workspace.Map giống BananaCat)
+        local espContainers = { workspace }
+        local mapF = workspace:FindFirstChild("Map")
+        if mapF then table.insert(espContainers, mapF) end
+
+        for _, container in ipairs(espContainers) do
+            for _, obj in ipairs(container:GetChildren()) do
+                if isFruitModel(obj) then
+                    -- QuantumOnyx style: fallback PrimaryPart
+                    local handle = obj:FindFirstChild("Handle") or obj.PrimaryPart
+                    if handle and handle:IsA("BasePart") and not _activeESPs[handle] then
+                        -- "Fruit" (tên game khi spawn) → hiện "Spawned Fruit"
+                        local displayName = obj.Name == "Fruit" and "Spawned Fruit"
+                            or obj.Name:gsub(" Fruit$", "")
+                        addFruitESP(handle, displayName)
+                    end
                 end
             end
         end
