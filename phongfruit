@@ -7,6 +7,7 @@
     - Server hop, persistent counter, noclip, Furina UI
 ]]
 
+
 -- ── Chờ DataLoaded (giống QuantumOnyx) ──────────────────────────────────────
 while true do
     task.wait()
@@ -69,7 +70,7 @@ ENV.PhongFruitCollectorStop = false
 local CONFIG_FOLDER = "PhongFruitCollector"
 local COUNTER_FILE = CONFIG_FOLDER .. "/fruit_count.json"
 local HOP_DELAY = 1
-local MOVE_SPEED = 350 -- studs per second
+local MOVE_SPEED = 190 -- studs per second
 local SCAN_DELAY = 1.0
 local FRUIT_NAME_KEY = "Fruit"
 
@@ -293,6 +294,26 @@ local countLabel = makeText(countCard, tostring(fruitCount),
     UDim2.fromOffset(12, 22), UDim2.new(1, -24, 0, 29),
     Enum.Font.GothamBold, Color3.fromRGB(177, 146, 255), 23)
 
+-- Nút reset số lượng trái
+local resetBtn = Instance.new("TextButton")
+resetBtn.Size = UDim2.fromOffset(36, 16)
+resetBtn.Position = UDim2.new(1, -44, 0, 8)
+resetBtn.BackgroundColor3 = Color3.fromRGB(220, 76, 100)
+resetBtn.Text = "reset"
+resetBtn.TextSize = 8
+resetBtn.Font = Enum.Font.GothamBold
+resetBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+resetBtn.BorderSizePixel = 0
+resetBtn.Parent = countCard
+Instance.new("UICorner", resetBtn).CornerRadius = UDim.new(0, 4)
+resetBtn.MouseButton1Click:Connect(function()
+    fruitCount = 0
+    ENV.PhongFruitCollectorCount = 0
+    countLabel.Text = "0"
+    saveCounter()
+    setStatus("Đã reset số trái về 0", false)
+end)
+
 local statusCard = makeCard(210, 48)
 local statusDot = Instance.new("Frame")
 statusDot.Size = UDim2.fromOffset(8, 8)
@@ -420,6 +441,44 @@ local function storeFruitTool(instance)
     return true
 end
 
+-- ── Discord Webhook Notify ────────────────────────────────────────────────────
+local function sendDiscordNotify(fruitName, totalCount)
+    local webhookUrl = getgenv().PhongWebhook
+    if not webhookUrl or webhookUrl == "" then return end
+
+    task.spawn(function()
+        local player = game:GetService("Players").LocalPlayer
+        local playerName = player and player.Name or "Unknown"
+        local serverId = game.JobId ~= "" and game.JobId or "Private Server"
+
+        local body = game:GetService("HttpService"):JSONEncode({
+            username = "Phong Fruit Collector",
+            avatar_url = "https://tr.rbxcdn.com/180DAY-" .. tostring(game.PlaceId) .. "/420/420/Image/Webp/noFilter",
+            embeds = {{
+                title = "🍎 Nhặt được trái!",
+                color = 0x2ecc71,
+                fields = {
+                    { name = "Trái", value = fruitName, inline = true },
+                    { name = "Tổng đã nhặt", value = tostring(totalCount), inline = true },
+                    { name = "Người chơi", value = playerName, inline = true },
+                    { name = "Server ID", value = "```" .. serverId .. "```", inline = false },
+                },
+                footer = { text = "Phong Fruit Collector • Blox Fruits" },
+                timestamp = os.date("!%Y-%m-%dT%H:%M:%SZ"),
+            }},
+        })
+
+        pcall(function()
+            (syn and syn.request or request or http_request or http.request)({
+                Url    = webhookUrl,
+                Method = "POST",
+                Headers = { ["Content-Type"] = "application/json" },
+                Body   = body,
+            })
+        end)
+    end)
+end
+
 local function countFruitTool(instance)
     if not isFruitTool(instance) or countedInstances[instance] then return end
     countedInstances[instance] = true
@@ -427,6 +486,10 @@ local function countFruitTool(instance)
     countLabel.Text = tostring(fruitCount)
     saveCounter()
     setStatus("Fruit collected successfully!", true)
+
+    -- Tên trái để hiển thị (bỏ chữ " Fruit" ở cuối nếu có)
+    local displayName = string.gsub(instance.Name, " Fruit$", "")
+    sendDiscordNotify(displayName, fruitCount)
 
     task.spawn(function()
         task.wait(0.25)
@@ -574,7 +637,7 @@ local function moveToFruit(handle)
         local RunService = game:GetService("RunService")
 
         -- Trạng thái speed-ramp
-        local capState = { cap = 120, nextRaise = 0 }  -- ramp từ 120 → MOVE_SPEED
+        local capState = { cap = 80, nextRaise = 0 }  -- ramp từ 80 → MOVE_SPEED
 
         local fromPos   = root.Position          -- vị trí "bàn đạp" hiện tại
         local bestDist  = math.huge              -- khoảng cách gần nhất đạt được
@@ -771,4 +834,115 @@ task.spawn(function()
     end
 end)
 
-print("[Phong Fruit Collector] Loaded. Automatic collection is active.")
+-- ── Fast Mode (auto bật khi load) ────────────────────────────────────────────
+task.spawn(function()
+    -- Chờ Main GUI sẵn sàng
+    local lp = game:GetService("Players").LocalPlayer
+    repeat task.wait(1) until lp.PlayerGui:FindFirstChild("Main")
+        and lp.PlayerGui.Main:FindFirstChild("SettingsMenu")
+
+    local scrollFrame = lp.PlayerGui.Main.SettingsMenu
+        and lp.PlayerGui.Main.SettingsMenu:FindFirstChild("Content")
+        and lp.PlayerGui.Main.SettingsMenu.Content:FindFirstChild("ScrollingFrame")
+
+    if not scrollFrame then return end
+
+    local fastModeBtn = scrollFrame:FindFirstChild("FastMode")
+    if not fastModeBtn then return end
+
+    -- Bấm FirstButton = bật Fast Mode (giống QuantumOnyx)
+    local btn = fastModeBtn:FindFirstChild("FirstButton")
+    if btn and btn:IsA("GuiButton") then
+        pcall(function()
+            if firesignal then
+                firesignal(btn.Activated)
+            end
+        end)
+        setStatus("Fast Mode: ON", true)
+    end
+end)
+
+-- ── Fruit ESP ────────────────────────────────────────────────────────────────
+local _activeESPs = {}
+
+local function addFruitESP(handle, fruitName)
+    if not handle or not handle.Parent then return end
+    if handle:FindFirstChild("_PhongESP") then return end
+
+    local folder = Instance.new("Folder", handle)
+    folder.Name = "_PhongESP"
+    _activeESPs[handle] = folder
+
+    local billboard = Instance.new("BillboardGui", folder)
+    billboard.Adornee      = handle
+    billboard.Size         = UDim2.new(0, 180, 0, 26)
+    billboard.StudsOffset  = Vector3.new(0, 3.5, 0)
+    billboard.AlwaysOnTop  = true
+    billboard.LightInfluence = 0
+    billboard.MaxDistance  = 2000
+    billboard.ClipsDescendants = false
+
+    local label = Instance.new("TextLabel", billboard)
+    label.BackgroundTransparency = 1
+    label.Size     = UDim2.fromScale(1, 1)
+    label.Font     = Enum.Font.GothamBold
+    label.TextSize = 12
+    label.RichText = true
+    label.TextStrokeTransparency = 0.2
+    label.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+    label.TextColor3 = Color3.fromRGB(255, 255, 255)
+
+    -- Cập nhật text + khoảng cách mỗi 0.1s
+    task.spawn(function()
+        local lp = game:GetService("Players").LocalPlayer
+        while handle and handle.Parent and folder.Parent do
+            task.wait(0.1)
+            local char = lp.Character
+            local root = char and char:FindFirstChild("HumanoidRootPart")
+            local dist = root and math.floor((root.Position - handle.Position).Magnitude) or 0
+            label.Text = string.format(
+                "<b><font color='rgb(255,180,0)'>%s</font></b>
+<font color='rgb(210,210,210)'>%d studs</font>",
+                fruitName, dist
+            )
+        end
+        -- Dọn dẹp khi trái biến mất
+        if folder and folder.Parent then folder:Destroy() end
+        _activeESPs[handle] = nil
+    end)
+end
+
+local function clearAllESP()
+    for handle, folder in pairs(_activeESPs) do
+        pcall(function() folder:Destroy() end)
+        _activeESPs[handle] = nil
+    end
+end
+
+-- Scan ESP mỗi 1s — thêm ESP cho trái mới, dọn trái cũ đã biến mất
+task.spawn(function()
+    while not ENV.PhongFruitCollectorStop do
+        task.wait(1)
+        -- Dọn ESP của trái đã despawn
+        for handle, folder in pairs(_activeESPs) do
+            if not handle.Parent then
+                pcall(function() folder:Destroy() end)
+                _activeESPs[handle] = nil
+            end
+        end
+        -- Thêm ESP cho trái mới
+        for _, obj in ipairs(workspace:GetChildren()) do
+            if (obj:IsA("Tool") or obj:IsA("Model"))
+                and obj.Name:lower():find("fruit", 1, true) then
+                local handle = obj:FindFirstChild("Handle")
+                if handle and not _activeESPs[handle] then
+                    local name = obj.Name:gsub(" Fruit", "") 
+                    addFruitESP(handle, name)
+                end
+            end
+        end
+    end
+    clearAllESP()
+end)
+
+print("[Phong Fruit Collector] Loaded. ESP + Fast Mode active.")
