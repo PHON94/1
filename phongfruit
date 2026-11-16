@@ -8,6 +8,7 @@
 ]]
 
 
+
 -- ── Chờ DataLoaded (giống QuantumOnyx) ──────────────────────────────────────
 while true do
     task.wait()
@@ -784,11 +785,25 @@ end
 -- Server hop uses the same in-game __ServerBrowser RemoteFunction pattern
 -- as the supplied source. It avoids the current JobId and retries safely.
 local hopping = false
--- Lưu lại các server đã từng hop vào — không vào lại trong cùng session
-local _visitedServers = {}
--- Thêm server hiện tại vào danh sách ngay khi script chạy
+-- Lưu 20 server gần nhất đã hop vào — không vào lại
+local VISITED_MAX = 20
+local _visitedQueue = {}   -- thứ tự vào (index 1 = cũ nhất)
+local _visitedSet   = {}   -- tra cứu nhanh O(1)
+
+local function markVisited(jobId)
+    if not jobId or jobId == "" or _visitedSet[jobId] then return end
+    _visitedSet[jobId] = true
+    table.insert(_visitedQueue, jobId)
+    -- Nếu vượt quá 20, xóa cái cũ nhất
+    if #_visitedQueue > VISITED_MAX then
+        local oldest = table.remove(_visitedQueue, 1)
+        _visitedSet[oldest] = nil
+    end
+end
+
+-- Đánh dấu server hiện tại ngay khi script chạy
 if game.JobId and game.JobId ~= "" then
-    _visitedServers[game.JobId] = true
+    markVisited(game.JobId)
 end
 
 local function hopServer()
@@ -816,9 +831,9 @@ local function hopServer()
                     if found or ENV.PhongFruitCollectorStop then break end
                     -- Chỉ nhảy vào server dưới 12 người (QuantumOnyx: Count < 12)
                     local count = type(data) == "table" and (data.Count or data.Players or 0) or 0
-                    if jobId ~= game.JobId and count < 12 and not _visitedServers[jobId] then
+                    if jobId ~= game.JobId and count < 12 and not _visitedSet[jobId] then
                         found = true
-                        _visitedServers[jobId] = true  -- đánh dấu trước khi teleport
+                        markVisited(jobId)  -- đánh dấu trước khi teleport
                         setStatus("🌐 Đang hop server...", false)
                         pcall(function()
                             browser:InvokeServer("teleport", jobId)
