@@ -8,7 +8,6 @@
 ]]
 
 
-
 -- ── Chờ DataLoaded (giống QuantumOnyx) ──────────────────────────────────────
 while true do
     task.wait()
@@ -796,63 +795,43 @@ local function hopServer()
         return false
     end
 
-    local tried = {}
-    local attempt = 0
-    local MAX_ATTEMPTS = 5  -- sau 5 lần không tìm được → bỏ, để main loop tiếp tục
-
-    while not ENV.PhongFruitCollectorStop and attempt < MAX_ATTEMPTS do
-        -- Quét tất cả page, thu thập candidates (không lọc theo playerCount vì data không đáng tin)
-        local candidates = {}
-        for page = 1, 20 do
-            if ENV.PhongFruitCollectorStop then break end
-            local ok, servers = pcall(function()
+    -- Spawn 100 coroutine song song (QuantumOnyx style) — tìm server rất nhanh
+    local found = false
+    for page = 1, 100 do
+        if ENV.PhongFruitCollectorStop or found then break end
+        task.spawn(function()
+            if found or ENV.PhongFruitCollectorStop then return end
+            local ok, result = pcall(function()
                 return browser:InvokeServer(page)
             end)
-            if ok and type(servers) == "table" then
-                for jobId in pairs(servers) do
-                    if jobId ~= game.JobId and not tried[jobId] then
-                        table.insert(candidates, jobId)
+            if ok and type(result) == "table" then
+                for jobId, data in pairs(result) do
+                    if found or ENV.PhongFruitCollectorStop then break end
+                    -- Chỉ nhảy vào server dưới 12 người (QuantumOnyx: Count < 12)
+                    local count = type(data) == "table" and (data.Count or data.Players or 0) or 0
+                    if jobId ~= game.JobId and count < 12 then
+                        found = true
+                        setStatus("🌐 Đang hop server...", false)
+                        pcall(function()
+                            browser:InvokeServer("teleport", jobId)
+                        end)
                     end
                 end
             end
-            task.wait(0.05)
-        end
-
-        if #candidates == 0 then
-            attempt += 1
-            setStatus("No servers found • retry " .. attempt .. "/" .. MAX_ATTEMPTS, false)
-            task.wait(3)
-        else
-            -- Thử lần lượt từng server, skip nếu không teleport được sau 4s
-            for _, jobId in ipairs(candidates) do
-                if ENV.PhongFruitCollectorStop then break end
-                tried[jobId] = true
-                attempt += 1
-                setStatus("🌐 Đang hop server " .. attempt .. "...", false)
-
-                local currentJob = game.JobId
-                pcall(function()
-                    browser:InvokeServer("teleport", jobId)
-                end)
-
-                -- Chờ tối đa 4s xem có chuyển server không
-                local t0 = os.clock()
-                repeat task.wait(0.5) until game.JobId ~= currentJob
-                    or os.clock() - t0 >= 4
-                    or ENV.PhongFruitCollectorStop
-
-                if game.JobId ~= currentJob then
-                    return true  -- teleport thành công
-                end
-                -- Nếu vẫn cùng server → đầy hoặc lỗi, thử tiếp
-                setStatus("🌐 Server đầy • thử server khác...", false)
-            end
-        end
+        end)
     end
 
+    -- Chờ tối đa 8s để một trong các coroutine tìm được server
+    local t0 = os.clock()
+    repeat task.wait(0.1) until found
+        or os.clock() - t0 >= 8
+        or ENV.PhongFruitCollectorStop
+
     hopping = false
-    setStatus("Hop failed • resuming scan...", false)
-    return false
+    if not found then
+        setStatus("Hop failed • resuming scan...", false)
+    end
+    return found
 end
 
 -- Main automatic loop ---------------------------------------------------------
