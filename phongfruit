@@ -526,44 +526,18 @@ end)
 -- BananaCat chỉ dùng IsA("Tool") + string.find(name,"Fruit") — đơn giản nhất
 -- Whitelist chỉ để lọc tên kỳ lạ, không dùng để reject trái hợp lệ
 
-local _fruitWhitelist = {}
-local function buildFruitWhitelist()
-    pcall(function()
-        local remotes = ReplicatedStorage:FindFirstChild("Remotes")
-        local commF = remotes and remotes:FindFirstChild("CommF_")
-        if not commF then return end
-        -- BananaCat style: gọi không có arg
-        local ok, fruits = pcall(function() return commF:InvokeServer("GetFruits") end)
-        if not ok or type(fruits) ~= "table" then
-            ok, fruits = pcall(function() return commF:InvokeServer("GetFruits", false) end)
-        end
-        if not ok or type(fruits) ~= "table" then return end
-        for _, g in pairs(fruits) do
-            if g and g.Name then
-                -- "Dragon-Dragon" → "Dragon Fruit"
-                local shortName = string.split(g.Name, "-")[1]
-                _fruitWhitelist[shortName .. " Fruit"] = true
-            end
-        end
-    end)
-end
-task.spawn(buildFruitWhitelist)
+
 
 local MAX_FRUIT_DIST = 3000
 
 -- Nhận diện trái trên map:
--- Sea 1/2: spawn là Tool (có Handle child)
--- Sea 3+:  spawn là Model (có Handle child, không phải Tool)
--- → accept cả hai, chỉ cần tên chứa "Fruit" và có Handle (BasePart)
+-- Tool có tên dạng "Xxx Fruit" + có Handle (BasePart)
 local function isWorldFruit(obj)
     if not (obj:IsA("Tool") or obj:IsA("Model")) then return false end
-    if not string.find(obj.Name, "Fruit", 1, true) then return false end
+    if not obj.Name:match("^.+ Fruit$") then return false end
     local handle = obj:FindFirstChild("Handle")
     if not handle or not handle:IsA("BasePart") then return false end
-    if next(_fruitWhitelist) ~= nil then
-        return _fruitWhitelist[obj.Name] == true
-    end
-    return obj.Name:match("^.+ Fruit$") ~= nil
+    return true
 end
 
 -- Scan workspace 2 cấp:
@@ -590,7 +564,7 @@ local function findNearestFruit()
 
     for _, child in ipairs(workspace:GetChildren()) do
         checkObj(child)
-        -- cấp 2: bên trong Folder hoặc Model cha (tránh đệ quy sâu gây lag)
+        -- cấp 2: bên trong Folder hoặc Model cha
         if child:IsA("Folder") or child:IsA("Model") then
             for _, grandchild in ipairs(child:GetChildren()) do
                 checkObj(grandchild)
