@@ -150,7 +150,7 @@ main.Name = "Main"
 main.Size = UDim2.fromOffset(370, 290)
 main.Position = UDim2.new(0, 28, 0.35, 0)
 main.BackgroundColor3 = Color3.fromRGB(18, 19, 29)
-main.BackgroundTransparency = 1
+main.BackgroundTransparency = 0
 main.ClipsDescendants = true
 main.BorderSizePixel = 0
 main.Parent = gui
@@ -167,8 +167,9 @@ backgroundImage.Position = UDim2.fromScale(0, 0)
 backgroundImage.ScaleType = Enum.ScaleType.Crop
 backgroundImage.ImageTransparency = 0.12
 backgroundImage.Image = "rbxassetid://120394418974036"
-backgroundImage.ZIndex = 1
+backgroundImage.ZIndex = 2   -- cao hơn shade (ZIndex 1)
 backgroundImage.Parent = main
+Instance.new("UICorner", backgroundImage).CornerRadius = UDim.new(0, 14)
 
 local backgroundShade = Instance.new("Frame")
 backgroundShade.Name = "BackgroundShade"
@@ -176,7 +177,7 @@ backgroundShade.Size = UDim2.fromScale(1, 1)
 backgroundShade.BackgroundColor3 = Color3.fromRGB(13, 16, 29)
 backgroundShade.BackgroundTransparency = 0.42
 backgroundShade.BorderSizePixel = 0
-backgroundShade.ZIndex = 1
+backgroundShade.ZIndex = 3   -- overlay tối đè lên ảnh
 backgroundShade.Parent = main
 Instance.new("UICorner", backgroundShade).CornerRadius = UDim.new(0, 14)
 
@@ -550,24 +551,32 @@ task.spawn(buildFruitWhitelist)
 
 local MAX_FRUIT_DIST = 3000
 
--- BananaCat style: scan trái trong workspace
--- Chỉ cần IsA("Tool") + tên kết thúc " Fruit" + có Handle
--- KHÔNG dùng whitelist để tránh bỏ sót trái hợp lệ
+-- Nhận diện trái trên map:
+-- Sea 1/2: spawn là Tool (có Handle child)
+-- Sea 3+:  spawn là Model (có Handle child, không phải Tool)
+-- → accept cả hai, chỉ cần tên chứa "Fruit" và có Handle (BasePart)
 local function isWorldFruit(obj)
-    if not obj:IsA("Tool") then return false end
-    if not obj.Name:match("^.+ Fruit$") then return false end
-    if not obj:FindFirstChild("Handle") then return false end
-    return true
+    if not (obj:IsA("Tool") or obj:IsA("Model")) then return false end
+    if not string.find(obj.Name, "Fruit", 1, true) then return false end
+    local handle = obj:FindFirstChild("Handle")
+    if not handle or not handle:IsA("BasePart") then return false end
+    if next(_fruitWhitelist) ~= nil then
+        return _fruitWhitelist[obj.Name] == true
+    end
+    return obj.Name:match("^.+ Fruit$") ~= nil
 end
 
--- Tìm Tool trái gần nhất trong workspace
+-- Scan workspace 2 cấp:
+-- cấp 1: workspace:GetChildren()       (Sea 1/2 — Tool/Model thả thẳng)
+-- cấp 2: con của Folder/Model con       (Sea 3 — trái nằm trong folder/group)
 local function findNearestFruit()
     local character = LocalPlayer.Character
     local root = character and character:FindFirstChild("HumanoidRootPart")
     if not root then return nil end
 
     local best, bestHandle, bestDist = nil, nil, math.huge
-    for _, obj in ipairs(workspace:GetChildren()) do
+
+    local function checkObj(obj)
         if isWorldFruit(obj) then
             local handle = obj:FindFirstChild("Handle")
             if handle then
@@ -578,6 +587,17 @@ local function findNearestFruit()
             end
         end
     end
+
+    for _, child in ipairs(workspace:GetChildren()) do
+        checkObj(child)
+        -- cấp 2: bên trong Folder hoặc Model cha (tránh đệ quy sâu gây lag)
+        if child:IsA("Folder") or child:IsA("Model") then
+            for _, grandchild in ipairs(child:GetChildren()) do
+                checkObj(grandchild)
+            end
+        end
+    end
+
     return best, bestHandle, bestDist
 end
 
