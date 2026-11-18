@@ -191,7 +191,7 @@ mainStroke.Parent = main
 local header = Instance.new("Frame")
 header.Size = UDim2.new(1, 0, 0, 54)
 header.BackgroundColor3 = Color3.fromRGB(29, 27, 47)
-header.BackgroundTransparency = 0.20
+header.BackgroundTransparency = 0.55
 header.BorderSizePixel = 0
 header.Parent = main
 Instance.new("UICorner", header).CornerRadius = UDim.new(0, 14)
@@ -200,7 +200,7 @@ local headerCover = Instance.new("Frame")
 headerCover.Size = UDim2.new(1, 0, 0, 14)
 headerCover.Position = UDim2.new(0, 0, 1, -14)
 headerCover.BackgroundColor3 = header.BackgroundColor3
-headerCover.BackgroundTransparency = 0.20
+headerCover.BackgroundTransparency = 0.55
 headerCover.BorderSizePixel = 0
 headerCover.Parent = header
 
@@ -252,7 +252,7 @@ local function makeCard(y, height)
     card.Position = UDim2.fromOffset(14, y)
     card.Size = UDim2.new(1, -28, 0, height)
     card.BackgroundColor3 = Color3.fromRGB(25, 27, 42)
-    card.BackgroundTransparency = 0.24
+    card.BackgroundTransparency = 0.55
     card.BorderSizePixel = 0
     card.Parent = main
     Instance.new("UICorner", card).CornerRadius = UDim.new(0, 10)
