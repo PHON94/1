@@ -576,28 +576,40 @@ local function findNearestFruit()
         end
     end
 
-    for _, child in ipairs(workspace:GetChildren()) do
-        checkObj(child)
-        -- cấp 2: bên trong Folder hoặc Model cha
-        if child:IsA("Folder") or child:IsA("Model") then
-            for _, grandchild in ipairs(child:GetChildren()) do
-                checkObj(grandchild)
-            end
-        end
+    -- Trái luôn nằm thẳng trong Workspace (Tool, Parent = Workspace)
+    for _, obj in ipairs(workspace:GetChildren()) do
+        checkObj(obj)
     end
 
     return best, bestHandle, bestDist
 end
 
--- BananaCat style: nhặt trái bằng firetouchinterest (không cần bay đến)
+-- Nhặt trái: thử firetouchinterest trước, fallback teleport sát Handle
 local function pickupFruitBNN(fruitTool)
     local handle = fruitTool and fruitTool:FindFirstChild("Handle")
     if not handle then return end
     local root = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
     if not root then return end
-    -- Gọi touch event từ xa — giống BananaCat line 861
-    pcall(function() firetouchinterest(root, handle, 0) end)
-    pcall(function() firetouchinterest(root, handle, 1) end)
+
+    -- Cách 1: firetouchinterest (BananaCat style)
+    local ok = pcall(function()
+        firetouchinterest(root, handle, 0)
+        firetouchinterest(root, handle, 1)
+    end)
+
+    -- Cách 2: teleport thẳng vào Handle nếu firetouchinterest không hoạt động
+    if not ok or fruitTool.Parent then
+        pcall(function()
+            root.CFrame = CFrame.new(handle.Position)
+            root.AssemblyLinearVelocity = Vector3.zero
+        end)
+        task.wait(0.1)
+        -- Thử lại firetouchinterest sau khi đã sát Handle
+        pcall(function()
+            firetouchinterest(root, handle, 0)
+            firetouchinterest(root, handle, 1)
+        end)
+    end
 end
 
 -- Alias giữ tương thích với phần ESP
@@ -890,27 +902,36 @@ task.spawn(function()
                 local displayName = fruit.Name
                 setStatus("🚀 Bay đến " .. displayName .. "...", true)
 
-                -- Thử firetouchinterest ngay lập tức (BananaCat style — nhặt từ xa)
-                pickupFruitBNN(fruit)
+                -- Spawn coroutine spam firetouchinterest liên tục trong khi bay
+                local spamActive = true
+                task.spawn(function()
+                    while spamActive and not ENV.PhongFruitCollectorStop do
+                        if not fruit.Parent or not handle.Parent then break end
+                        pickupFruitBNN(fruit)
+                        task.wait(0.15)
+                    end
+                end)
 
-                -- Nếu trái vẫn còn sau 0.5s → bay đến rồi thử lại
-                task.wait(0.5)
+                -- Bay đến trái (coroutine spam chạy song song)
+                moveToFruit(handle)
+
+                -- Dừng spam
+                spamActive = false
+
+                -- Nếu trái vẫn còn sau khi bay đến → thử lần cuối
                 if fruit.Parent and handle.Parent then
-                    setStatus("🚀 Đang bay đến " .. displayName .. "...", true)
-                    moveToFruit(handle)
-                    -- Thử lại firetouchinterest sau khi bay đến
                     pickupFruitBNN(fruit)
+                    -- Chờ tối đa 2s
+                    local deadline = os.clock() + 2
+                    while os.clock() < deadline and not ENV.PhongFruitCollectorStop do
+                        if not fruit.Parent or not handle.Parent then break end
+                        task.wait(0.1)
+                    end
                 end
 
-                -- Chờ tối đa 3s để trái biến mất (vào backpack)
-                local deadline = os.clock() + 3
-                while os.clock() < deadline and not ENV.PhongFruitCollectorStop do
-                    if not fruit.Parent or not handle.Parent then break end
-                    task.wait(0.2)
-                end
                 if fruit.Parent then
                     setStatus("⚠️ Trái còn trên map • thử lại...", false)
-                    task.wait(1)
+                    task.wait(0.5)
                 end
             else
                 setStatus("❌ Không có trái • sắp hop server...", false)
