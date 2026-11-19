@@ -8,6 +8,7 @@
 ]]
 
 
+
 -- ── Chờ DataLoaded (giống QuantumOnyx) ──────────────────────────────────────
 while true do
     task.wait()
@@ -657,6 +658,69 @@ local function cancelFly()
     activeFlyHandle = { cancelled = false }
 end
 
+-- ── NoSink (đứng trên mặt nước — BananaCat FloatForce style) ─────────────
+local noSinkConnection = nil
+
+local function setupNoSink()
+    if noSinkConnection then return end -- đã chạy rồi
+
+    noSinkConnection = game:GetService("RunService").Heartbeat:Connect(function()
+        local character = LocalPlayer.Character
+        if not character then return end
+        local root = character:FindFirstChild("HumanoidRootPart")
+        local humanoid = character:FindFirstChildOfClass("Humanoid")
+        if not root or not humanoid then return end
+
+        -- Disable trạng thái bơi
+        pcall(function()
+            humanoid:SetStateEnabled(Enum.HumanoidStateType.Swimming, false)
+        end)
+
+        -- Nếu đang bơi → đẩy lên mặt nước
+        if humanoid:GetState() == Enum.HumanoidStateType.Swimming then
+            local ff = root:FindFirstChild("__PhongNoSink")
+            if not ff then
+                ff = Instance.new("BodyVelocity")
+                ff.Name     = "__PhongNoSink"
+                ff.Velocity = Vector3.new(0, 0, 0)
+                ff.MaxForce = Vector3.new(1e5, 1e5, 1e5)
+                ff.P        = 1e4
+                ff.Parent   = root
+            end
+            -- Đẩy lên nhẹ để nổi trên mặt nước
+            ff.Velocity = Vector3.new(
+                root.AssemblyLinearVelocity.X,
+                math.max(root.AssemblyLinearVelocity.Y, 5),
+                root.AssemblyLinearVelocity.Z
+            )
+        else
+            -- Không bơi → xóa force
+            local ff = root:FindFirstChild("__PhongNoSink")
+            if ff then ff:Destroy() end
+        end
+    end)
+end
+
+local function stopNoSink()
+    if noSinkConnection then
+        noSinkConnection:Disconnect()
+        noSinkConnection = nil
+    end
+    local character = LocalPlayer.Character
+    local root = character and character:FindFirstChild("HumanoidRootPart")
+    if root then
+        local ff = root:FindFirstChild("__PhongNoSink")
+        if ff then ff:Destroy() end
+    end
+    -- Re-enable bơi lại khi tắt
+    local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+    if humanoid then
+        pcall(function()
+            humanoid:SetStateEnabled(Enum.HumanoidStateType.Swimming, true)
+        end)
+    end
+end
+
 local function moveToFruit(handle)
     local character = LocalPlayer.Character
     local root = character and character:FindFirstChild("HumanoidRootPart")
@@ -886,6 +950,9 @@ local function hopServer()
 end
 
 -- Main automatic loop ---------------------------------------------------------
+-- NoSink bật ngay khi script load, chạy liên tục
+setupNoSink()
+
 task.spawn(function()
     task.wait(1)
 
@@ -900,33 +967,33 @@ task.spawn(function()
             local fruit, handle = findNearestFruit()
             if fruit and handle then
                 local displayName = fruit.Name
-                setStatus("🚀 Bay đến " .. displayName .. "...", true)
 
-                -- Spawn coroutine spam firetouchinterest liên tục trong khi bay
-                local spamActive = true
-                task.spawn(function()
-                    while spamActive and not ENV.PhongFruitCollectorStop do
-                        if not fruit.Parent or not handle.Parent then break end
-                        pickupFruitBNN(fruit)
-                        task.wait(0.15)
-                    end
-                end)
-
-                -- Bay đến trái (coroutine spam chạy song song)
-                moveToFruit(handle)
-
-                -- Dừng spam
-                spamActive = false
-
-                -- Nếu trái vẫn còn sau khi bay đến → thử lần cuối
-                if fruit.Parent and handle.Parent then
+                -- ── Bước 1: thử nhặt từ xa trước (5 lần × 0.3s) ──────────
+                setStatus("🎯 Thử nhặt từ xa " .. displayName .. "...", true)
+                for i = 1, 5 do
+                    if not fruit.Parent or not handle.Parent then break end
+                    if ENV.PhongFruitCollectorStop then break end
                     pickupFruitBNN(fruit)
-                    -- Chờ tối đa 2s
-                    local deadline = os.clock() + 2
-                    while os.clock() < deadline and not ENV.PhongFruitCollectorStop do
-                        if not fruit.Parent or not handle.Parent then break end
-                        task.wait(0.1)
-                    end
+                    task.wait(0.3)
+                end
+
+                -- ── Bước 2: nếu vẫn còn → bay đến + spam nhặt song song ──
+                if fruit.Parent and handle.Parent and not ENV.PhongFruitCollectorStop then
+                    setStatus("🚀 Bay đến " .. displayName .. "...", true)
+
+                    -- Spam nhặt từ xa liên tục trong khi bay
+                    local spamActive = true
+                    task.spawn(function()
+                        while spamActive and not ENV.PhongFruitCollectorStop do
+                            if not fruit.Parent or not handle.Parent then break end
+                            pickupFruitBNN(fruit)
+                            task.wait(0.15)
+                        end
+                    end)
+
+                    -- Bay đến (coroutine spam chạy song song, dừng ngay khi trái biến mất)
+                    moveToFruit(handle)
+                    spamActive = false
                 end
 
                 if fruit.Parent then
