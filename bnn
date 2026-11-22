@@ -1054,12 +1054,10 @@ function AutoFarm()
                 end
             end
         else
-            if not string.find(GetQuestTitle.Text, NameMon) then game.ReplicatedStorage:WaitForChild("Remotes").CommF_:InvokeServer("AbandonQuest"); end
             if GetQuest.Visible == false then
                 Usefastattack = false
                 StartMagnetAutoFarmLevel = false
                 Questtween = toTarget(CFrameQuest) wait(.1)
-                if not string.find(GetQuestTitle.Text, NameMon) then game.ReplicatedStorage:WaitForChild("Remotes").CommF_:InvokeServer("AbandonQuest"); end
                 if OldWorld and (Ms == "Fishman Commando [Lv. 400]" or Ms == "Fishman Warrior [Lv. 375]") and (CFrameQuest.Position - game:GetService("Players").LocalPlayer.Character:WaitForChild("HumanoidRootPart").Position).magnitude > 50000 then
                     if Questtween then Questtween:Stop() end wait(.5)
                     game:GetService("ReplicatedStorage").Remotes.CommF_:InvokeServer("requestEntrance",Vector3.new(61163.8515625, 11.6796875, 1819.7841796875))
@@ -1089,9 +1087,9 @@ function AutoFarm()
                 if game:GetService("Workspace").Enemies:FindFirstChild(Ms) then
                     for i,v in pairs(game:GetService("Workspace").Enemies:GetChildren()) do
                         if AutoFarmLevel and v.Name == Ms and v:FindFirstChild("HumanoidRootPart") and v:FindFirstChild("Humanoid") and v.Humanoid.Health > 0 then
-                            if string.find(GetQuestTitle.Text, NameMon) then
+                            if GetQuest.Visible == true then
                                 repeat wait()
-                                    if not string.find(GetQuestTitle.Text, NameMon) then game.ReplicatedStorage:WaitForChild("Remotes").CommF_:InvokeServer("AbandonQuest"); end
+                                    if GetQuest.Visible == false then game.ReplicatedStorage:WaitForChild("Remotes").CommF_:InvokeServer("AbandonQuest"); end
                                     FarmtoTarget = toTarget(v.HumanoidRootPart.CFrame * CFrame.new(0,30,0))
                                     if v:FindFirstChild("HumanoidRootPart") and v:FindFirstChild("Humanoid") and (v.HumanoidRootPart.Position - game.Players.LocalPlayer.Character.HumanoidRootPart.Position).magnitude <= 350 then
                                         if FarmtoTarget then FarmtoTarget:Stop() end
@@ -1112,19 +1110,18 @@ function AutoFarm()
                                         game.Players.LocalPlayer.Character.HumanoidRootPart.CFrame = v.HumanoidRootPart.CFrame * CFrame.new(0, 30, 0)
                                         Click()
                                     end
-                                until not game:GetService("Workspace").Enemies:FindFirstChild(Ms) or not AutoFarmLevel or not string.find(GetQuestTitle.Text, NameMon) or v.Humanoid.Health <= 0 or not v.Parent
-                                if not string.find(GetQuestTitle.Text, NameMon) then game.ReplicatedStorage:WaitForChild("Remotes").CommF_:InvokeServer("AbandonQuest"); end
+                                until not game:GetService("Workspace").Enemies:FindFirstChild(Ms) or not AutoFarmLevel or GetQuest.Visible == false or v.Humanoid.Health <= 0 or not v.Parent
+                                if GetQuest.Visible == false then game.ReplicatedStorage:WaitForChild("Remotes").CommF_:InvokeServer("AbandonQuest"); end
                                 Usefastattack = false
                                 StartMagnetAutoFarmLevel = false
                             else
-                                game.ReplicatedStorage:WaitForChild("Remotes").CommF_:InvokeServer("AbandonQuest");
+                                -- quest panel đã tắt, không abandon để tránh loop
                             end
                         end
                     end
                 else
                     StartMagnetAutoFarmLevel = false
                     Usefastattack = false
-                    if not string.find(GetQuestTitle.Text, NameMon) then game.ReplicatedStorage:WaitForChild("Remotes").CommF_:InvokeServer("AbandonQuest"); end
                     Modstween = toTarget(CFrameMon)
                     if OldWorld and (Ms == "Fishman Commando [Lv. 400]" or Ms == "Fishman Warrior [Lv. 375]") and (CFrameQuest.Position - game:GetService("Players").LocalPlayer.Character:WaitForChild("HumanoidRootPart").Position).magnitude > 50000 then
                         if Modstween then Modstween:Stop() end wait(.5)
