@@ -7110,7 +7110,22 @@ TakeQuestLevel = function()
 	end
 	if (H - B.Position).Magnitude <= 8 and C.Health > 0 then
 		wait(2)
-		CommF:InvokeServer("StartQuest", tostring(V.QuestName), V.Id)
+		local ok, result = pcall(function()
+			return CommF:InvokeServer("StartQuest", tostring(V.QuestName), V.Id)
+		end)
+		-- Set PendingMob ngay sau khi nhận quest để StartFarm biết mob cần đánh
+		if ok and (result == 0 or result == true or result == nil) then
+			if LevelFarmController then
+				LevelFarmController.PendingMob = V.Mob
+				LevelFarmController.PendingQuestName = tostring(V.QuestName)
+				LevelFarmController.PendingQuestId = V.Id
+				LevelFarmController.PendingUntil = tick() + 5
+			end
+			-- Chờ server cập nhật QuestData để DontQuest() trả true
+			local timeout = tick() + 3
+			repeat task.wait(0.1)
+			until DontQuest() or tick() > timeout
+		end
 	else
 		toTarget(CFrame.new(H) * CFrame.new(0, 4, 2), true)
 	end
